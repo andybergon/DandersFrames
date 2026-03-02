@@ -4455,8 +4455,8 @@ function DF:ToggleGUI()
         GUI:RefreshCurrentPage()
 
         -- Auto-show changelog on first open after update
-        if DandersFramesDB_v2 and DandersFramesDB_v2.lastSeenVersion ~= DF.ADDON_VERSION then
-            DandersFramesDB_v2.lastSeenVersion = DF.ADDON_VERSION
+        if DandersFramesDB_v2 and DandersFramesDB_v2.lastSeenVersion ~= DF.VERSION then
+            DandersFramesDB_v2.lastSeenVersion = DF.VERSION
             if GUI.changelogOverlay and GUI.changelogContent and GUI.changelogScroll then
                 GUI.changelogContent:SetWidth(GUI.changelogScroll:GetWidth())
                 GUI.changelogContent:SetText(GUI.FormatChangelog(DF.CHANGELOG_TEXT))
@@ -4539,17 +4539,7 @@ function DF:CreateGUI()
     
     local title = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("LEFT", 12, 0)
-    local addonVer = DF.ADDON_VERSION
-    local tocVer = DF.VERSION
-    -- Prefer ADDON_VERSION from CI, fall back to TOC version, skip placeholders
-    local versionStr
-    if addonVer and addonVer ~= "dev" then
-        versionStr = addonVer
-    elseif tocVer and not tocVer:find("@") then
-        versionStr = "v" .. tocVer
-    else
-        versionStr = "v" .. (DF.ADDON_VERSION_FALLBACK or "4.0.5")
-    end
+    local versionStr = DF.VERSION or "Unknown"
     local channelTags = { alpha = " |cffff8800alpha|r", beta = " |cffff8800beta|r" }
     local channelTag = channelTags[DF.RELEASE_CHANNEL] or ""
     title:SetText("DandersFrames " .. versionStr .. channelTag)

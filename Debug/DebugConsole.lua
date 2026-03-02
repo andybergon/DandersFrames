@@ -296,7 +296,7 @@ function DebugConsole:GetExportText()
 
     local lines = {}
     tinsert(lines, "DandersFrames Debug Log")
-    tinsert(lines, "Version: " .. (DF.ADDON_VERSION or DF.VERSION or "unknown"))
+    tinsert(lines, "Version: " .. (DF.VERSION or "unknown"))
     tinsert(lines, "Exported: " .. date("%Y-%m-%d %H:%M:%S"))
     tinsert(lines, "Entries: " .. #debugLog)
     tinsert(lines, "========================================")

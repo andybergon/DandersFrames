@@ -57,7 +57,7 @@ jobs:
           fi
           ./generate_changelog.sh
 
-          VERSION=$(grep 'DF.ADDON_VERSION' Changelog.lua | sed 's/.*= "\(.*\)"/\1/')
+          VERSION=$(grep '^## Version:' DandersFrames.toc | sed 's/^## Version: //')
           CHANNEL=$(grep 'DF.RELEASE_CHANNEL' Changelog.lua | sed 's/.*= "\(.*\)"/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "channel=$CHANNEL" >> $GITHUB_OUTPUT

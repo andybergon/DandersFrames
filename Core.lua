@@ -3189,7 +3189,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 
         -- Track last seen version for auto-showing changelog on update
         if not DandersFramesDB_v2.lastSeenVersion then
-            DandersFramesDB_v2.lastSeenVersion = DF.ADDON_VERSION
+            DandersFramesDB_v2.lastSeenVersion = DF.VERSION
         end
         if not DandersFramesDB_v2.profiles["Default"] then
             DandersFramesDB_v2.profiles["Default"] = {

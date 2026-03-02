@@ -157,7 +157,6 @@ echo "$CHANGELOG_CONTENT" > "$CHANGELOG_FILE"
 # Write Changelog.lua
 cat > "$OUTPUT_FILE" << LUAEOF
 local addonName, DF = ...
-DF.ADDON_VERSION = "${VERSION}"
 DF.BUILD_DATE = "${BUILD_DATE}"
 DF.RELEASE_CHANNEL = "${RELEASE_CHANNEL}"
 DF.CHANGELOG_TEXT = [===[
@@ -165,9 +164,4 @@ ${CHANGELOG_CONTENT}
 ]===]
 LUAEOF
 
-# Set TOC version for local testing and alpha builds
-# Handles both the CI placeholder (@project-version@) and previously set versions
-sed -i "s/^## Version: .*/## Version: ${VERSION}/" DandersFrames.toc
-echo "Set TOC version to ${VERSION}"
-
-echo "Generated ${OUTPUT_FILE}: version=${VERSION} channel=${RELEASE_CHANNEL} date=${BUILD_DATE}"
+echo "Generated ${OUTPUT_FILE}: channel=${RELEASE_CHANNEL} date=${BUILD_DATE}"
