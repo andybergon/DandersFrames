@@ -1001,6 +1001,35 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
         end)
     end
 
+    -- Copy To button
+    local copyBtn = CreateFrame("Button", nil, row, "BackdropTemplate")
+    copyBtn:SetSize(55, 20)
+    copyBtn:SetPoint("RIGHT", -120, 0)
+    copyBtn:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    copyBtn:SetBackdropColor(0.15, 0.15, 0.15, 1)
+    copyBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+
+    local copyText = copyBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    copyText:SetPoint("CENTER")
+    copyText:SetText("Copy To")
+    copyText:SetTextColor(1, 0.5, 0.2)
+
+    copyBtn:SetScript("OnEnter", function(self)
+        self:SetBackdropColor(0.25, 0.15, 0.1, 1)
+        self:SetBackdropBorderColor(1, 0.5, 0.2, 1)
+    end)
+    copyBtn:SetScript("OnLeave", function(self)
+        self:SetBackdropColor(0.15, 0.15, 0.15, 1)
+        self:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+    end)
+    copyBtn:SetScript("OnClick", function()
+        AutoProfilesUI:ShowCopyDialog(contentType, profile, index, pageFrame)
+    end)
+
     -- Edit Settings button
     local editBtn = CreateFrame("Button", nil, row, "BackdropTemplate")
     editBtn:SetSize(75, 20)
@@ -1721,6 +1750,644 @@ function AutoProfilesUI:SubmitDialog()
         dialog.validationMsg:SetText(err or "Unknown error")
         dialog.validationMsg:SetTextColor(0.85, 0.3, 0.3)
     end
+end
+
+-- ============================================================
+-- COPY TO DIALOG
+-- ============================================================
+
+local copyDialog = nil
+
+function AutoProfilesUI:CreateCopyDialog()
+    if copyDialog then return copyDialog end
+
+    local dialog = CreateFrame("Frame", "DandersAutoProfileCopyDialog", UIParent, "BackdropTemplate")
+    dialog:SetSize(360, 280)
+    dialog:SetPoint("CENTER", DF.GUIFrame or UIParent, "CENTER", 0, 0)
+    dialog:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    dialog:SetBackdropColor(0.06, 0.06, 0.06, 0.98)
+    dialog:SetBackdropBorderColor(0, 0, 0, 1)
+    dialog:SetFrameStrata("FULLSCREEN_DIALOG")
+    dialog:SetFrameLevel(100)
+    dialog:EnableMouse(true)
+    dialog:SetMovable(true)
+    dialog:RegisterForDrag("LeftButton")
+    dialog:SetScript("OnDragStart", dialog.StartMoving)
+    dialog:SetScript("OnDragStop", dialog.StopMovingOrSizing)
+    dialog:Hide()
+
+    -- Title
+    local title = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    title:SetPoint("TOPLEFT", 12, -12)
+    title:SetText("Copy Layout")
+    title:SetTextColor(0.9, 0.9, 0.9)
+    dialog.title = title
+
+    -- Close button
+    local closeBtn = CreateFrame("Button", nil, dialog, "BackdropTemplate")
+    closeBtn:SetSize(20, 20)
+    closeBtn:SetPoint("TOPRIGHT", -6, -6)
+    closeBtn:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    closeBtn:SetBackdropColor(0.1, 0.1, 0.1, 1)
+    closeBtn:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+    local closeIcon = closeBtn:CreateTexture(nil, "OVERLAY")
+    closeIcon:SetSize(12, 12)
+    closeIcon:SetPoint("CENTER")
+    closeIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\close")
+    closeIcon:SetVertexColor(0.5, 0.5, 0.5)
+    closeBtn:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(0.8, 0.2, 0.2, 1)
+        closeIcon:SetVertexColor(1, 0.3, 0.3)
+    end)
+    closeBtn:SetScript("OnLeave", function(self)
+        self:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+        closeIcon:SetVertexColor(0.5, 0.5, 0.5)
+    end)
+    closeBtn:SetScript("OnClick", function()
+        dialog:Hide()
+    end)
+
+    -- =============================================
+    -- Layout Name Section
+    -- =============================================
+    local nameLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    nameLabel:SetPoint("TOPLEFT", 12, -40)
+    nameLabel:SetText("Layout Name")
+    nameLabel:SetTextColor(0.6, 0.6, 0.6)
+
+    local nameInput = CreateFrame("EditBox", nil, dialog, "BackdropTemplate")
+    nameInput:SetSize(336, 26)
+    nameInput:SetPoint("TOPLEFT", 12, -56)
+    nameInput:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    nameInput:SetBackdropColor(0.03, 0.03, 0.03, 1)
+    nameInput:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+    nameInput:SetFontObject("GameFontHighlight")
+    nameInput:SetTextInsets(8, 8, 0, 0)
+    nameInput:SetAutoFocus(false)
+    nameInput:SetMaxLetters(30)
+    nameInput:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    nameInput:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    nameInput:SetScript("OnTextChanged", function()
+        AutoProfilesUI:ValidateCopyDialog()
+    end)
+    dialog.nameInput = nameInput
+
+    -- =============================================
+    -- Destination Selector (radio-style buttons)
+    -- =============================================
+    local destLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    destLabel:SetPoint("TOPLEFT", 12, -92)
+    destLabel:SetText("Copy To")
+    destLabel:SetTextColor(0.6, 0.6, 0.6)
+
+    local destButtons = {}
+    local buttonWidth = 106
+    local buttonSpacing = 6
+    local startX = 12
+
+    for i, ct in ipairs(CONTENT_TYPES) do
+        local btn = CreateFrame("Button", nil, dialog, "BackdropTemplate")
+        btn:SetSize(buttonWidth, 24)
+        btn:SetPoint("TOPLEFT", startX + (i - 1) * (buttonWidth + buttonSpacing), -108)
+        btn:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        btn:SetBackdropColor(0.1, 0.1, 0.1, 1)
+        btn:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+
+        local btnText = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        btnText:SetPoint("CENTER")
+        btnText:SetText(ct.title)
+        btnText:SetTextColor(0.6, 0.6, 0.6)
+
+        btn.contentType = ct
+        btn.label = btnText
+
+        btn:SetScript("OnClick", function(self)
+            dialog.selectedDest = self.contentType.key
+            AutoProfilesUI:UpdateCopyDestButtons()
+            AutoProfilesUI:UpdateCopyRangeVisibility()
+            AutoProfilesUI:ValidateCopyDialog()
+        end)
+
+        btn:SetScript("OnEnter", function(self)
+            if dialog.selectedDest ~= self.contentType.key then
+                self:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+                self.label:SetTextColor(0.8, 0.8, 0.8)
+            end
+            -- Show warning if mythic already has a profile
+            if self.contentType.key == "mythic" then
+                local mythicProfile = DF.db.raidAutoProfiles.mythic.profile
+                if mythicProfile then
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText("Will replace existing Mythic layout", 1, 0.67, 0)
+                    GameTooltip:AddLine("\"" .. mythicProfile.name .. "\" will be overwritten.", 0.7, 0.7, 0.7, true)
+                    GameTooltip:Show()
+                end
+            end
+        end)
+
+        btn:SetScript("OnLeave", function(self)
+            GameTooltip:Hide()
+            if dialog.selectedDest ~= self.contentType.key then
+                self:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+                self.label:SetTextColor(0.6, 0.6, 0.6)
+            end
+        end)
+
+        destButtons[i] = btn
+    end
+    dialog.destButtons = destButtons
+
+    -- =============================================
+    -- Range Section (dual-handle slider, same as profile dialog)
+    -- =============================================
+    local rangeLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    rangeLabel:SetPoint("TOPLEFT", 12, -144)
+    rangeLabel:SetText("Player Range")
+    rangeLabel:SetTextColor(0.6, 0.6, 0.6)
+    dialog.rangeLabel = rangeLabel
+
+    local rangeDisplay = dialog:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    rangeDisplay:SetPoint("TOPRIGHT", -12, -144)
+    rangeDisplay:SetTextColor(1, 0.5, 0.2)
+    dialog.rangeDisplay = rangeDisplay
+
+    local sliderWidth = 336
+    local sliderTrack = CreateFrame("Frame", nil, dialog, "BackdropTemplate")
+    sliderTrack:SetSize(sliderWidth, 12)
+    sliderTrack:SetPoint("TOPLEFT", 12, -164)
+    sliderTrack:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    sliderTrack:SetBackdropColor(0.03, 0.03, 0.03, 1)
+    sliderTrack:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+    dialog.sliderTrack = sliderTrack
+
+    local rangeFill = sliderTrack:CreateTexture(nil, "ARTWORK")
+    rangeFill:SetTexture("Interface\\Buttons\\WHITE8x8")
+    rangeFill:SetVertexColor(1, 0.5, 0.2, 0.5)
+    rangeFill:SetHeight(10)
+    rangeFill:SetPoint("TOP", 0, -1)
+    dialog.rangeFill = rangeFill
+
+    local function CopyValueToPos(value)
+        local pct = (value - 1) / (40 - 1)
+        return pct * (sliderWidth - 4) + 2
+    end
+
+    local function CopyPosToValue(pos)
+        local pct = (pos - 2) / (sliderWidth - 4)
+        return math.floor(pct * (40 - 1) + 1 + 0.5)
+    end
+
+    local dragging = nil
+
+    local minHandle = CreateFrame("Button", nil, sliderTrack)
+    minHandle:SetSize(8, 16)
+    minHandle:SetPoint("CENTER", sliderTrack, "LEFT", 2, 0)
+    minHandle:EnableMouse(true)
+    local minHandleTex = minHandle:CreateTexture(nil, "OVERLAY")
+    minHandleTex:SetAllPoints()
+    minHandleTex:SetTexture("Interface\\Buttons\\WHITE8x8")
+    minHandleTex:SetVertexColor(1, 0.5, 0.2, 1)
+    dialog.minHandle = minHandle
+
+    local maxHandle = CreateFrame("Button", nil, sliderTrack)
+    maxHandle:SetSize(8, 16)
+    maxHandle:SetPoint("CENTER", sliderTrack, "LEFT", sliderWidth - 2, 0)
+    maxHandle:EnableMouse(true)
+    local maxHandleTex = maxHandle:CreateTexture(nil, "OVERLAY")
+    maxHandleTex:SetAllPoints()
+    maxHandleTex:SetTexture("Interface\\Buttons\\WHITE8x8")
+    maxHandleTex:SetVertexColor(1, 0.5, 0.2, 1)
+    dialog.maxHandle = maxHandle
+
+    local function UpdateCopySliderVisuals()
+        local minVal = dialog.currentMin or 1
+        local maxVal = dialog.currentMax or 40
+
+        local minPos = CopyValueToPos(minVal)
+        local maxPos = CopyValueToPos(maxVal)
+
+        minHandle:ClearAllPoints()
+        minHandle:SetPoint("CENTER", sliderTrack, "LEFT", minPos, 0)
+        maxHandle:ClearAllPoints()
+        maxHandle:SetPoint("CENTER", sliderTrack, "LEFT", maxPos, 0)
+
+        rangeFill:ClearAllPoints()
+        rangeFill:SetPoint("LEFT", sliderTrack, "LEFT", minPos, 0)
+        rangeFill:SetWidth(math.max(maxPos - minPos, 2))
+
+        if minVal == maxVal then
+            rangeDisplay:SetText(minVal .. " players")
+        else
+            rangeDisplay:SetText(minVal .. " - " .. maxVal .. " players")
+        end
+
+        AutoProfilesUI:ValidateCopyDialog()
+    end
+    dialog.UpdateSliderVisuals = UpdateCopySliderVisuals
+
+    minHandle:SetScript("OnMouseDown", function(self, button)
+        if button == "LeftButton" then dragging = "min" end
+    end)
+    maxHandle:SetScript("OnMouseDown", function(self, button)
+        if button == "LeftButton" then dragging = "max" end
+    end)
+    minHandle:SetScript("OnMouseUp", function(self, button)
+        if button == "LeftButton" and dragging == "min" then dragging = nil end
+    end)
+    maxHandle:SetScript("OnMouseUp", function(self, button)
+        if button == "LeftButton" and dragging == "max" then dragging = nil end
+    end)
+
+    dialog:SetScript("OnMouseUp", function(self, button)
+        if button == "LeftButton" then dragging = nil end
+    end)
+
+    dialog:SetScript("OnUpdate", function(self)
+        if not dragging then return end
+
+        local x = select(1, GetCursorPosition()) / UIParent:GetEffectiveScale()
+        local trackLeft = sliderTrack:GetLeft()
+        if not trackLeft then return end
+
+        local pos = x - trackLeft
+        pos = math.max(2, math.min(pos, sliderWidth - 2))
+
+        local value = CopyPosToValue(pos)
+        value = math.max(1, math.min(value, 40))
+
+        if dragging == "min" then
+            if value <= dialog.currentMax then
+                dialog.currentMin = value
+            end
+        elseif dragging == "max" then
+            if value >= dialog.currentMin then
+                dialog.currentMax = value
+            end
+        end
+
+        UpdateCopySliderVisuals()
+    end)
+
+    sliderTrack:EnableMouse(true)
+    sliderTrack:SetScript("OnMouseDown", function(self, button)
+        if button ~= "LeftButton" then return end
+
+        local x = select(1, GetCursorPosition()) / UIParent:GetEffectiveScale()
+        local trackLeft = sliderTrack:GetLeft()
+        local pos = x - trackLeft
+        local value = CopyPosToValue(pos)
+
+        local minDist = math.abs(value - dialog.currentMin)
+        local maxDist = math.abs(value - dialog.currentMax)
+
+        if minDist <= maxDist then
+            if value <= dialog.currentMax then
+                dialog.currentMin = value
+            end
+        else
+            if value >= dialog.currentMin then
+                dialog.currentMax = value
+            end
+        end
+
+        UpdateCopySliderVisuals()
+    end)
+
+    -- Scale labels
+    local scaleLabels = {1, 10, 20, 30, 40}
+    for _, num in ipairs(scaleLabels) do
+        local label = sliderTrack:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        label:SetText(num)
+        label:SetTextColor(0.35, 0.35, 0.35)
+        local xPos = CopyValueToPos(num)
+        label:SetPoint("TOP", sliderTrack, "BOTTOM", xPos - sliderWidth/2, -2)
+    end
+
+    -- Mythic fixed label (shown when mythic is selected destination)
+    local mythicFixedLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    mythicFixedLabel:SetPoint("TOPLEFT", 12, -155)
+    mythicFixedLabel:SetText("Fixed at 20 players (Mythic)")
+    mythicFixedLabel:SetTextColor(0.5, 0.5, 0.5)
+    mythicFixedLabel:Hide()
+    dialog.mythicFixedLabel = mythicFixedLabel
+
+    -- =============================================
+    -- Validation Message
+    -- =============================================
+    local validationIcon = dialog:CreateTexture(nil, "OVERLAY")
+    validationIcon:SetSize(14, 14)
+    validationIcon:SetPoint("TOPLEFT", 12, -200)
+    dialog.validationIcon = validationIcon
+
+    local validationMsg = dialog:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    validationMsg:SetPoint("LEFT", validationIcon, "RIGHT", 6, 0)
+    validationMsg:SetWidth(310)
+    validationMsg:SetJustifyH("LEFT")
+    dialog.validationMsg = validationMsg
+
+    -- =============================================
+    -- Buttons
+    -- =============================================
+    local cancelBtn = CreateFrame("Button", nil, dialog, "BackdropTemplate")
+    cancelBtn:SetSize(80, 26)
+    cancelBtn:SetPoint("BOTTOMLEFT", 12, 12)
+    cancelBtn:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    cancelBtn:SetBackdropColor(0.1, 0.1, 0.1, 1)
+    cancelBtn:SetBackdropBorderColor(0.25, 0.25, 0.25, 1)
+
+    local cancelText = cancelBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    cancelText:SetPoint("CENTER")
+    cancelText:SetText("Cancel")
+    cancelText:SetTextColor(0.6, 0.6, 0.6)
+
+    cancelBtn:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+        cancelText:SetTextColor(0.9, 0.9, 0.9)
+    end)
+    cancelBtn:SetScript("OnLeave", function(self)
+        self:SetBackdropBorderColor(0.25, 0.25, 0.25, 1)
+        cancelText:SetTextColor(0.6, 0.6, 0.6)
+    end)
+    cancelBtn:SetScript("OnClick", function()
+        dialog:Hide()
+    end)
+
+    local createBtn = CreateFrame("Button", nil, dialog, "BackdropTemplate")
+    createBtn:SetSize(100, 26)
+    createBtn:SetPoint("BOTTOMRIGHT", -12, 12)
+    createBtn:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    createBtn:SetBackdropColor(0.15, 0.08, 0.03, 1)
+    createBtn:SetBackdropBorderColor(1, 0.5, 0.2, 1)
+
+    local createText = createBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    createText:SetPoint("CENTER")
+    createText:SetText("Copy Layout")
+    createText:SetTextColor(1, 0.5, 0.2)
+    dialog.createBtnText = createText
+
+    createBtn:SetScript("OnEnter", function(self)
+        if self.enabled then
+            self:SetBackdropColor(0.22, 0.12, 0.05, 1)
+        end
+    end)
+    createBtn:SetScript("OnLeave", function(self)
+        if self.enabled then
+            self:SetBackdropColor(0.15, 0.08, 0.03, 1)
+        end
+    end)
+    createBtn:SetScript("OnClick", function(self)
+        if self.enabled then
+            AutoProfilesUI:SubmitCopyDialog()
+        end
+    end)
+    dialog.createBtn = createBtn
+
+    copyDialog = dialog
+    return dialog
+end
+
+function AutoProfilesUI:UpdateCopyDestButtons()
+    local dialog = copyDialog
+    if not dialog then return end
+
+    for _, btn in ipairs(dialog.destButtons) do
+        local key = btn.contentType.key
+        if key == dialog.selectedDest then
+            -- Selected
+            btn:SetBackdropColor(0.2, 0.1, 0.05, 1)
+            btn:SetBackdropBorderColor(1, 0.5, 0.2, 1)
+            btn.label:SetTextColor(1, 0.5, 0.2)
+        else
+            -- Available but not selected
+            btn:SetBackdropColor(0.1, 0.1, 0.1, 1)
+            btn:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+            btn.label:SetTextColor(0.6, 0.6, 0.6)
+        end
+    end
+end
+
+function AutoProfilesUI:UpdateCopyRangeVisibility()
+    local dialog = copyDialog
+    if not dialog then return end
+
+    local isMythic = dialog.selectedDest == "mythic"
+
+    if isMythic then
+        dialog.rangeLabel:Hide()
+        dialog.rangeDisplay:Hide()
+        dialog.sliderTrack:Hide()
+        dialog.mythicFixedLabel:Show()
+        -- Adjust validation and dialog height
+        dialog.validationIcon:ClearAllPoints()
+        dialog.validationIcon:SetPoint("TOPLEFT", 12, -175)
+        dialog:SetHeight(250)
+    else
+        dialog.rangeLabel:Show()
+        dialog.rangeDisplay:Show()
+        dialog.sliderTrack:Show()
+        dialog.mythicFixedLabel:Hide()
+        dialog.validationIcon:ClearAllPoints()
+        dialog.validationIcon:SetPoint("TOPLEFT", 12, -200)
+        dialog:SetHeight(280)
+    end
+end
+
+function AutoProfilesUI:ShowCopyDialog(contentType, profile, index, pageFrame)
+    local dialog = self:CreateCopyDialog()
+
+    -- Re-anchor to GUI frame if it exists now
+    if DF.GUIFrame then
+        dialog:ClearAllPoints()
+        dialog:SetPoint("CENTER", DF.GUIFrame, "CENTER", 0, 0)
+    end
+
+    -- Store context
+    dialog.sourceContentType = contentType.key
+    dialog.sourceProfile = profile
+    dialog.pageFrame = pageFrame
+
+    -- Pre-fill name
+    dialog.nameInput:SetText((profile.name or "Unnamed") .. " (Copy)")
+
+    -- Default destination to the same content type (same-section copy is common)
+    dialog.selectedDest = contentType.key
+
+    -- Set initial range from source profile
+    if contentType.isFixed then
+        dialog.currentMin = 1
+        dialog.currentMax = 40
+    else
+        dialog.currentMin = profile.min or 1
+        dialog.currentMax = profile.max or 40
+    end
+
+    -- Update UI
+    self:UpdateCopyDestButtons()
+    self:UpdateCopyRangeVisibility()
+    dialog.UpdateSliderVisuals()
+    self:ValidateCopyDialog()
+    dialog:Show()
+    dialog.nameInput:SetFocus()
+end
+
+function AutoProfilesUI:ValidateCopyDialog()
+    local dialog = copyDialog
+    if not dialog or not dialog:IsShown() then return false end
+
+    local isValid = true
+    local errorMsg = nil
+    local name = strtrim(dialog.nameInput:GetText() or "")
+    local destKey = dialog.selectedDest
+
+    if not destKey then
+        isValid = false
+        errorMsg = "Select a destination"
+    elseif name == "" then
+        isValid = false
+        errorMsg = "Enter a layout name"
+    else
+        -- Check name conflict in destination
+        local profiles = self:GetProfiles(destKey)
+        for _, p in ipairs(profiles) do
+            if p.name:lower() == name:lower() then
+                if destKey == "mythic" then
+                    -- Mythic replaces, so name conflict is a warning not a block
+                    break
+                end
+                isValid = false
+                errorMsg = "A layout with this name already exists in " .. destKey
+                break
+            end
+        end
+
+        -- Check range overlap (only for non-mythic destinations)
+        if isValid and destKey ~= "mythic" then
+            local minVal = dialog.currentMin or 1
+            local maxVal = dialog.currentMax or 40
+            local overlap = self:CheckRangeOverlap(destKey, minVal, maxVal)
+            if overlap then
+                isValid = false
+                errorMsg = "Overlaps with \"" .. overlap.name .. "\" (" .. overlap.min .. "-" .. overlap.max .. ")"
+            end
+        end
+    end
+
+    -- Update validation display
+    if isValid then
+        dialog.validationIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\check")
+        dialog.validationIcon:SetVertexColor(0.3, 0.85, 0.3)
+        if destKey == "mythic" and DF.db.raidAutoProfiles.mythic.profile then
+            dialog.validationMsg:SetText("Will replace existing Mythic layout")
+            dialog.validationMsg:SetTextColor(1, 0.67, 0)
+        else
+            dialog.validationMsg:SetText("Ready to copy")
+            dialog.validationMsg:SetTextColor(0.3, 0.85, 0.3)
+        end
+    elseif errorMsg then
+        dialog.validationIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\close")
+        dialog.validationIcon:SetVertexColor(0.85, 0.3, 0.3)
+        dialog.validationMsg:SetText(errorMsg)
+        dialog.validationMsg:SetTextColor(0.85, 0.3, 0.3)
+    else
+        dialog.validationIcon:SetTexture(nil)
+        dialog.validationMsg:SetText("")
+    end
+
+    -- Update button state
+    local btn = dialog.createBtn
+    btn.enabled = isValid
+    if isValid then
+        btn:SetBackdropColor(0.15, 0.08, 0.03, 1)
+        btn:SetBackdropBorderColor(1, 0.5, 0.2, 1)
+        dialog.createBtnText:SetTextColor(1, 0.5, 0.2)
+    else
+        btn:SetBackdropColor(0.06, 0.06, 0.06, 1)
+        btn:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+        dialog.createBtnText:SetTextColor(0.3, 0.3, 0.3)
+    end
+
+    return isValid
+end
+
+function AutoProfilesUI:SubmitCopyDialog()
+    local dialog = copyDialog
+    if not dialog then return end
+
+    local name = strtrim(dialog.nameInput:GetText() or "")
+    local destKey = dialog.selectedDest
+    local sourceProfile = dialog.sourceProfile
+
+    -- Deep-copy the overrides from the source
+    local copiedOverrides = {}
+    if sourceProfile.overrides then
+        for k, v in pairs(sourceProfile.overrides) do
+            copiedOverrides[k] = DeepCopyValue(v)
+        end
+    end
+
+    if destKey == "mythic" then
+        -- Mythic: single profile, just replace
+        self:InitDefaults()
+        DF.db.raidAutoProfiles.mythic.profile = {
+            name = name,
+            overrides = copiedOverrides,
+        }
+    else
+        -- Instanced / Open World: use CreateProfile then inject overrides
+        local minVal = dialog.currentMin or 1
+        local maxVal = dialog.currentMax or 40
+        local success, err = self:CreateProfile(destKey, name, minVal, maxVal)
+        if not success then
+            dialog.validationIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\close")
+            dialog.validationIcon:SetVertexColor(0.85, 0.3, 0.3)
+            dialog.validationMsg:SetText(err or "Unknown error")
+            dialog.validationMsg:SetTextColor(0.85, 0.3, 0.3)
+            return
+        end
+
+        -- Find the newly created profile and inject overrides
+        local profiles = DF.db.raidAutoProfiles[destKey].profiles
+        for _, p in ipairs(profiles) do
+            if p.name == name then
+                p.overrides = copiedOverrides
+                break
+            end
+        end
+    end
+
+    dialog:Hide()
+    if dialog.pageFrame and dialog.pageFrame.Refresh then
+        dialog.pageFrame:Refresh()
+    end
+    self:EvaluateAndApply()
 end
 
 -- ============================================================
