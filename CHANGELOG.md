@@ -1,5 +1,14 @@
 # DandersFrames Changelog
 
+## [4.0.10] - 2026-03-02
+
+### Bug Fixes
+* Fixed Aura Designer tracking buffs from other players instead of only your own casts
+
+### New Features
+* **Auto layout Copy To** — duplicate an auto layout (with all overrides) to any content type section, including same-section copying for different size ranges
+* **Only My Buffs filter** — new toggle in Direct API buff filters that restricts all buff filters to player-cast buffs only (enabled by default); removes the now-redundant My Buffs sub-filter
+
 ## [4.0.9] - 2026-03-02
 
 ### Bug Fixes
