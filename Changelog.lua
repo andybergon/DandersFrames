@@ -1,64 +1,94 @@
 local addonName, DF = ...
-DF.ADDON_VERSION = "v4.0.8-alpha.1"
-DF.BUILD_DATE = "2026-03-01T18:41:39Z"
-DF.RELEASE_CHANNEL = "alpha"
+DF.ADDON_VERSION = "v4.0.8"
+DF.BUILD_DATE = "2026-03-01T22:10:58Z"
+DF.RELEASE_CHANNEL = "release"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
 
-## [4.0.8] - 2026-02-26
+## [4.0.8] - 2026-03-01
 
-### Auras
-* **Buff deduplication** — buffs already displayed by the Defensive Bar or Aura Designer placed indicators are automatically hidden from the buff bar. Enabled by default, toggle in Buffs tab
-* **Direct Aura API mode** — optional mode that queries C_UnitAuras directly with configurable filter strings (PLAYER, RAID, BIG_DEFENSIVE, etc.), giving full control over which auras appear. Configure in Auras > Aura Filters
-* **Modernized Direct API scanning** — replaced slot-by-slot GetAuraDataByIndex loops with C_UnitAuras.GetUnitAuras bulk API for better performance and reliability
-* **All Buffs / All Debuffs toggles** — Direct mode now has master toggles that bypass sub-filters and pass plain HELPFUL/HARMFUL to the API. All Debuffs is on by default
-* **Per-mode filter caching** — party and raid frames now build and cache separate filter strings, fixing raid frames using stale party filters
+### New: Aura Designer
+Visual indicator system for tracking buffs, debuffs, and auras on your frames.
+* **8 indicator types** — 3 placed indicators (Icon, Square, Bar) that occupy anchor points on the frame, plus 5 frame effects (Border, Health Bar Color, Name Text Color, Health Text Color, Frame Alpha) that affect the entire frame
+* **Drag-to-place** — drag auras from the spell list onto any of 9 anchor points (corners, edges, center) with X/Y offset adjustment
+* **Icon indicators** — spell icon with cooldown swipe, duration text, and stack count display
+* **Square indicators** — colored square with cooldown swipe, duration text, and stack count
+* **Bar indicators** — progress bar showing remaining duration with horizontal/vertical orientation, match-frame-width option, fill color, background color, and bar-color-by-time gradient
+* **Border frame effect** — 5 styles: Solid, Animated, Dashed, Glow, and Corners Only with configurable thickness and color
+* **Health Bar Color frame effect** — Replace or Tint mode with adjustable blend strength
+* **Name/Health Text Color frame effects** — override unit name or health text color when an aura is active
+* **Frame Alpha frame effect** — adjust entire frame transparency based on aura presence
+* **Expiring system** — all 8 indicator types support an expiring color that activates below a configurable remaining-duration threshold, fully combat-safe
+* **Priority stacking** — configurable priority per aura (1-20); frame effects only show the highest-priority active aura, placed indicators coexist on separate anchors
+* **Buff coexistence** — standard buff icons can display alongside Aura Designer indicators, with a popup to choose when enabling AD
+* **Global defaults** — configure default icon size, scale, duration/stack font, font scale, and outline style; new indicators inherit these automatically with per-indicator overrides available
+* **Live preview** — indicators render on the frame preview in the options panel with adjustable zoom (0.75×–2.5×)
+* **Per-spec aura lists** — curated aura lists for 8 healer and augmentation specs, auto-refreshes when switching specs
+
+### New: Auto Layouts (Raid Only)
+Automatically switches your raid frame layout based on content type and raid size. Does not apply to party, solo, or arena.
+* **Three content categories** — Instanced/PvP (raids, dungeons, battlegrounds), Mythic (fixed 20-player), and Open World (world bosses, outdoor groups)
+* **Per-size-range profiles** — create multiple layouts per content type, each covering a custom player range (e.g., 1-10, 11-20, 21-40). Mythic is a single fixed layout for 20 players
+* **Automatic switching** — monitors group roster, zone changes, and instance type; applies the matching layout on-the-fly when content or raid size changes
+* **Override-only storage** — each layout stores only the settings that differ from your global profile; everything else is inherited automatically
+* **Full settings coverage** — overrides can include frame size, growth direction, groups per row, group visibility, bar colors, text settings, aura filters, icon toggles, pinned frame configuration, and more
+* **Live editing** — click "Edit Settings" to enter editing mode with live frame preview; every change is tracked as an override with visual indicators showing which settings are modified vs global
+* **Override indicators** — green checkmark for global values, orange star with reset button for modified values, per-tab override counts
+* **Non-destructive** — your global profile is never modified; exiting editing mode restores your base settings cleanly
+* **Crash recovery** — if editing is interrupted, the next login detects and restores your base settings
+* **Status display** — shows current content type, instance name, raid size, active layout, and override count
+* **Export/import support** — auto layout configurations included in profile exports
+
+### New: Aura System Improvements
+* **Direct Aura mode** — optional mode that gives full control over which buffs and debuffs appear using filter categories (Player, Raid, Big Defensive, etc.). Configure in Auras > Aura Filters
+* **All Buffs / All Debuffs toggles** — master toggles to quickly show all buffs or all debuffs without configuring individual filters
+* **Important Spells filter** — checkbox to show Blizzard's curated list of important buffs and debuffs
+* **Buff deduplication** — buffs already displayed by the Defensive Bar or Aura Designer are automatically hidden from the buff bar. Enabled by default, toggle in Buffs tab
 * **Multi-defensive icons** — Defensive Bar now shows all active big defensives simultaneously (up to configured max), not just one
-* **Defensive bar compound growth** — growth direction now supports two-axis layouts (e.g., RIGHT_DOWN, LEFT_UP) with configurable wrap count, matching the buff/debuff icon grid system
-* **Important Spells filter** — Direct mode now has an "Important Spells" checkbox for both buffs and debuffs, using the 12.0.1 IMPORTANT aura filter
+* **Defensive bar compound growth** — growth direction now supports two-axis layouts (e.g., RIGHT_DOWN, LEFT_UP) with configurable wrap count
 * Max buff and debuff icon count increased from 5 to 8
-* Direct mode filter defaults updated — All Debuffs enabled, Buffs set to My Buffs + Raid In Combat (one-time migration for existing profiles)
 
-### Aura Designer
-* **Buff coexistence** — standard buff icons can now display alongside Aura Designer indicators. When enabling AD a popup asks whether to keep or replace standard buffs, with info banners in both tabs for quick toggling
-* **Health Bar Color tint mode rework** — uses a StatusBar overlay instead of color blending, fixing tint not working reliably with Blizzard's protected health values
-* **Preview scale slider** — adjustable zoom (0.75×–2.5×) for the frame preview window, making it easier to place indicators on small frames like raid frames
-* Aura Designer now refreshes when switching specs so per-spec aura lists update immediately
-
-### Click Casting
-* Binding tooltip moved to main Tooltip settings with full anchor and position controls
-* Removed "Show Tooltips" toggle from click-cast panel (now in Tooltip settings)
+### New Features
+* Health fade system — fades frames above a configurable health threshold, with option to cancel fade when a dispellable debuff is active (contributed by X-Steeve)
+* Class power pips — Holy Power, Chi, Combo Points, etc. displayed on the player frame as colored pips with configurable size, position, anchor, color, vertical layout, and role filter options (contributed by X-Steeve)
+* "Sync with Raid/Party" toggle per settings page (contributed by Enf0)
+* Per-class resource bar filter toggles
+* Click-cast binding tooltip on unit frame hover — shows active bindings with usability status (contributed by riyuk)
+* Health gradient color mode for missing health bar (contributed by Enf0)
+* Click-cast binding tooltip moved to main Tooltip settings with full anchor and position controls
+* Debug Console — in-game debug log viewer (`/df debug` to toggle, `/df console` to view)
 
 ### Bug Fixes
-* Fix aura tooltips not showing — new parent-driven tooltip system handles all aura types (buffs, debuffs, defensives, boss debuffs, private auras)
-* Fix Aura Designer indicator icons not showing tooltips on hover
-* Fix Direct mode defensive icons ignoring the Icon Size slider — was reading an internal bar size (24px) instead of the user-configured setting
-* Fix Direct mode debuffs not appearing on raid frames — raid frames were using stale party filter cache
-* Fix dispel overlay potentially treating all debuffs as dispellable when filter constant is unavailable — hardened with RAID_PLAYER_DISPELLABLE fallback
-* Fix Direct Aura API only tracking one player's auras — RegisterUnitEvent in a loop silently dropped all but the last unit
-* Fix animated border flickering in Aura Designer border mode
-* Fix missing raid groups when reloading UI during combat — header visibility is now set up during the ADDON_LOADED grace window
-* Fix permanent buff duration text showing on non-expiring auras — native countdown text now stays as child of cooldown frame for proper auto-hiding when auras shift
-* Fix debuffs being hidden when Aura Designer is enabled — debuffs now always display regardless of AD state
-* Fix Health Bar Color replace mode not reverting when the aura drops off
-* Fix blend slider still showing when Health Bar Color mode is set to Replace
-* Fix defensive icons and aura durations showing stale data after entering/exiting vehicles — aura cache is now invalidated on vehicle swaps
+* Fix click-casting "script ran too long" error when many frames are registered (ElvUI, etc.)
+* Fix health fade errors caused by Blizzard's protected health values
+* Fix health fade not working correctly on pet frames, in test mode, and during health animation
+* Fix profiles not persisting per character — each character now remembers their own active profile
+* Fix pet frames vanishing after reload
+* Fix pet frame font crash on non-English clients
+* Fix party frame container not repositioning when dragging width or height sliders
+* Fix resource bar border, color, and width issues after login/reload/resize
+* Fix heal absorb bar showing smaller than actual absorb amount
+* Fix absorb bar not fading when unit is out of range
+* Fix name text truncation not applied to offline players
+* Fix summon icon permanently stuck on frames after M+ start or group leave
+* Fix icon alpha settings (role, leader, raid target, ready check) reverting to 100% after releasing slider
+* Fix click-casting not working when clicking on aura/defensive icons
+* Fix click-casting "Spell not learned" when queuing as different spec
+* Fix DF click-casting not working until reload when first enabled
+* Fix Clique compatibility — prevent duplicate registration, defer writes, commit all header children
+* Fix aura click-through not updating safely on login
+* Fix leader icon not updating on first leader change (contributed by riyuk)
+* Fix Lua errors during Blizzard frame registration (contributed by riyuk)
+* Fix missing raid groups when reloading UI during combat
+* Fix duration text showing on permanent buffs
+* Fix defensive icons showing stale data after entering/exiting vehicles
 * Fix unit name getting stuck to the vehicle name after exiting a vehicle
-* Fix Aura Designer bar indicators getting stuck in a corrupted visual state after the tracked aura expires
-* Fix boss debuff (private aura) tooltips not showing — intermediate parent frames now propagate mouse events to the unit frame
-* Fix follower dungeon only showing 2-3 party members until /reload — delayed roster recheck now picks up NPCs that register late
-* Fix SetUnitBuff error when hovering aura icons on recycled frames — added nil unit guard to all tooltip handlers
+* Fix follower dungeon only showing 2-3 party members until /reload
 * Fix click-casting reload popup appearing on every login when the Clicked conflict warning is set to Ignore
-* Fix Aura Designer not detecting auras hidden by Blizzard's frames (e.g., Symbiotic Relationship) — now scans units directly via C_UnitAuras API instead of reading from Blizzard's aura cache
-* Fix non-defensive buffs appearing in the Defensive Bar when units are out of range — added post-validation to filter out misclassified auras
-* Fix aura filter settings persisting when switching profiles — filter strings are now rebuilt on profile change
-* Fix Aura Designer indicators showing wrong spells during boss fights — removed stale instanceId cache fallback, tracked auras are on Blizzard's whitelist so secret fallback is unnecessary
-* Fix Aura Designer icons and squares getting stuck after auras expire — stale aura data and cooldowns are now cleared on hide, matching existing bar cleanup
-* Fix Aura Designer tooltip crash when hovering indicator icons — removed legacy index-based tooltip fallback that passed invalid index=0
-* Fix Aura Designer buff bar dedup not working for frame-level indicators (border, health bar color, name text) — dedup set now includes all indicator types
-* Fix raid mover frame (orange anchor) not resizing when frame settings change — mover now syncs to the correct 40-player max size in both test and live modes
-* Fix group labels anchoring to the wrong player when sorting is enabled — labels now track the first frame of each group after sort order is applied
-* Fix auto profile global value text showing internal code names for dropdowns (e.g., "HORIZONTAL" instead of "Rows") — dropdown options are now resolved to their display labels
+* Fix dispel overlay sometimes treating all debuffs as dispellable
+* Fix non-defensive buffs appearing in the Defensive Bar when units are out of range
+* Fix raid mover frame (orange anchor) not resizing when frame settings change
+* Fix group labels anchoring to the wrong player when sorting is enabled
 
 ## [4.0.6] - 2026-02-15
 

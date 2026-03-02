@@ -226,9 +226,17 @@ end
 function CC:ClearBindingsFromFrame(frame)
     if not frame then return end
     if InCombatLockdown() then return end
-    
+
     -- Check if this frame is currently being hovered
     local isCurrentlyHovered = (self.currentHoveredFrame == frame) or (frame.IsMouseOver and frame:IsMouseOver())
+
+    -- Debug: warn if clearing bindings on a hovered frame
+    local frameName = frame:GetName() or "unnamed"
+    if isCurrentlyHovered then
+        DF:DebugWarn("CLICK", "ClearBindings on HOVERED frame %s (preserving snippet/overrides)", frameName)
+    else
+        DF:Debug("CLICK", "ClearBindings %s", frameName)
+    end
     
     -- Check if this is a Blizzard frame - we need to preserve default behavior for these
     local isBlizzardFrame = frame.dfIsBlizzardFrame == true
@@ -2385,7 +2393,11 @@ function CC:ApplyBindingsToFrameUnified(frame, skipKeyboardUpdate)
     
     local frameName = frame:GetName()
     if not frameName then return end
-    
+
+    -- Debug: track when bindings are reapplied (helps diagnose unexpected clears)
+    local isHovered = (self.currentHoveredFrame == frame) or (frame.IsMouseOver and frame:IsMouseOver())
+    DF:Debug("CLICK", "ApplyBindings %s hovered=%s", frameName, tostring(isHovered))
+
     -- Clear existing bindings first
     self:ClearBindingsFromFrame(frame)
     
@@ -2599,7 +2611,13 @@ function CC:ApplyBindingsToFrameUnified(frame, skipKeyboardUpdate)
     
     -- Mark this frame as having had bindings applied (for optimization in ClearBindingsFromFrame)
     frame.dfBindingsEverApplied = true
-    
+
+    -- Debug: confirm final attribute state after apply
+    local finalType1 = frame:GetAttribute("type1")
+    local finalMacro1 = frame:GetAttribute("macrotext1")
+    DF:Debug("CLICK", "ApplyBindings DONE %s type1=%s macro1=%s",
+        frameName, tostring(finalType1), finalMacro1 and finalMacro1:sub(1, 50) or "nil")
+
     -- Update keyboard binding snippet for WrapScript to use
     -- Skip when caller will batch-refresh all frames (e.g. ApplyBindings)
     if not skipKeyboardUpdate then

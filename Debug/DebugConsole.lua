@@ -249,10 +249,18 @@ function DebugConsole:RefreshDisplay()
     local text = #lines > 0 and table.concat(lines, "\n") or "|cff666666No log entries match current filters.|r"
     liveEditBox:SetText(text)
 
-    -- Auto-scroll to bottom
+    -- Update EditBox height to fit all text (enables scroll frame scrolling)
+    -- EditBox doesn't have GetStringHeight, so calculate from line count + font size
+    local numLines = 1
+    for _ in text:gmatch("\n") do numLines = numLines + 1 end
+    local _, fontSize = liveEditBox:GetFont()
+    local lineHeight = (fontSize or 10) + 2
+    liveEditBox:SetHeight(math.max(390, numLines * lineHeight + 10))
+
+    -- Auto-scroll to bottom (delay to let scroll range recalculate after height change)
     local scrollFrame = liveEditBox:GetParent()
     if scrollFrame and scrollFrame.SetVerticalScroll then
-        C_Timer.After(0.01, function()
+        C_Timer.After(0.02, function()
             if scrollFrame and scrollFrame.GetVerticalScrollRange then
                 scrollFrame:SetVerticalScroll(scrollFrame:GetVerticalScrollRange())
             end
