@@ -1252,7 +1252,7 @@ local function CreateADSquare(frame, auraName)
 
     -- Stack count (on textOverlay so it draws above swipe)
     sq.count = sq.textOverlay:CreateFontString(nil, "OVERLAY")
-    sq.count:SetFont("Fonts\\FRIZQT__.TTF", 8, "OUTLINE")
+    sq.count:SetFontObject(GameFontNormal)
     sq.count:SetPoint("CENTER", 0, 0)
     sq.count:SetTextColor(1, 1, 1)
 

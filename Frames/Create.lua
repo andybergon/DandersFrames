@@ -2521,6 +2521,8 @@ function DF:CreateAuraIcon(parent, index, auraType)
         if icon.SetMouseClickEnabled then
             icon:SetMouseClickEnabled(false)
         end
+    else
+        DF.auraIconsNeedMouseFix = true
     end
     
     -- Store parent frame name for secure binding setup

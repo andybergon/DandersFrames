@@ -4286,6 +4286,31 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         if DF.UpdateAllAuras then
             DF:UpdateAllAuras()
         end
+        -- Re-apply mouse settings on aura icons created during combat
+        if DF.auraIconsNeedMouseFix then
+            DF.auraIconsNeedMouseFix = false
+            local function fixIconMouse(frame)
+                if not frame or not frame:IsShown() then return end
+                for _, icons in ipairs({ frame.buffIcons, frame.debuffIcons }) do
+                    if icons then
+                        for _, icon in ipairs(icons) do
+                            icon:EnableMouse(true)
+                            if icon.SetPropagateMouseMotion then
+                                icon:SetPropagateMouseMotion(true)
+                            end
+                            if icon.SetPropagateMouseClicks then
+                                icon:SetPropagateMouseClicks(true)
+                            end
+                            if icon.SetMouseClickEnabled then
+                                icon:SetMouseClickEnabled(false)
+                            end
+                        end
+                    end
+                end
+            end
+            if DF.IteratePartyFrames then DF:IteratePartyFrames(fixIconMouse) end
+            if DF.IterateRaidFrames then DF:IterateRaidFrames(fixIconMouse) end
+        end
         -- Update role icons (in case hideInCombat is enabled)
         if DF.UpdateAllRoleIcons then
             DF:UpdateAllRoleIcons()
