@@ -437,10 +437,18 @@ function DF.BuildAuraBlacklistPage(guiRef, pageRef, dbRef)
         return container
     end
 
+    -- ========== DESCRIPTION ==========
+    local desc = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    desc:SetPoint("TOPLEFT", 10, -10)
+    desc:SetPoint("RIGHT", -10, 0)
+    desc:SetJustifyH("LEFT")
+    desc:SetText("Hide specific buffs and debuffs from your frames. Blacklisted auras will not appear on buff bars or Aura Designer indicators.")
+    desc:SetTextColor(0.6, 0.6, 0.6)
+
     -- ========== CLASS DROPDOWN ==========
     local dropdownContainer = CreateFrame("Frame", nil, parent)
     dropdownContainer:SetSize(280, 55)
-    dropdownContainer:SetPoint("TOPLEFT", 10, -10)
+    dropdownContainer:SetPoint("TOPLEFT", 10, -30)
     dropdownContainer:SetFrameStrata("DIALOG")
 
     local classLabel = dropdownContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
