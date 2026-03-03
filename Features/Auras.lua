@@ -1142,6 +1142,9 @@ DF.IsPlayerDispellable = IsPlayerDispellable
 
 -- Check if the current player has any buff applied to a unit
 -- Blizzard's buffFrames on raid frames already only shows buffs YOU cast
+-- DEPRECATED: My Buff Indicator feature is hidden from the UI and force-disabled.
+-- This function is kept for potential future re-enablement.
+--
 -- So we just check if there's anything in the buffs cache
 -- Out of combat: filter out raid buffs (like Mark of the Wild) by checking icon texture
 -- In combat: can't read aura data, so trust the cache as-is
@@ -1360,15 +1363,26 @@ function DF:UpdateAuraIcons_Enhanced(frame, icons, auraType, maxAuras)
         local canDisplay = false
         local skipAura = false
 
+        -- Check aura blacklist (spell ID based, works even with secret icons)
+        if auraData and auraData.spellId and not issecretvalue(auraData.spellId) then
+            local blTable = DF.db and DF.db.auraBlacklist
+            if blTable then
+                local blSet = auraType == "BUFF" and blTable.buffs or blTable.debuffs
+                if DF.AuraBlacklist and DF.AuraBlacklist.IsBlacklisted(blSet, auraData.spellId) then
+                    skipAura = true
+                end
+            end
+        end
+
         -- Set icon texture
         local auraIconTexture = auraData.icon
-        if auraIconTexture then
+        if not skipAura and auraIconTexture then
             canDisplay = SafeSetTexture(icon, auraIconTexture)
         end
 
         -- Check if this is a raid buff we should skip
         -- Note: auraIconTexture may be a secret value - can't use secrets as table keys
-        if canDisplay and shouldFilterRaidBuffs and raidBuffIcons and auraIconTexture then
+        if canDisplay and not skipAura and shouldFilterRaidBuffs and raidBuffIcons and auraIconTexture then
             -- Only do lookup if not a secret value
             if not issecretvalue(auraIconTexture) and raidBuffIcons[auraIconTexture] then
                 skipAura = true
@@ -1738,16 +1752,27 @@ function DF:UpdateAuraIconsDirect(frame, icons, auraType, maxAuras)
                 local nextIcon = icons[displayedCount + 1]
                 if not nextIcon then break end
 
+                -- Check aura blacklist (spell ID based, works even with secret icons)
+                local skipAura = false
+                if auraData.spellId and not issecretvalue(auraData.spellId) then
+                    local blTable = DF.db and DF.db.auraBlacklist
+                    if blTable then
+                        local blSet = auraType == "BUFF" and blTable.buffs or blTable.debuffs
+                        if DF.AuraBlacklist and DF.AuraBlacklist.IsBlacklisted(blSet, auraData.spellId) then
+                            skipAura = true
+                        end
+                    end
+                end
+
                 -- Set texture (validates the aura is displayable)
                 local auraIconTexture = auraData.icon
                 local canDisplay = false
-                if auraIconTexture then
+                if not skipAura and auraIconTexture then
                     canDisplay = SafeSetTexture(nextIcon, auraIconTexture)
                 end
 
                 -- Check raid buff filtering
-                local skipAura = false
-                if canDisplay and shouldFilterRaidBuffs and raidBuffIcons and auraIconTexture then
+                if canDisplay and not skipAura and shouldFilterRaidBuffs and raidBuffIcons and auraIconTexture then
                     if not issecretvalue(auraIconTexture) and raidBuffIcons[auraIconTexture] then
                         skipAura = true
                     end

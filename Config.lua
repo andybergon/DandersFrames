@@ -1250,7 +1250,7 @@ DF.PartyDefaults = {
     missingBuffIconX = 0,
     missingBuffIconY = 0,
 
-    -- My Buff Indicator
+    -- My Buff Indicator (DEPRECATED — hidden from UI, force-disabled on load)
     myBuffIndicatorAnimate = false,
     myBuffIndicatorBorderAlpha = 0.8,
     myBuffIndicatorBorderInset = -1,
@@ -2414,7 +2414,7 @@ DF.RaidDefaults = {
     missingBuffIconX = 0,
     missingBuffIconY = 0,
 
-    -- My Buff Indicator
+    -- My Buff Indicator (DEPRECATED — hidden from UI, force-disabled on load)
     myBuffIndicatorAnimate = false,
     myBuffIndicatorBorderAlpha = 0.8,
     myBuffIndicatorBorderInset = -1,

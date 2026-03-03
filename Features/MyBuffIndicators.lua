@@ -1,8 +1,14 @@
 local addonName, DF = ...
 
 -- ============================================================
--- MY BUFF INDICATORS
+-- MY BUFF INDICATORS (DEPRECATED)
 -- Shows visual indicator when player has any buff on unit
+--
+-- This feature is currently hidden from the UI and force-disabled
+-- for all users as of v4.0.12. The code is kept intact in case
+-- the feature needs to be re-enabled in a future version.
+-- The GUI tab, test mode checkbox, auto-profile category, and
+-- out-of-range slider have all been removed from the UI.
 -- ============================================================
 
 local pairs = pairs

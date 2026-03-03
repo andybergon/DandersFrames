@@ -4200,26 +4200,5 @@ function DF:ApplyAuraDesignerTabState()
     local modeDB = DF:GetDB(mode)
     local adEnabled = modeDB and modeDB.auraDesigner and modeDB.auraDesigner.enabled
 
-    local tab = guiRef.Tabs["auras_mybuffindicators"]
-    if tab then
-        tab.disabled = adEnabled or false
-        if adEnabled then
-            tab.Text:SetTextColor(0.4, 0.4, 0.4)
-            tab.Text:SetAlpha(1)
-            if not tab._strikethrough then
-                tab._strikethrough = tab:CreateTexture(nil, "OVERLAY")
-                tab._strikethrough:SetColorTexture(0.6, 0.6, 0.6, 0.6)
-                tab._strikethrough:SetHeight(1)
-                tab._strikethrough:SetPoint("LEFT", tab.Text or tab, "LEFT", 0, 0)
-                tab._strikethrough:SetPoint("RIGHT", tab.Text or tab, "RIGHT", 0, 0)
-            end
-            tab._strikethrough:Show()
-        else
-            tab.Text:SetTextColor(0.9, 0.9, 0.9)
-            tab.Text:SetAlpha(1)
-            if tab._strikethrough then
-                tab._strikethrough:Hide()
-            end
-        end
-    end
+    -- My Buff Indicators tab removed — feature deprecated
 end

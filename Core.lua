@@ -3236,6 +3236,13 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         if not DF.db.linkedSections then
             DF.db.linkedSections = {}
         end
+
+        -- Ensure auraBlacklist table exists (profile-level, shared across party/raid)
+        if not DF.db.auraBlacklist then
+            DF.db.auraBlacklist = { buffs = {}, debuffs = {} }
+        end
+        if not DF.db.auraBlacklist.buffs then DF.db.auraBlacklist.buffs = {} end
+        if not DF.db.auraBlacklist.debuffs then DF.db.auraBlacklist.debuffs = {} end
         
         -- Migrate any missing settings from defaults
         for key, value in pairs(DF.PartyDefaults) do
@@ -3248,6 +3255,10 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
                 DF.db.raid[key] = DF:DeepCopy(value)
             end
         end
+
+        -- Force-disable deprecated My Buff Indicator for all profiles
+        DF.db.party.myBuffIndicatorEnabled = false
+        DF.db.raid.myBuffIndicatorEnabled = false
         
         -- Migrate any missing settings for raidAutoProfiles
         for key, value in pairs(DF.RaidAutoProfilesDefaults) do

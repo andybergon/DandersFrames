@@ -6104,13 +6104,10 @@ function DF:CreateTestPanel()
     panel.showOutOfRangeCheck = CreateCheckbox(panel, y, col2X, "Out of Range", "testShowOutOfRange", nil, "display_fading")
     y = y - checkHeight
     
-    -- Row 3: Dispel Overlay | My Buff Indicator
+    -- Row 3: Dispel Overlay (My Buff Indicator removed — feature deprecated)
     panel.showDispelGlowCheck = CreateCheckbox(panel, y, col1X, "Dispel Overlay", "testShowDispelGlow", function()
         if DF.testMode or DF.raidTestMode then DF:UpdateAllTestDispelGlow() end
     end, "auras_dispel")
-    panel.showMyBuffIndicatorCheck = CreateCheckbox(panel, y, col2X, "My Buff Indicator", "testShowMyBuffIndicator", function()
-        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestMyBuffIndicator() end
-    end, "auras_mybuffindicators")
     y = y - checkHeight
     
     -- Row 4: Defensive Icon | Missing Buff

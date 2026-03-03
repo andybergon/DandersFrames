@@ -658,9 +658,8 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local oorDispel = oorGroup:AddWidget(GUI:CreateSlider(self.child, "Dispel Overlay Alpha", 0.0, 1.0, 0.05, db, "oorDispelOverlayAlpha", nil, function() DF:RefreshAllVisibleFrames() end, true), 55)
         oorDispel.hideOn = HideOOROptions
         
-        local oorMyBuffIndicator = oorGroup:AddWidget(GUI:CreateSlider(self.child, "My Buff Indicator Alpha", 0.0, 1.0, 0.05, db, "oorMyBuffIndicatorAlpha", nil, function() DF:RefreshAllVisibleFrames() end, true), 55)
-        oorMyBuffIndicator.hideOn = HideOOROptions
-        
+        -- My Buff Indicator OOR slider removed — feature deprecated
+
         local oorPower = oorGroup:AddWidget(GUI:CreateSlider(self.child, "Power Bar Alpha", 0.0, 1.0, 0.05, db, "oorPowerBarAlpha", nil, function() DF:RefreshAllVisibleFrames() end, true), 55)
         oorPower.hideOn = HideOOROptions
         
@@ -3813,6 +3812,14 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         end
     end)
 
+    -- Auras > Aura Blacklist
+    local pageAuraBlacklist = CreateSubTab("auras", "auras_blacklist", "Aura Blacklist")
+    BuildPage(pageAuraBlacklist, function(self, db, Add, AddSpace, AddSyncPoint)
+        if DF.BuildAuraBlacklistPage then
+            DF.BuildAuraBlacklistPage(GUI, self, db)
+        end
+    end)
+
     -- Auras > Buffs (combined Layout + Appearance with collapsible sections)
     local pageBuffs = CreateSubTab("auras", "auras_buffs", "Buffs")
     BuildPage(pageBuffs, function(self, db, Add, AddSpace, AddSyncPoint)
@@ -4090,121 +4097,13 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             {pageId = "display_tooltips", label = "Buff Tooltips"},
             {pageId = "general_integrations", label = "Integrations"},
             {pageId = "auras_missingbuffs", label = "Missing Buffs"},
-            {pageId = "auras_mybuffindicators", label = "My Buff Indicators"},
             {pageId = "auras_defensiveicon", label = "Defensive Icon"},
         }), 30, "both")
     end)
-    
-    -- Auras > My Buff Indicators
-    local pageMyBuffIndicators = CreateSubTab("auras", "auras_mybuffindicators", "My Buff Indicators")
-    BuildPage(pageMyBuffIndicators, function(self, db, Add, AddSpace, AddSyncPoint)
-        -- Copy button at top
-        Add(CreateCopyButton(self.child, {"myBuffIndicator"}, "My Buff Indicators", "auras_mybuffindicators"), 25, 2)
-        
-        AddSpace(10, "both")
-        
-        local function HideMyBuffOptions(d)
-            return not d.myBuffIndicatorEnabled
-        end
-        
-        local function HideGradientOptions(d)
-            return not d.myBuffIndicatorEnabled or not d.myBuffIndicatorShowGradient
-        end
-        
-        local function RefreshIndicators()
-            if DF.UpdateAllMyBuffIndicators then DF:UpdateAllMyBuffIndicators() end
-        end
-        
-        -- ===== SETTINGS GROUP (Column 1) =====
-        local settingsGroup = GUI:CreateSettingsGroup(self.child, 280)
-        settingsGroup:AddWidget(GUI:CreateHeader(self.child, "Settings"), 40)
-        settingsGroup:AddWidget(GUI:CreateCheckbox(self.child, "Enable My Buff Indicators", db, "myBuffIndicatorEnabled", function()
-            self:RefreshStates()
-            RefreshIndicators()
-        end), 30)
-        
-        local apiWarning = settingsGroup:AddWidget(GUI:CreateWarningBox(self.child, 
-            "Due to Blizzard API restrictions, this feature cannot track individual buffs. It activates when ANY of your buffs are present on a unit — it cannot distinguish between specific spells.", 
-            250, 75), 80)
-        apiWarning.hideOn = HideMyBuffOptions
-        
-        settingsGroup:AddWidget(GUI:CreateLabel(self.child, "Shows a colored border/gradient when YOU have any buff active on this unit. Useful for tracking HoTs, shields, and other beneficial effects you've applied.", 250), 50)
-        
-        local showBorder = settingsGroup:AddWidget(GUI:CreateCheckbox(self.child, "Show Border", db, "myBuffIndicatorShowBorder", RefreshIndicators), 30)
-        showBorder.hideOn = HideMyBuffOptions
-        
-        local showGradient = settingsGroup:AddWidget(GUI:CreateCheckbox(self.child, "Show Gradient", db, "myBuffIndicatorShowGradient", function()
-            self:RefreshStates()
-            RefreshIndicators()
-        end), 30)
-        showGradient.hideOn = HideMyBuffOptions
-        
-        local animate = settingsGroup:AddWidget(GUI:CreateCheckbox(self.child, "Pulse Animation", db, "myBuffIndicatorAnimate", RefreshIndicators), 30)
-        animate.hideOn = HideMyBuffOptions
-        
-        Add(settingsGroup, nil, 1)
-        
-        -- ===== APPEARANCE GROUP (Column 2) =====
-        local appearanceGroup = GUI:CreateSettingsGroup(self.child, 280)
-        appearanceGroup:AddWidget(GUI:CreateHeader(self.child, "Border Appearance"), 40)
-        
-        local color = appearanceGroup:AddWidget(GUI:CreateColorPicker(self.child, "Indicator Color", db, "myBuffIndicatorColor", false, RefreshIndicators), 30)
-        color.hideOn = HideMyBuffOptions
-        
-        local borderSize = appearanceGroup:AddWidget(GUI:CreateSlider(self.child, "Border Thickness", 1, 6, 1, db, "myBuffIndicatorBorderSize", nil, RefreshIndicators, true), 55)
-        borderSize.hideOn = HideMyBuffOptions
-        
-        local borderInset = appearanceGroup:AddWidget(GUI:CreateSlider(self.child, "Border Inset", -4, 4, 1, db, "myBuffIndicatorBorderInset", nil, RefreshIndicators, true), 55)
-        borderInset.hideOn = HideMyBuffOptions
-        
-        local borderAlpha = appearanceGroup:AddWidget(GUI:CreateSlider(self.child, "Border Opacity", 0.1, 1.0, 0.1, db, "myBuffIndicatorBorderAlpha", nil, RefreshIndicators, true), 55)
-        borderAlpha.hideOn = HideMyBuffOptions
-        
-        appearanceGroup.hideOn = HideMyBuffOptions
-        Add(appearanceGroup, nil, 2)
-        
-        -- ===== GRADIENT GROUP (Column 1, row 2) =====
-        local gradientGroup = GUI:CreateSettingsGroup(self.child, 280)
-        gradientGroup:AddWidget(GUI:CreateHeader(self.child, "Gradient Appearance"), 40)
-        
-        local gradientStyleOptions = {
-            FULL = "Full Frame",
-            TOP = "Top Edge",
-            BOTTOM = "Bottom Edge",
-            LEFT = "Left Edge",
-            RIGHT = "Right Edge",
-            EDGE = "Edge Glow (All Sides)",
-        }
-        local gradientStyle = gradientGroup:AddWidget(GUI:CreateDropdown(self.child, "Gradient Style", gradientStyleOptions, db, "myBuffIndicatorGradientStyle", function()
-            self:RefreshStates()
-            RefreshIndicators()
-        end), 55)
-        gradientStyle.hideOn = HideGradientOptions
-        
-        local function HideOnCurrentHealthOption(d)
-            return not d.myBuffIndicatorEnabled or not d.myBuffIndicatorShowGradient or d.myBuffIndicatorGradientStyle ~= "FULL"
-        end
-        local onHealthCheck = gradientGroup:AddWidget(GUI:CreateCheckbox(self.child, "Show On Current Health Only", db, "myBuffIndicatorGradientOnCurrentHealth", RefreshIndicators), 30)
-        onHealthCheck.hideOn = HideOnCurrentHealthOption
-        
-        local gradientAlpha = gradientGroup:AddWidget(GUI:CreateSlider(self.child, "Gradient Opacity", 0.1, 1.0, 0.05, db, "myBuffIndicatorGradientAlpha", nil, RefreshIndicators, true), 55)
-        gradientAlpha.hideOn = HideGradientOptions
-        
-        local gradientSize = gradientGroup:AddWidget(GUI:CreateSlider(self.child, "Gradient Size", 0.1, 1.0, 0.05, db, "myBuffIndicatorGradientSize", nil, RefreshIndicators, true), 55)
-        gradientSize.hideOn = HideGradientOptions
-        
-        gradientGroup.hideOn = HideGradientOptions
-        Add(gradientGroup, nil, 1)
-        
-        -- See Also links
-        AddSpace(20, "both")
-        Add(GUI:CreateSeeAlso(self.child, {
-            {pageId = "auras_buffs", label = "Buffs"},
-            {pageId = "auras_debuffs", label = "Debuffs"},
-            {pageId = "auras_dispel", label = "Dispel Overlay"},
-        }), 30, "both")
-    end)
-    
+
+    -- Auras > My Buff Indicators — DEPRECATED: tab removed from UI, feature force-disabled on load.
+    -- Code kept intact in Features/MyBuffIndicators.lua for potential future re-enablement.
+
     -- Auras > Debuffs (combined Layout + Appearance with collapsible sections)
     local pageDebuffs = CreateSubTab("auras", "auras_debuffs", "Debuffs")
     BuildPage(pageDebuffs, function(self, db, Add, AddSpace, AddSyncPoint)
@@ -4389,7 +4288,6 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         Add(GUI:CreateSeeAlso(self.child, {
             {pageId = "display_tooltips", label = "Debuff Tooltips"},
             {pageId = "general_integrations", label = "Integrations"},
-            {pageId = "auras_mybuffindicators", label = "My Buff Indicators"},
             {pageId = "auras_dispel", label = "Dispel Overlay"},
             {pageId = "auras_bossdebuffs", label = "Boss Debuffs"},
         }), 30, "both")
@@ -6111,7 +6009,6 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         AddSpace(20, "both")
         Add(GUI:CreateSeeAlso(self.child, {
             {pageId = "auras_debuffs", label = "Debuffs"},
-            {pageId = "auras_mybuffindicators", label = "My Buff Indicators"},
             {pageId = "indicators_highlights", label = "Highlights"},
         }), 30, "both")
     end)

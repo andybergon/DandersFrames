@@ -79,6 +79,10 @@ AuraDesigner\Engine.lua
 AuraDesigner\Indicators.lua
 AuraDesigner\Options.lua
 
+# Aura Blacklist
+AuraBlacklist\Config.lua
+AuraBlacklist\Options.lua
+
 Features\TargetedSpells.lua
 Features\PinnedFrames.lua
 Features\FlatRaidFrames.lua

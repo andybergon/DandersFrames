@@ -160,6 +160,13 @@ function Engine:UpdateFrame(frame)
         for auraName, auraCfg in pairs(auras) do
             local auraData = activeAuras[auraName]
             if auraData then
+                -- Skip blacklisted auras
+                local blTable = DF.db and DF.db.auraBlacklist
+                if blTable and auraData.spellId and DF.AuraBlacklist and DF.AuraBlacklist.IsBlacklisted(blTable.buffs, auraData.spellId) then
+                    auraData = nil
+                end
+            end
+            if auraData then
                 local priority = auraCfg.priority or 5
 
                 -- Placed indicators from instances array
