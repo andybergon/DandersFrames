@@ -4,13 +4,18 @@ DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
 
-## [4.0.13] - 2026-03-05
+## [4.0.13] - 2026-03-06
 
 ### New Features
 * **Spec-scoped aura configs** — Aura Designer configurations are now saved per-spec, so shared buffs like Prayer of Mending can have different indicator setups on each spec
+* **Spec-scoped layout groups** — layout groups are now saved per-spec alongside aura configs
 * **Global Hide Cooldown Swipe** — new toggle in Aura Designer Global Defaults to hide the cooldown swipe animation on all icon and square indicators
 
 ### Bug Fixes
+* Fixed buff/debuff/defensive tooltips not showing when hovering aura icons
+* Fixed aura icon tooltips using legacy index-based API that isn't secret-safe for Midnight
+* Fixed defensive bar icons not receiving hover events for tooltips
+* Fixed aura icons created during combat permanently losing tooltip hover after combat ends
 * Fixed Aura Blacklist class dropdown staying open when clicking outside it
 * Fixed Aura Blacklist buff list rendering outside of scroll area when list is long
 * Fixed Aura Blacklist "No spells blacklisted" / "No spells available" text positioned incorrectly

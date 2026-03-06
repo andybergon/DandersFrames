@@ -978,6 +978,7 @@ function DF:CreateFrameElementsExtended(frame, db)
             local unit = self.unitFrame.unit
             if unit and self.auraData.auraInstanceID and GameTooltip.SetUnitAuraByAuraInstanceID then
                 GameTooltip:SetUnitAuraByAuraInstanceID(unit, self.auraData.auraInstanceID)
+                GameTooltip:Show()
             end
         end
     end)
@@ -1688,6 +1689,7 @@ function DF:CreateUnitFrame(unit, index, isRaid)
             local unit = self.unitFrame.unit
             if unit and self.auraData.auraInstanceID and GameTooltip.SetUnitAuraByAuraInstanceID then
                 GameTooltip:SetUnitAuraByAuraInstanceID(unit, self.auraData.auraInstanceID)
+                GameTooltip:Show()
             end
         end
     end)
@@ -1702,7 +1704,7 @@ function DF:CreateUnitFrame(unit, index, isRaid)
         end
         GameTooltip:Hide()
     end)
-    
+
     -- === MOUSE HANDLING FOR DEFENSIVE ICON ===
     -- SetPropagateMouseMotion(true): Mouse motion events propagate to parent frame
     -- SetPropagateMouseClicks(true): Mouse click events propagate to parent frame
@@ -2084,7 +2086,7 @@ function DF:CreateUnitFrame(unit, index, isRaid)
             return
         end
 
-        -- Live aura data — unified API
+        -- Live aura data — use auraInstanceID API (secret-safe for Midnight)
         if icon.auraData and icon.auraData.auraInstanceID then
             local unit = anchorFrame.unit
             if unit then
@@ -2094,14 +2096,8 @@ function DF:CreateUnitFrame(unit, index, isRaid)
                     GameTooltip:SetUnitBuffByAuraInstanceID(unit, icon.auraData.auraInstanceID)
                 elseif auraType == "DEBUFF" and GameTooltip.SetUnitDebuffByAuraInstanceID then
                     GameTooltip:SetUnitDebuffByAuraInstanceID(unit, icon.auraData.auraInstanceID)
-                elseif icon.auraData.index then
-                    if auraType == "BUFF" then
-                        GameTooltip:SetUnitBuff(unit, icon.auraData.index, "HELPFUL")
-                    else
-                        local filter = db.debuffShowAll and "HARMFUL" or "HARMFUL|RAID"
-                        GameTooltip:SetUnitDebuff(unit, icon.auraData.index, filter)
-                    end
                 end
+                GameTooltip:Show()
             end
         end
     end
@@ -2487,6 +2483,7 @@ function DF:CreateAuraIcon(parent, index, auraType)
                 if not unit then return end
                 if self.auraData.auraInstanceID and GameTooltip.SetUnitAuraByAuraInstanceID then
                     GameTooltip:SetUnitAuraByAuraInstanceID(unit, self.auraData.auraInstanceID)
+                    GameTooltip:Show()
                 end
             end
         end

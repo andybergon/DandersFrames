@@ -198,8 +198,21 @@ local function GetOrCreateDefensiveBarIcon(frame, index)
         GameTooltip:Hide()
     end)
 
-    if icon.SetMouseClickEnabled then
-        icon:SetMouseClickEnabled(false)
+    -- Mouse setup: enable hover for tooltips, propagate clicks to parent for bindings
+    -- Same approach as buff/debuff icons — guarded for combat lockdown
+    if not InCombatLockdown() then
+        icon:EnableMouse(true)
+        if icon.SetPropagateMouseMotion then
+            icon:SetPropagateMouseMotion(true)
+        end
+        if icon.SetPropagateMouseClicks then
+            icon:SetPropagateMouseClicks(true)
+        end
+        if icon.SetMouseClickEnabled then
+            icon:SetMouseClickEnabled(false)
+        end
+    else
+        DF.auraIconsNeedMouseFix = true
     end
 
     frame.defensiveBarIcons[index] = icon

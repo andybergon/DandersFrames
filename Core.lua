@@ -4330,7 +4330,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
             DF.auraIconsNeedMouseFix = false
             local function fixIconMouse(frame)
                 if not frame or not frame:IsShown() then return end
-                for _, icons in ipairs({ frame.buffIcons, frame.debuffIcons }) do
+                -- Fix buff, debuff, and defensive bar icons
+                for _, icons in ipairs({ frame.buffIcons, frame.debuffIcons, frame.defensiveBarIcons }) do
                     if icons then
                         for _, icon in ipairs(icons) do
                             icon:EnableMouse(true)
@@ -4344,6 +4345,19 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
                                 icon:SetMouseClickEnabled(false)
                             end
                         end
+                    end
+                end
+                -- Fix single defensive icon
+                if frame.defensiveIcon then
+                    frame.defensiveIcon:EnableMouse(true)
+                    if frame.defensiveIcon.SetPropagateMouseMotion then
+                        frame.defensiveIcon:SetPropagateMouseMotion(true)
+                    end
+                    if frame.defensiveIcon.SetPropagateMouseClicks then
+                        frame.defensiveIcon:SetPropagateMouseClicks(true)
+                    end
+                    if frame.defensiveIcon.SetMouseClickEnabled then
+                        frame.defensiveIcon:SetMouseClickEnabled(false)
                     end
                 end
             end
