@@ -296,6 +296,7 @@ local DEFAULT_BINDING = {
         mouseover = false,
         target = false,
         selfCast = false,
+        stopSpellTarget = false,
     },
     -- Load conditions
     loadSpec = nil, -- nil = all specs, or table of spec IDs
@@ -440,6 +441,10 @@ local FALLBACK_INFO = {
     selfCast = {
         name = "Self",
         desc = "Cast on yourself as a last resort if no other valid target is found.",
+    },
+    stopSpellTarget = {
+        name = "Cancel Targeting",
+        desc = "Adds /stopspelltarget to the macro which cancels the blue targeting hand after casting. Disable this for spells like Rescue that require a targeting phase to complete.",
     },
 }
 CC.FALLBACK_INFO = FALLBACK_INFO

@@ -1294,8 +1294,8 @@ function CC:CreateEditBindingPanel()
     -- ADVANCED COLLAPSIBLE SECTION
     -- ============================================================
     
-    local COLLAPSED_HEIGHT = 480
-    local EXPANDED_HEIGHT = 610
+    local COLLAPSED_HEIGHT = 502
+    local EXPANDED_HEIGHT = 685
     
     -- Advanced header/toggle button
     local advancedToggle = CreateFrame("Button", nil, panel, "BackdropTemplate")
@@ -1382,10 +1382,26 @@ function CC:CreateEditBindingPanel()
         panel.pendingBinding.fallback.selfCast = self:GetChecked()
     end)
     panel.selfCB = selfCB
-    
+
+    -- Macro Options section header
+    local macroOptionsLabel = advancedContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    macroOptionsLabel:SetPoint("TOPLEFT", 0, -108)
+    macroOptionsLabel:SetText("Macro Options:")
+    macroOptionsLabel:SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
+    panel.macroOptionsLabel = macroOptionsLabel
+
+    -- Cancel Targeting checkbox (stopSpellTarget)
+    local stopSpellTargetCB = CreateCheckbox(advancedContent, FALLBACK_INFO.stopSpellTarget.name, FALLBACK_INFO.stopSpellTarget.desc)
+    stopSpellTargetCB:SetPoint("TOPLEFT", 18, -128)
+    stopSpellTargetCB:SetScript("OnClick", function(self)
+        panel.pendingBinding.fallback = panel.pendingBinding.fallback or {}
+        panel.pendingBinding.fallback.stopSpellTarget = self:GetChecked()
+    end)
+    panel.stopSpellTargetCB = stopSpellTargetCB
+
     -- Priority slider (inside advanced content)
     local priorityLabel = advancedContent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    priorityLabel:SetPoint("TOPLEFT", 0, -112)
+    priorityLabel:SetPoint("TOPLEFT", 0, -158)
     priorityLabel:SetText("Priority:")
     priorityLabel:SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
     panel.priorityLabel = priorityLabel
@@ -1397,7 +1413,7 @@ function CC:CreateEditBindingPanel()
     panel.priorityValue = priorityValue
     
     local prioritySlider = CreateFrame("Slider", nil, advancedContent, "BackdropTemplate")
-    prioritySlider:SetPoint("TOPLEFT", 68, -109)
+    prioritySlider:SetPoint("TOPLEFT", 68, -155)
     prioritySlider:SetSize(200, 16)
     prioritySlider:SetOrientation("HORIZONTAL")
     prioritySlider:SetMinMaxValues(1, 10)
@@ -1859,7 +1875,7 @@ function CC:ShowEditBindingPanel(spellData, existingBinding, existingIndex)
     
     -- Check if this binding has advanced options set (should auto-expand)
     local fallback = panel.pendingBinding.fallback or { mouseover = false, target = false, selfCast = false }
-    local hasAdvancedOptions = fallback.mouseover or fallback.target or fallback.selfCast
+    local hasAdvancedOptions = fallback.mouseover or fallback.target or fallback.selfCast or fallback.stopSpellTarget
     local currentPriority = panel.pendingBinding.priority or 5
     if currentPriority ~= 5 then
         hasAdvancedOptions = true
@@ -1880,6 +1896,8 @@ function CC:ShowEditBindingPanel(spellData, existingBinding, existingIndex)
         if panel.mouseoverCB then panel.mouseoverCB:Hide() end
         if panel.targetFallbackCB then panel.targetFallbackCB:Hide() end
         if panel.selfCB then panel.selfCB:Hide() end
+        if panel.macroOptionsLabel then panel.macroOptionsLabel:Hide() end
+        if panel.stopSpellTargetCB then panel.stopSpellTargetCB:Hide() end
         
         -- Show Global Keybind section for macros/items (above Active section)
         -- Layout: Global Keybind: (heading) -> description -> checkbox
@@ -1933,6 +1951,8 @@ function CC:ShowEditBindingPanel(spellData, existingBinding, existingIndex)
         if panel.mouseoverCB then panel.mouseoverCB:Show() end
         if panel.targetFallbackCB then panel.targetFallbackCB:Show() end
         if panel.selfCB then panel.selfCB:Show() end
+        if panel.macroOptionsLabel then panel.macroOptionsLabel:Show() end
+        if panel.stopSpellTargetCB then panel.stopSpellTargetCB:Show() end
         
         -- Hide Global Keybind section for spells (they use fallback options instead)
         if panel.globalBindLabel then
@@ -1948,11 +1968,11 @@ function CC:ShowEditBindingPanel(spellData, existingBinding, existingIndex)
         -- Reset priority slider position for spells
         if panel.priorityLabel then
             panel.priorityLabel:ClearAllPoints()
-            panel.priorityLabel:SetPoint("TOPLEFT", panel.advancedContent, "TOPLEFT", 0, -112)
+            panel.priorityLabel:SetPoint("TOPLEFT", panel.advancedContent, "TOPLEFT", 0, -158)
         end
         if panel.prioritySlider then
             panel.prioritySlider:ClearAllPoints()
-            panel.prioritySlider:SetPoint("TOPLEFT", panel.advancedContent, "TOPLEFT", 68, -109)
+            panel.prioritySlider:SetPoint("TOPLEFT", panel.advancedContent, "TOPLEFT", 68, -155)
         end
         
         -- Auto-expand if binding has advanced options
@@ -2019,8 +2039,8 @@ function CC:ShowEditBindingPanel(spellData, existingBinding, existingIndex)
     end
     
     -- Adjust panel height based on macro/item vs spell, and Advanced expanded state
-    local SPELL_COLLAPSED_HEIGHT = 480
-    local SPELL_EXPANDED_HEIGHT = 610
+    local SPELL_COLLAPSED_HEIGHT = 502
+    local SPELL_EXPANDED_HEIGHT = 685
     local MACRO_COLLAPSED_HEIGHT = 475  -- With Global Keybind section above Active
     local MACRO_EXPANDED_HEIGHT = 540   -- With Advanced expanded (just priority slider)
     
@@ -2047,6 +2067,7 @@ function CC:ShowEditBindingPanel(spellData, existingBinding, existingIndex)
         panel.mouseoverCB:SetChecked(fallback.mouseover == true)
         panel.targetFallbackCB:SetChecked(fallback.target == true)
         panel.selfCB:SetChecked(fallback.selfCast == true)
+        panel.stopSpellTargetCB:SetChecked(fallback.stopSpellTarget == true)
     end
     
     -- Update target type radios (only if not a macro)

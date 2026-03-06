@@ -2019,8 +2019,13 @@ function CC:BuildMacroTextForBinding(binding, forGlobalBinding)
         if #parts == 0 then
             table.insert(parts, spellName)
         end
-        
-        return "/cast " .. table.concat(parts, "; ") .. "\n/stopspelltarget"
+
+        local macroText = "/cast " .. table.concat(parts, "; ")
+        local fallbackTbl = binding.fallback or {}
+        if fallbackTbl.stopSpellTarget then
+            macroText = macroText .. "\n/stopspelltarget"
+        end
+        return macroText
         
     elseif actionType == self.ACTION_TYPES.MACRO then
         -- For custom macros, just return the macro body
@@ -2294,8 +2299,21 @@ function CC:BuildCombinedMacroForBindings(bindings, forGlobalBinding)
     end
     
     if #parts == 0 then return nil end
-    
-    return "/cast " .. table.concat(parts, "; ") .. "\n/stopspelltarget", friendlyBinding or hostileBinding or anyBinding
+
+    -- Check if any contributing binding has stopSpellTarget enabled
+    local useStopSpellTarget = false
+    for _, b in ipairs({friendlyBinding, hostileBinding, anyBinding}) do
+        if b and b.fallback and b.fallback.stopSpellTarget then
+            useStopSpellTarget = true
+            break
+        end
+    end
+
+    local macroText = "/cast " .. table.concat(parts, "; ")
+    if useStopSpellTarget then
+        macroText = macroText .. "\n/stopspelltarget"
+    end
+    return macroText, friendlyBinding or hostileBinding or anyBinding
 end
 
 -- Process all bindings and build unified macro map
@@ -2751,8 +2769,21 @@ function CC:BuildHelpHarmMacroBody(friendlyBinding, hostileBinding, anyBinding)
             table.insert(parts, "[@player" .. combatStr .. "] " .. friendlyBinding.spellName)
         end
     end
-    
-    return "/cast " .. table.concat(parts, "; ") .. "\n/stopspelltarget"
+
+    -- Check if any contributing binding has stopSpellTarget enabled
+    local useStopSpellTarget = false
+    for _, b in ipairs({friendlyBinding, hostileBinding, anyBinding}) do
+        if b and b.fallback and b.fallback.stopSpellTarget then
+            useStopSpellTarget = true
+            break
+        end
+    end
+
+    local macroText = "/cast " .. table.concat(parts, "; ")
+    if useStopSpellTarget then
+        macroText = macroText .. "\n/stopspelltarget"
+    end
+    return macroText
 end
 
 -- Get or create an auto-generated macro for a specific key combination

@@ -12,6 +12,7 @@ DF.CHANGELOG_TEXT = [===[
 * **Global Hide Cooldown Swipe** — new toggle in Aura Designer Global Defaults to hide the cooldown swipe animation on all icon and square indicators
 * **Duration and Stack text color** — new color pickers with alpha for duration text and stack text on icon and square indicators, available as both global defaults and per-indicator overrides
 * **Hide Icon (Text Only)** — new checkbox on icon and square indicators that hides the icon visual while keeping duration and stack text visible
+* **Cancel Targeting option** — new per-binding checkbox in click-casting advanced settings that adds /stopspelltarget to the macro, preventing the blue targeting hand on certain spells. Disabled by default so spells like Rescue work correctly
 
 ### Bug Fixes
 * Fixed buff/debuff/defensive tooltips not showing when hovering aura icons
