@@ -951,11 +951,19 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
     local priorityBoost = 20 - (priority or 5)
     icon:SetFrameLevel(baseLevel + priorityBoost)
 
+    -- Hide Icon (text-only mode) — hides texture, border, swipe but keeps text
+    local hideIcon = config.hideIcon; if hideIcon == nil then hideIcon = defaults and defaults.hideIcon end
+
     -- Texture
-    if auraData.icon then
-        SafeSetTexture(icon, auraData.icon)
-    elseif auraData.spellId and C_Spell and C_Spell.GetSpellTexture then
-        SafeSetTexture(icon, C_Spell.GetSpellTexture(auraData.spellId))
+    if not hideIcon then
+        if auraData.icon then
+            SafeSetTexture(icon, auraData.icon)
+        elseif auraData.spellId and C_Spell and C_Spell.GetSpellTexture then
+            SafeSetTexture(icon, C_Spell.GetSpellTexture(auraData.spellId))
+        end
+        if icon.texture then icon.texture:Show() end
+    else
+        if icon.texture then icon.texture:Hide() end
     end
 
     -- Cooldown — uses Duration object pipeline (secret-safe)
@@ -963,7 +971,7 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
     local hasDuration = HasAuraDuration(auraData, frame.unit)
     if hasDuration then
         SafeSetCooldown(icon.cooldown, auraData, frame.unit)
-        icon.cooldown:SetDrawSwipe(not hideSwipe)
+        icon.cooldown:SetDrawSwipe(not hideSwipe and not hideIcon)
         icon.cooldown:Show()
     else
         icon.cooldown:SetDrawSwipe(false)
@@ -979,7 +987,7 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
     local borderInset = config.borderInset or 1
 
     if icon.border then
-        if borderEnabled then
+        if borderEnabled and not hideIcon then
             icon.border:ClearAllPoints()
             icon.border:SetPoint("TOPLEFT", icon, "TOPLEFT", -borderInset, borderInset)
             icon.border:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", borderInset, -borderInset)
@@ -991,7 +999,7 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
     end
 
     -- Adjust texture inset to sit inside border
-    if icon.texture then
+    if icon.texture and not hideIcon then
         icon.texture:ClearAllPoints()
         local texInset = borderEnabled and borderThickness or 0
         icon.texture:SetPoint("TOPLEFT", texInset, -texInset)
@@ -1021,6 +1029,12 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
         DF:SafeSetFont(icon.count, stackFont, stackSize, stackOutline)
         icon.count:ClearAllPoints()
         icon.count:SetPoint(stackAnchor, icon, stackAnchor, stackX, stackY)
+        local stackColor = config.stackColor or (defaults and defaults.stackColor)
+        if stackColor then
+            icon.count:SetTextColor(stackColor.r or 1, stackColor.g or 1, stackColor.b or 1, stackColor.a or 1)
+        else
+            icon.count:SetTextColor(1, 1, 1, 1)
+        end
 
         -- Secret-safe stack display: use Blizzard API when available
         icon.count:SetText("")
@@ -1146,7 +1160,12 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
                     end
                 end
             else
-                icon.nativeCooldownText:SetTextColor(1, 1, 1, 1)
+                local durationColor = config.durationColor or (defaults and defaults.durationColor)
+                if durationColor then
+                    icon.nativeCooldownText:SetTextColor(durationColor.r or 1, durationColor.g or 1, durationColor.b or 1, durationColor.a or 1)
+                else
+                    icon.nativeCooldownText:SetTextColor(1, 1, 1, 1)
+                end
             end
         else
             icon.nativeCooldownText:Hide()
@@ -1296,12 +1315,20 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
     -- Alpha
     sq:SetAlpha(config.alpha or 1.0)
 
+    -- Hide Icon (text-only mode) — hides texture, border, swipe but keeps text
+    local hideIcon = config.hideIcon; if hideIcon == nil then hideIcon = defaults and defaults.hideIcon end
+
     -- Color
     local color = config.color
-    if color then
-        sq.texture:SetColorTexture(color[1] or color.r or 1, color[2] or color.g or 1, color[3] or color.b or 1, 1)
+    if not hideIcon then
+        if color then
+            sq.texture:SetColorTexture(color[1] or color.r or 1, color[2] or color.g or 1, color[3] or color.b or 1, 1)
+        else
+            sq.texture:SetColorTexture(1, 1, 1, 1)
+        end
+        sq.texture:Show()
     else
-        sq.texture:SetColorTexture(1, 1, 1, 1)
+        sq.texture:Hide()
     end
 
     -- Position — each aura has its own anchor, no growth
@@ -1328,7 +1355,7 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
     local borderThickness = config.borderThickness or 1
     local borderInset = config.borderInset or 1
 
-    if showBorder then
+    if showBorder and not hideIcon then
         sq.border:ClearAllPoints()
         sq.border:SetPoint("TOPLEFT", sq, "TOPLEFT", -borderInset, borderInset)
         sq.border:SetPoint("BOTTOMRIGHT", sq, "BOTTOMRIGHT", borderInset, -borderInset)
@@ -1339,10 +1366,12 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
     end
 
     -- Adjust texture inset to sit inside border
-    sq.texture:ClearAllPoints()
-    local texInset = showBorder and borderThickness or 0
-    sq.texture:SetPoint("TOPLEFT", texInset, -texInset)
-    sq.texture:SetPoint("BOTTOMRIGHT", -texInset, texInset)
+    if not hideIcon then
+        sq.texture:ClearAllPoints()
+        local texInset = showBorder and borderThickness or 0
+        sq.texture:SetPoint("TOPLEFT", texInset, -texInset)
+        sq.texture:SetPoint("BOTTOMRIGHT", -texInset, texInset)
+    end
 
     -- ========================================
     -- COOLDOWN SWIPE (Duration object pipeline)
@@ -1352,7 +1381,7 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
     if sq.cooldown then
         if hasDuration then
             SafeSetCooldown(sq.cooldown, auraData, frame.unit)
-            sq.cooldown:SetDrawSwipe(not hideSwipe)
+            sq.cooldown:SetDrawSwipe(not hideSwipe and not hideIcon)
             sq.cooldown:Show()
         else
             sq.cooldown:SetDrawSwipe(false)
@@ -1379,6 +1408,12 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
         DF:SafeSetFont(sq.count, stackFont, stackSize, stackOutline)
         sq.count:ClearAllPoints()
         sq.count:SetPoint(stackAnchor, sq, stackAnchor, stackX, stackY)
+        local stackColor = config.stackColor or (defaults and defaults.stackColor)
+        if stackColor then
+            sq.count:SetTextColor(stackColor.r or 1, stackColor.g or 1, stackColor.b or 1, stackColor.a or 1)
+        else
+            sq.count:SetTextColor(1, 1, 1, 1)
+        end
 
         sq.count:SetText("")
         sq.count:Hide()
@@ -1491,7 +1526,12 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
                     end
                 end
             else
-                sq.nativeCooldownText:SetTextColor(1, 1, 1, 1)
+                local durationColor = config.durationColor or (defaults and defaults.durationColor)
+                if durationColor then
+                    sq.nativeCooldownText:SetTextColor(durationColor.r or 1, durationColor.g or 1, durationColor.b or 1, durationColor.a or 1)
+                else
+                    sq.nativeCooldownText:SetTextColor(1, 1, 1, 1)
+                end
             end
         else
             sq.nativeCooldownText:Hide()

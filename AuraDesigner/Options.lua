@@ -482,15 +482,17 @@ local TYPE_DEFAULTS = {
         anchor = "TOPLEFT", offsetX = 0, offsetY = 0,
         size = 24, scale = 1.0, alpha = 1.0,
         borderEnabled = true, borderThickness = 1, borderInset = 1,
-        hideSwipe = false,
+        hideSwipe = false, hideIcon = false,
         showDuration = true, durationFont = "Fonts\\FRIZQT__.TTF",
         durationScale = 1.0, durationOutline = "OUTLINE",
         durationAnchor = "CENTER", durationX = 0, durationY = 0,
         durationColorByTime = true,
+        durationColor = {r = 1, g = 1, b = 1, a = 1},
         showStacks = true, stackMinimum = 2,
         stackFont = "Fonts\\FRIZQT__.TTF", stackScale = 1.0,
         stackOutline = "OUTLINE", stackAnchor = "BOTTOMRIGHT",
         stackX = 0, stackY = 0,
+        stackColor = {r = 1, g = 1, b = 1, a = 1},
         expiringEnabled = false, expiringThreshold = 30,
         expiringColor = {r = 1, g = 0.2, b = 0.2, a = 1},
     },
@@ -499,15 +501,17 @@ local TYPE_DEFAULTS = {
         size = 24, scale = 1.0, alpha = 1.0,
         color = {r = 1, g = 1, b = 1, a = 1},
         showBorder = true, borderThickness = 1, borderInset = 1,
-        hideSwipe = false,
+        hideSwipe = false, hideIcon = false,
         showDuration = true, durationFont = "Fonts\\FRIZQT__.TTF",
         durationScale = 1.0, durationOutline = "OUTLINE",
         durationAnchor = "CENTER", durationX = 0, durationY = 0,
         durationColorByTime = true,
+        durationColor = {r = 1, g = 1, b = 1, a = 1},
         showStacks = true, stackMinimum = 2,
         stackFont = "Fonts\\FRIZQT__.TTF", stackScale = 1.0,
         stackOutline = "OUTLINE", stackAnchor = "BOTTOMRIGHT",
         stackX = 0, stackY = 0,
+        stackColor = {r = 1, g = 1, b = 1, a = 1},
         expiringEnabled = false, expiringThreshold = 30,
         expiringColor = {r = 1, g = 0.2, b = 0.2, a = 1},
     },
@@ -665,21 +669,21 @@ local GLOBAL_DEFAULT_MAP = {
         size = "iconSize", scale = "iconScale", showDuration = "showDuration", showStacks = "showStacks",
         durationFont = "durationFont", durationScale = "durationScale", durationOutline = "durationOutline",
         durationAnchor = "durationAnchor", durationX = "durationX", durationY = "durationY",
-        durationColorByTime = "durationColorByTime",
+        durationColorByTime = "durationColorByTime", durationColor = "durationColor",
         stackFont = "stackFont", stackScale = "stackScale", stackOutline = "stackOutline",
         stackAnchor = "stackAnchor", stackX = "stackX", stackY = "stackY",
-        stackMinimum = "stackMinimum",
-        hideSwipe = "hideSwipe",
+        stackMinimum = "stackMinimum", stackColor = "stackColor",
+        hideSwipe = "hideSwipe", hideIcon = "hideIcon",
     },
     square = {
         size = "iconSize", scale = "iconScale", showDuration = "showDuration", showStacks = "showStacks",
         durationFont = "durationFont", durationScale = "durationScale", durationOutline = "durationOutline",
         durationAnchor = "durationAnchor", durationX = "durationX", durationY = "durationY",
-        durationColorByTime = "durationColorByTime",
+        durationColorByTime = "durationColorByTime", durationColor = "durationColor",
         stackFont = "stackFont", stackScale = "stackScale", stackOutline = "stackOutline",
         stackAnchor = "stackAnchor", stackX = "stackX", stackY = "stackY",
-        stackMinimum = "stackMinimum",
-        hideSwipe = "hideSwipe",
+        stackMinimum = "stackMinimum", stackColor = "stackColor",
+        hideSwipe = "hideSwipe", hideIcon = "hideIcon",
     },
     bar    = {
         durationFont = "durationFont", durationScale = "durationScale", durationOutline = "durationOutline",
@@ -2066,6 +2070,7 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
         AddWidget(GUI:CreateSlider(parent, "Border Thickness", 1, 5, 1, proxy, "borderThickness"), 54)
         AddWidget(GUI:CreateSlider(parent, "Border Inset", -3, 5, 1, proxy, "borderInset"), 54)
         AddWidget(GUI:CreateCheckbox(parent, "Hide Cooldown Swipe", proxy, "hideSwipe"), 28)
+        AddWidget(GUI:CreateCheckbox(parent, "Hide Icon (Text Only)", proxy, "hideIcon"), 28)
         AddDivider()
         -- Duration text
         AddWidget(GUI:CreateCheckbox(parent, "Show Duration Text", proxy, "showDuration"), 28)
@@ -2076,6 +2081,10 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
         AddWidget(GUI:CreateSlider(parent, "Duration Offset X", -20, 20, 1, proxy, "durationX"), 54)
         AddWidget(GUI:CreateSlider(parent, "Duration Offset Y", -20, 20, 1, proxy, "durationY"), 54)
         AddWidget(GUI:CreateCheckbox(parent, "Color Duration by Time", proxy, "durationColorByTime"), 28)
+        AddWidget(GUI:CreateColorPicker(parent, "Duration Text Color", proxy, "durationColor", true,
+            function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
+            function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
+            true), 28)
         AddDivider()
         -- Stack count
         AddWidget(GUI:CreateCheckbox(parent, "Show Stacks", proxy, "showStacks"), 28)
@@ -2086,6 +2095,10 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
         AddWidget(GUI:CreateDropdown(parent, "Stack Anchor", ANCHOR_OPTIONS, proxy, "stackAnchor"), 54)
         AddWidget(GUI:CreateSlider(parent, "Stack Offset X", -20, 20, 1, proxy, "stackX"), 54)
         AddWidget(GUI:CreateSlider(parent, "Stack Offset Y", -20, 20, 1, proxy, "stackY"), 54)
+        AddWidget(GUI:CreateColorPicker(parent, "Stack Text Color", proxy, "stackColor", true,
+            function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
+            function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
+            true), 28)
         AddDivider()
         -- Expiring (changes icon border color when aura is about to expire)
         AddWidget(GUI:CreateCheckbox(parent, "Expiring Color Override", proxy, "expiringEnabled"), 28)
@@ -2122,6 +2135,7 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
         AddWidget(GUI:CreateSlider(parent, "Border Thickness", 1, 5, 1, proxy, "borderThickness"), 54)
         AddWidget(GUI:CreateSlider(parent, "Border Inset", -3, 5, 1, proxy, "borderInset"), 54)
         AddWidget(GUI:CreateCheckbox(parent, "Hide Cooldown Swipe", proxy, "hideSwipe"), 28)
+        AddWidget(GUI:CreateCheckbox(parent, "Hide Icon (Text Only)", proxy, "hideIcon"), 28)
         AddDivider()
         -- Duration text
         AddWidget(GUI:CreateCheckbox(parent, "Show Duration Text", proxy, "showDuration"), 28)
@@ -2132,6 +2146,10 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
         AddWidget(GUI:CreateSlider(parent, "Duration Offset X", -20, 20, 1, proxy, "durationX"), 54)
         AddWidget(GUI:CreateSlider(parent, "Duration Offset Y", -20, 20, 1, proxy, "durationY"), 54)
         AddWidget(GUI:CreateCheckbox(parent, "Color Duration by Time", proxy, "durationColorByTime"), 28)
+        AddWidget(GUI:CreateColorPicker(parent, "Duration Text Color", proxy, "durationColor", true,
+            function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
+            function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
+            true), 28)
         AddDivider()
         -- Stack count
         AddWidget(GUI:CreateCheckbox(parent, "Show Stacks", proxy, "showStacks"), 28)
@@ -2142,6 +2160,10 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
         AddWidget(GUI:CreateDropdown(parent, "Stack Anchor", ANCHOR_OPTIONS, proxy, "stackAnchor"), 54)
         AddWidget(GUI:CreateSlider(parent, "Stack Offset X", -20, 20, 1, proxy, "stackX"), 54)
         AddWidget(GUI:CreateSlider(parent, "Stack Offset Y", -20, 20, 1, proxy, "stackY"), 54)
+        AddWidget(GUI:CreateColorPicker(parent, "Stack Text Color", proxy, "stackColor", true,
+            function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
+            function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
+            true), 28)
         AddDivider()
         -- Expiring
         AddWidget(GUI:CreateCheckbox(parent, "Expiring Color Override", proxy, "expiringEnabled"), 28)
@@ -2320,12 +2342,14 @@ local GLOBAL_DEFAULTS_FALLBACK = {
     durationFont = "Fonts\\FRIZQT__.TTF", durationScale = 1.0,
     durationOutline = "OUTLINE", durationAnchor = "CENTER",
     durationX = 0, durationY = 0, durationColorByTime = false,
+    durationColor = {r = 1, g = 1, b = 1, a = 1},
     stackFont = "Fonts\\FRIZQT__.TTF", stackScale = 1.0,
     stackOutline = "OUTLINE", stackAnchor = "BOTTOMRIGHT",
     stackX = 0, stackY = 0,
+    stackColor = {r = 1, g = 1, b = 1, a = 1},
     iconBorderEnabled = true, iconBorderThickness = 1,
     stackMinimum = 2,
-    hideSwipe = false,
+    hideSwipe = false, hideIcon = false,
 }
 
 local function BuildGlobalView(parent)
@@ -2379,6 +2403,10 @@ local function BuildGlobalView(parent)
 
     local hideSwipeCb = GUI:CreateCheckbox(parent, "Hide Cooldown Swipe", defaults, "hideSwipe")
     hideSwipeCb:SetPoint("TOPLEFT", 5, yPos)
+    yPos = yPos - 24
+
+    local hideIconCb = GUI:CreateCheckbox(parent, "Hide Icon (Text Only)", defaults, "hideIcon")
+    hideIconCb:SetPoint("TOPLEFT", 5, yPos)
     yPos = yPos - 28
 
     -- ===== FONT SETTINGS =====
@@ -2429,7 +2457,18 @@ local function BuildGlobalView(parent)
     local durOffY = GUI:CreateSlider(parent, "Offset Y", -20, 20, 1, defaults, "durationY")
     durOffY:SetPoint("TOPLEFT", 5, yPos)
     durOffY:SetWidth(contentWidth - 10)
-    yPos = yPos - 54
+    yPos = yPos - 50
+
+    local durColorByTimeCb = GUI:CreateCheckbox(parent, "Color by Time", defaults, "durationColorByTime")
+    durColorByTimeCb:SetPoint("TOPLEFT", 5, yPos)
+    yPos = yPos - 24
+
+    local durColorPicker = GUI:CreateColorPicker(parent, "Duration Text Color", defaults, "durationColor", true,
+        function() RefreshPlacedIndicators(); RefreshPreviewEffects() end,
+        function() RefreshPlacedIndicators(); RefreshPreviewEffects() end,
+        true)
+    durColorPicker:SetPoint("TOPLEFT", 5, yPos)
+    yPos = yPos - 32
 
     local stackFontLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     stackFontLabel:SetPoint("TOPLEFT", 10, yPos)
@@ -2465,7 +2504,14 @@ local function BuildGlobalView(parent)
     local stkOffY = GUI:CreateSlider(parent, "Offset Y", -20, 20, 1, defaults, "stackY")
     stkOffY:SetPoint("TOPLEFT", 5, yPos)
     stkOffY:SetWidth(contentWidth - 10)
-    yPos = yPos - 54
+    yPos = yPos - 50
+
+    local stkColorPicker = GUI:CreateColorPicker(parent, "Stack Text Color", defaults, "stackColor", true,
+        function() RefreshPlacedIndicators(); RefreshPreviewEffects() end,
+        function() RefreshPlacedIndicators(); RefreshPreviewEffects() end,
+        true)
+    stkColorPicker:SetPoint("TOPLEFT", 5, yPos)
+    yPos = yPos - 32
 
     -- ===== IMPORT FROM BUFFS TAB =====
     local div0 = parent:CreateTexture(nil, "ARTWORK")

@@ -10,6 +10,8 @@ DF.CHANGELOG_TEXT = [===[
 * **Spec-scoped aura configs** — Aura Designer configurations are now saved per-spec, so shared buffs like Prayer of Mending can have different indicator setups on each spec
 * **Spec-scoped layout groups** — layout groups are now saved per-spec alongside aura configs
 * **Global Hide Cooldown Swipe** — new toggle in Aura Designer Global Defaults to hide the cooldown swipe animation on all icon and square indicators
+* **Duration and Stack text color** — new color pickers with alpha for duration text and stack text on icon and square indicators, available as both global defaults and per-indicator overrides
+* **Hide Icon (Text Only)** — new checkbox on icon and square indicators that hides the icon visual while keeping duration and stack text visible
 
 ### Bug Fixes
 * Fixed buff/debuff/defensive tooltips not showing when hovering aura icons
