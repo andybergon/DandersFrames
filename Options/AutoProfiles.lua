@@ -2755,12 +2755,12 @@ function AutoProfilesUI:CreateEditingBanner(parent)
     })
     exitBtn:SetBackdropColor(0.1, 0.1, 0.1, 1)
     exitBtn:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
-    
+
     local exitText = exitBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     exitText:SetPoint("CENTER")
     exitText:SetText("Exit Editing")
     exitText:SetTextColor(0.8, 0.8, 0.8)
-    
+
     exitBtn:SetScript("OnEnter", function(self)
         self:SetBackdropBorderColor(1, 0.5, 0.2, 1)
         exitText:SetTextColor(1, 0.5, 0.2)
@@ -2772,18 +2772,72 @@ function AutoProfilesUI:CreateEditingBanner(parent)
     exitBtn:SetScript("OnClick", function()
         AutoProfilesUI:ExitEditing()
     end)
-    
+
+    -- Reset Aura Designer button (only visible on Aura Designer page)
+    local resetADBtn = CreateFrame("Button", nil, banner, "BackdropTemplate")
+    resetADBtn:SetSize(140, 26)
+    resetADBtn:SetPoint("RIGHT", exitBtn, "LEFT", -8, 0)
+    resetADBtn:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    resetADBtn:SetBackdropColor(0.12, 0.06, 0.06, 1)
+    resetADBtn:SetBackdropBorderColor(0.5, 0.15, 0.15, 1)
+
+    local resetADText = resetADBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    resetADText:SetPoint("CENTER")
+    resetADText:SetText("Reset to Global")
+    resetADText:SetTextColor(1, 0.5, 0.5)
+
+    resetADBtn:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(0.8, 0.2, 0.2, 1)
+        resetADText:SetTextColor(1, 1, 1)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Reset Aura Designer to Global")
+        GameTooltip:AddLine("Removes all Aura Designer overrides from this\nauto layout, restoring it to match your global profile.", 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    resetADBtn:SetScript("OnLeave", function(self)
+        self:SetBackdropBorderColor(0.5, 0.15, 0.15, 1)
+        resetADText:SetTextColor(1, 0.5, 0.5)
+        GameTooltip:Hide()
+    end)
+    resetADBtn:SetScript("OnClick", function()
+        StaticPopup_Show("DF_AURA_DESIGNER_RESET_GLOBAL")
+    end)
+    resetADBtn:Hide()
+    banner.resetADBtn = resetADBtn
+
     editingBanner = banner
     return banner
 end
 
 function AutoProfilesUI:UpdateEditingBanner()
     if not editingBanner then return end
-    
+
     local info = self:GetEditingInfo()
     if info then
         editingBanner.profileText:SetText(info.contentName .. " → \"" .. info.name .. "\"")
-        editingBanner.infoText:SetText(info.rangeText .. " · Only changed settings will be saved")
+
+        -- Show contextual info text based on the current page
+        local GUI = DF.GUI
+        local isAuraDesignerPage = GUI and GUI.CurrentPageName == "auras_auradesigner"
+        if isAuraDesignerPage then
+            editingBanner.infoText:SetText(info.rangeText .. " · |cffff6666Per-setting reset is not available for Aura Designer|r")
+        else
+            editingBanner.infoText:SetText(info.rangeText .. " · Only changed settings will be saved")
+        end
+
+        -- Show/hide the Reset Aura Designer button
+        if editingBanner.resetADBtn then
+            if isAuraDesignerPage then
+                editingBanner.resetADBtn:Show()
+            else
+                editingBanner.resetADBtn:Hide()
+            end
+        end
+
         editingBanner:Show()
     else
         editingBanner:Hide()
@@ -2961,14 +3015,18 @@ function AutoProfilesUI:SetupEditingBanner()
         end
     end
 
-    -- Hook tab button clicks to dismiss sidebar hint
+    -- Hook tab button clicks to dismiss sidebar hint and update banner
     -- Tab OnClick calls the local SelectTab (not GUI.SelectTab), so we must
     -- hook each button directly to detect user tab clicks
     for _, btn in pairs(GUI.Tabs) do
         btn:HookScript("OnClick", function()
-            if AutoProfilesUI:IsEditing() and not AutoProfilesUI.sidebarHintDismissed
-               and not AutoProfilesUI.suppressHintDismiss then
-                AutoProfilesUI:HideSidebarHint()
+            if AutoProfilesUI:IsEditing() then
+                if not AutoProfilesUI.sidebarHintDismissed
+                   and not AutoProfilesUI.suppressHintDismiss then
+                    AutoProfilesUI:HideSidebarHint()
+                end
+                -- Update banner for page-specific elements (e.g. Aura Designer reset button)
+                AutoProfilesUI:UpdateEditingBanner()
             end
         end)
     end

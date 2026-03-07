@@ -600,7 +600,9 @@ SlashCmdList["DFOVERRIDEDEBUG"] = function()
     end
 end
 
-local function AddOverrideIndicators(container, lbl, dbKey, onReset, verticalOffset, optionsMap)
+local function AddOverrideIndicators(container, lbl, dbKey, onReset, verticalOffset, optionsMap, dbTable)
+    -- Skip for proxy tables (e.g. Aura Designer) that don't support per-key override tracking
+    if dbTable and rawget(dbTable, "_skipOverrideIndicators") then return end
     verticalOffset = verticalOffset or 0
     container.overrideOptionsMap = optionsMap
     
@@ -1013,7 +1015,7 @@ function GUI:CreateCheckbox(parent, label, dbTable, dbKey, callback, customGet, 
                 if callback then callback() end
             end
         end
-        AddOverrideIndicators(container, txt, effectiveOverrideKey, onReset)
+        AddOverrideIndicators(container, txt, effectiveOverrideKey, onReset, nil, nil, dbTable)
     end
     
     local function UpdateState()
@@ -1170,7 +1172,7 @@ function GUI:CreateEditBox(parent, label, dbTable, dbKey, callback, width)
                 if callback then callback() end
             end
         end
-        AddOverrideIndicators(frame, lbl, dbKey, onReset, 6)
+        AddOverrideIndicators(frame, lbl, dbKey, onReset, 6, nil, dbTable)
     end
     
     local editbox = CreateFrame("EditBox", nil, frame)
@@ -1266,9 +1268,9 @@ function GUI:CreateSlider(parent, label, minVal, maxVal, step, dbTable, dbKey, c
                 DF:UpdateAll()
             end
         end
-        AddOverrideIndicators(container, lbl, dbKey, onReset, 6)
+        AddOverrideIndicators(container, lbl, dbKey, onReset, 6, nil, dbTable)
     end
-    
+
     -- Background track
     local track = CreateFrame("Frame", nil, container, "BackdropTemplate")
     track:SetPoint("TOPLEFT", 0, -18)
@@ -1548,7 +1550,7 @@ function GUI:CreateColorPicker(parent, label, dbTable, dbKey, hasAlpha, callback
                 DF:UpdateAll()
             end
         end
-        AddOverrideIndicators(container, txt, dbKey, onReset)
+        AddOverrideIndicators(container, txt, dbKey, onReset, nil, nil, dbTable)
     end
     
     local function UpdateSwatch()
@@ -1720,7 +1722,7 @@ function GUI:CreateDropdown(parent, label, options, dbTable, dbKey, callback)
                 DF:UpdateAll()
             end
         end
-        AddOverrideIndicators(container, lbl, dbKey, onReset, 6, options)
+        AddOverrideIndicators(container, lbl, dbKey, onReset, 6, options, dbTable)
     end
 
     -- Button - use relative anchoring so it resizes with container
@@ -1906,13 +1908,13 @@ end
 function GUI:CreateTextureDropdown(parent, label, dbTable, dbKey, callback, customOptions)
     local container = CreateFrame("Frame", nil, parent)
     container:SetSize(260, 50)
-    
+
     -- Label
     local lbl = container:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     lbl:SetPoint("TOPLEFT", 0, 0)
     lbl:SetText(label)
     lbl:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-    
+
     -- Add override indicators if dbKey is provided
     if dbKey and type(dbKey) == "string" then
         local function onReset()
@@ -1929,7 +1931,7 @@ function GUI:CreateTextureDropdown(parent, label, dbTable, dbKey, callback, cust
                 if callback then callback() end
             end
         end
-        AddOverrideIndicators(container, lbl, dbKey, onReset, 6)
+        AddOverrideIndicators(container, lbl, dbKey, onReset, 6, nil, dbTable)
     end
     
     -- Button - use relative anchoring so it resizes with container
@@ -2218,13 +2220,13 @@ end
 function GUI:CreateFontDropdown(parent, label, dbTable, dbKey, callback)
     local container = CreateFrame("Frame", nil, parent)
     container:SetSize(260, 50)
-    
+
     -- Label
     local lbl = container:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     lbl:SetPoint("TOPLEFT", 0, 0)
     lbl:SetText(label)
     lbl:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-    
+
     -- Add override indicators if dbKey is provided
     if dbKey and type(dbKey) == "string" then
         local function onReset()
@@ -2241,7 +2243,7 @@ function GUI:CreateFontDropdown(parent, label, dbTable, dbKey, callback)
                 if callback then callback() end
             end
         end
-        AddOverrideIndicators(container, lbl, dbKey, onReset, 6)
+        AddOverrideIndicators(container, lbl, dbKey, onReset, 6, nil, dbTable)
     end
     
     -- Button - use relative anchoring so it resizes with container
@@ -2839,7 +2841,7 @@ function GUI:CreateRoleOrderList(parent, dbTable, dbKey, callback, separateMelee
     end
     
     -- Override indicators for profile editing
-    if dbKey and type(dbKey) == "string" then
+    if dbKey and type(dbKey) == "string" and not (dbTable and rawget(dbTable, "_skipOverrideIndicators")) then
         local function onReset()
             if DF.AutoProfilesUI then
                 DF.AutoProfilesUI:ResetProfileSetting(dbKey)
@@ -2857,7 +2859,7 @@ function GUI:CreateRoleOrderList(parent, dbTable, dbKey, callback, separateMelee
             end
         end
         AddOrderListOverrideIndicators(container, dbKey, onReset)
-        
+
         container:SetScript("OnShow", function()
             UpdateItemPositions()
             if container.UpdateOverrideIndicators then
@@ -2865,7 +2867,7 @@ function GUI:CreateRoleOrderList(parent, dbTable, dbKey, callback, separateMelee
             end
         end)
     end
-    
+
     return container
 end
 
@@ -3162,7 +3164,7 @@ function GUI:CreateClassOrderList(parent, dbTable, dbKey, callback)
     end
     
     -- Override indicators for profile editing
-    if dbKey and type(dbKey) == "string" then
+    if dbKey and type(dbKey) == "string" and not (dbTable and rawget(dbTable, "_skipOverrideIndicators")) then
         local function onReset()
             if DF.AutoProfilesUI then
                 DF.AutoProfilesUI:ResetProfileSetting(dbKey)
@@ -3180,7 +3182,7 @@ function GUI:CreateClassOrderList(parent, dbTable, dbKey, callback)
             end
         end
         AddOrderListOverrideIndicators(container, dbKey, onReset)
-        
+
         container:SetScript("OnShow", function()
             UpdateItemPositions()
             if container.UpdateOverrideIndicators then
@@ -3188,7 +3190,7 @@ function GUI:CreateClassOrderList(parent, dbTable, dbKey, callback)
             end
         end)
     end
-    
+
     return container
 end
 
@@ -3467,7 +3469,7 @@ function GUI:CreateGroupOrderList(parent, dbTable, dbKey, callback, playerGroupF
     end
     
     -- Override indicators for profile editing
-    if dbKey and type(dbKey) == "string" then
+    if dbKey and type(dbKey) == "string" and not (dbTable and rawget(dbTable, "_skipOverrideIndicators")) then
         local function onReset()
             if DF.AutoProfilesUI then
                 DF.AutoProfilesUI:ResetProfileSetting(dbKey)
@@ -3485,7 +3487,7 @@ function GUI:CreateGroupOrderList(parent, dbTable, dbKey, callback, playerGroupF
             end
         end
         AddOrderListOverrideIndicators(container, dbKey, onReset)
-        
+
         container:SetScript("OnShow", function()
             UpdateItemPositions()
             if container.UpdateOverrideIndicators then
@@ -3493,7 +3495,7 @@ function GUI:CreateGroupOrderList(parent, dbTable, dbKey, callback, playerGroupF
             end
         end)
     end
-    
+
     return container
 end
 

@@ -695,7 +695,7 @@ local GLOBAL_DEFAULT_MAP = {
 -- Create a proxy table that maps flat key access to an indicator instance
 -- Fallback chain: instance value → global defaults → TYPE_DEFAULTS
 local function CreateInstanceProxy(auraName, indicatorID)
-    return setmetatable({}, {
+    return setmetatable({ _skipOverrideIndicators = true }, {
         __index = function(_, k)
             local inst = GetIndicatorByID(auraName, indicatorID)
             if inst then
@@ -742,7 +742,7 @@ end
 -- Create a proxy table that maps flat key access to nested aura config
 local function CreateProxy(auraName, typeKey)
     local defaults = TYPE_DEFAULTS[typeKey]
-    return setmetatable({}, {
+    return setmetatable({ _skipOverrideIndicators = true }, {
         __index = function(_, k)
             local auraCfg = GetSpecAuras()[auraName]
             if auraCfg and auraCfg[typeKey] then
@@ -772,7 +772,7 @@ end
 
 -- Create a proxy for the aura-level config (priority, expiring)
 local function CreateAuraProxy(auraName)
-    return setmetatable({}, {
+    return setmetatable({ _skipOverrideIndicators = true }, {
         __index = function(_, k)
             local auraCfg = GetSpecAuras()[auraName]
             if auraCfg then return auraCfg[k] end
@@ -1049,6 +1049,52 @@ local contentBaseY          -- yPos where content starts (below enable banner)
 local contentRightInset     -- Right inset for left-side panels
 local origY_framePreview    -- original yPos of framePreview
 local currentBannerShift = 0 -- tracks current coexist banner offset
+
+-- ============================================================
+-- AUTO LAYOUT RESET POPUP
+-- Confirmation dialog before wiping all Aura Designer overrides
+-- ============================================================
+
+StaticPopupDialogs["DF_AURA_DESIGNER_RESET_GLOBAL"] = {
+    text = "Reset all Aura Designer settings in this auto layout to match your global profile?\n\nThis cannot be undone.",
+    button1 = "Reset",
+    button2 = "Cancel",
+    OnAccept = function()
+        local AutoProfilesUI = DF.AutoProfilesUI
+        if not AutoProfilesUI or not AutoProfilesUI:IsEditing() then return end
+
+        local editingProfile = AutoProfilesUI.editingProfile
+        if not editingProfile or not editingProfile.overrides then return end
+
+        -- Remove the auraDesigner override (stored as a single top-level key)
+        local hadOverride = editingProfile.overrides["auraDesigner"] ~= nil
+        editingProfile.overrides["auraDesigner"] = nil
+
+        -- Restore from global snapshot
+        if AutoProfilesUI.globalSnapshot then
+            local realRaidDB = DF._realRaidDB
+            if realRaidDB then
+                local globalVal = AutoProfilesUI.globalSnapshot["auraDesigner"]
+                if globalVal then
+                    realRaidDB["auraDesigner"] = DF:DeepCopy(globalVal)
+                else
+                    realRaidDB["auraDesigner"] = nil
+                end
+            end
+        end
+
+        DF:Debug("AUTOPROFILE", "Reset Aura Designer overrides: had=%s", tostring(hadOverride))
+
+        -- Refresh Aura Designer page
+        DF:AuraDesigner_RefreshPage()
+        DF:InvalidateAuraLayout()
+        DF:UpdateAllFrames()
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
 
 -- ============================================================
 -- UI STATE (v4 redesign — tabbed right panel)
@@ -2358,7 +2404,7 @@ local function BuildGlobalView(parent)
     -- Proxy so every write triggers a full preview rebuild
     -- (global defaults affect ALL indicators, need full teardown/rebuild)
     -- Falls back to GLOBAL_DEFAULTS_FALLBACK for keys missing from existing profiles
-    local defaults = setmetatable({}, {
+    local defaults = setmetatable({ _skipOverrideIndicators = true }, {
         __index = function(_, k)
             local v = rawDefaults[k]
             if v ~= nil then return v end
@@ -4777,6 +4823,9 @@ function DF.BuildAuraDesignerPage(guiRef, pageRef, dbRef)
     -- ========================================
     -- COEXISTENCE INFO BANNER
     -- ========================================
+    -- contentBaseY marks where dynamic content starts (below the enable banner).
+    -- The coexist banner is positioned dynamically in RefreshPage based on
+    -- visibility, shifting the split container down as needed.
     contentBaseY = yPos
     coexistBanner = CreateFrame("Frame", nil, mainFrame, "BackdropTemplate")
     coexistBanner:SetHeight(COEXIST_BANNER_H)
@@ -5034,6 +5083,15 @@ end
 function DF:AuraDesigner_RefreshPage()
     if not mainFrame then return end
 
+    -- Account for editing banner offset (50px) when editing an auto layout
+    local editingOffset = 0
+    if DF.AutoProfilesUI and DF.AutoProfilesUI:IsEditing() then
+        editingOffset = 50
+    end
+    mainFrame:ClearAllPoints()
+    mainFrame:SetPoint("TOPLEFT", mainFrame:GetParent(), "TOPLEFT", 0, -editingOffset)
+    mainFrame:SetPoint("BOTTOMRIGHT", mainFrame:GetParent(), "BOTTOMRIGHT", 0, 0)
+
     -- Check if spec changed
     local currentSpec = ResolveSpec()
     if currentSpec ~= selectedSpec then
@@ -5066,16 +5124,20 @@ function DF:AuraDesigner_RefreshPage()
             coexistBanner:Hide()
         end
 
-        -- Shift the split container when banner is visible
-        local newShift = bannerVisible and (COEXIST_BANNER_H + COEXIST_GAP) or 0
-        if newShift ~= currentBannerShift then
-            currentBannerShift = newShift
-            local delta = -newShift
-            if mainFrame.splitContainer then
-                mainFrame.splitContainer:ClearAllPoints()
-                mainFrame.splitContainer:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 0, contentBaseY + delta)
-                mainFrame.splitContainer:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", 0, 0)
-            end
+        coexistBanner:ClearAllPoints()
+        coexistBanner:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 0, contentBaseY)
+        coexistBanner:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", 0, contentBaseY)
+
+        -- Shift the split container below the coexist banner when visible
+        local totalShift = 0
+        if bannerVisible then
+            totalShift = totalShift + COEXIST_BANNER_H + COEXIST_GAP
+        end
+        currentBannerShift = totalShift
+        if mainFrame.splitContainer then
+            mainFrame.splitContainer:ClearAllPoints()
+            mainFrame.splitContainer:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 0, contentBaseY - totalShift)
+            mainFrame.splitContainer:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", 0, 0)
         end
     end
 

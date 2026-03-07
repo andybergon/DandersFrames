@@ -877,9 +877,12 @@ function CC:ShouldClearBlizzardFromFrame(frame)
     local isDandersFrame = frame.dfIsDandersFrame == true
     
     if isDandersFrame then
-        -- Always clear from DandersFrames when our click-casting is enabled
-        -- This ensures we have full control over our own frames
-        return true
+        -- DandersFrames never have Blizzard click-casting applied to them.
+        -- Our own ClearBindingsFromFrame (inside ApplyBindingsToFrameUnified)
+        -- already handles full cleanup. Clearing type1 here would race with
+        -- the batch processing that re-applies it, leaving frames with type1=""
+        -- if combat starts before the batch reaches them.
+        return false
     else
         -- Only clear from Other frames if user has bindings that apply to them
         return self:AnyBindingNeedsOtherFrames()
@@ -1241,8 +1244,10 @@ function CC:RegisterFrame(frame)
         end)
     end
     
-    -- Clear any Blizzard click casting on this frame
-    self:ClearBlizzardClickCastFromFrame(frame)
+    -- Clear any Blizzard click casting on this frame (only non-DandersFrames need this)
+    if self:ShouldClearBlizzardFromFrame(frame) then
+        self:ClearBlizzardClickCastFromFrame(frame)
+    end
     
     -- IMPORTANT: Build macro map FIRST so we have bindings to apply
     if not self.unifiedMacroMap then

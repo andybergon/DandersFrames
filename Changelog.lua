@@ -1,8 +1,23 @@
 local addonName, DF = ...
-DF.BUILD_DATE = "2026-03-06T13:33:51Z"
+DF.BUILD_DATE = "2026-03-06T22:22:19Z"
 DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
+
+## [4.0.13] - 2026-03-06
+
+### Bug Fixes
+* (Click Casting) Fixed spell transform procs (e.g. Flash of Light → Benediction) causing "Spell not Learned" errors — macros now always use the base spell name since WoW's /cast command handles override resolution automatically
+* (Click Casting) Fixed left-click casting randomly failing on some party/raid frames — Blizzard click-cast clearing was racing with the binding batch processor, leaving frames unclickable if combat started mid-batch
+* (Aura Blacklist) Fixed class dropdown overlapping text and not changing the displayed lists when selecting a different class
+* (Auto Layouts) Fixed Aura Designer changes not saving when editing an auto layout a second time — existing overrides are now properly updated instead of silently skipped
+* (Aura Designer) Fixed override indicators incorrectly appearing on internal proxy settings
+
+### Improvements
+* (Aura Designer) Increased all X/Y offset slider ranges to -150 to 150 for more positioning flexibility
+* (Aura Designer) Grouped layout spacing slider now allows negative values (down to -5) for overlapping indicators
+* (Aura Designer) Added "Reset to Global" button in the editing banner when editing auto layout overrides
+* (Aura Designer) Editing banner now properly offsets page content instead of overlapping controls
 
 ## [4.0.12] - 2026-03-06
 
