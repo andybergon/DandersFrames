@@ -2795,7 +2795,7 @@ local function CreateEnableBanner(parent)
     cb:SetCheckedTexture(cb.Check)
 
     local adDB = GetAuraDesignerDB()
-    cb:SetChecked(adDB.enabled)
+    cb:SetChecked(adDB and adDB.enabled)
     cb:SetScript("OnClick", function(self)
         local checked = self:GetChecked()
         if checked then
