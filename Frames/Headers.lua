@@ -124,6 +124,16 @@ end
 -- unit events are silently dropped — causing health desync.
 -- ============================================================
 function DF:RebuildUnitFrameMap()
+    -- Targeted cleanup: remove stale entries where the frame is hidden
+    -- or no longer assigned to that unit. This replaces the old destructive
+    -- wipe(unitFrameMap) pattern — we keep valid entries so UNIT_HEALTH
+    -- events are never silently dropped during transitions.
+    for unit, frame in pairs(unitFrameMap) do
+        if not frame:IsShown() or frame:GetAttribute("unit") ~= unit then
+            unitFrameMap[unit] = nil
+        end
+    end
+
     -- Helper: process a single header child.
     -- Uses IsShown() instead of IsVisible() because IsVisible() requires
     -- ALL ancestors to be visible.  After a zone-transition wipe the parent
@@ -790,6 +800,14 @@ function DF:InitializeHeaderChild(frame)
     -- This ensures all visual elements are properly updated
     -- ========================================
     frame:HookScript("OnShow", function(self)
+        -- Register in unitFrameMap immediately so UNIT_HEALTH events
+        -- can dispatch to this frame the instant it becomes visible.
+        -- Without this, frames shown after RebuildUnitFrameMap() are
+        -- invisible to event dispatch until the next rebuild.
+        if self.unit and not self.isPinnedFrame then
+            unitFrameMap[self.unit] = self
+        end
+
         -- Small delay to ensure unit is set
         C_Timer.After(0.05, function()
             if self and self.unit and self:IsVisible() then
@@ -7363,10 +7381,17 @@ headerEventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
         wipe(rosterMembershipCache)
         lastRosterCount = 0
         
-        -- Clear unit-to-frame map - stale mappings could cause event handlers
-        -- to update wrong frames after zone transition
-        wipe(unitFrameMap)
-        
+        -- NOTE: Do NOT wipe(unitFrameMap) here. Keeping existing entries ensures
+        -- UNIT_HEALTH events keep dispatching to frames while headers rebuild.
+        -- The GUID cache wipe above forces OnAttributeChanged to always take the
+        -- full-refresh path, preventing stale-player-same-unit-string issues.
+        -- Stale entries are cleaned by RebuildUnitFrameMap() (targeted cleanup)
+        -- and overwritten by OnAttributeChanged when units reassign.
+
+        -- Reset self-healing cooldown so the first missed UNIT_HEALTH event
+        -- after zone transition triggers an immediate map rebuild
+        headerChildEventFrame.lastMapRebuild = nil
+
         -- Clear phased icon cache - stale phase data from previous zone/group
         if DF.WipePhasedCache then DF:WipePhasedCache() end
 
@@ -7447,7 +7472,21 @@ headerEventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
                 end)
             end
         end)
-        
+
+        -- BG SAFETY NET: In large BGs (40 players), SecureGroupHeaderTemplate
+        -- may take >0.1s to show all children. The OnShow hook registers each
+        -- child in unitFrameMap as it appears, but a second full rebuild +
+        -- refresh ensures every frame has correct health data.
+        if IsInRaid() then
+            C_Timer.After(1.0, function()
+                if InCombatLockdown() then return end
+                DF:RebuildUnitFrameMap()
+                if DF.RefreshLiveFrames then
+                    DF:RefreshLiveFrames()
+                end
+            end)
+        end
+
         -- BUG #3 FIX: Delayed arena detection retry.
         -- On reload in arena, IsInInstance() may not return "arena" immediately when
         -- PLAYER_ENTERING_WORLD fires. This causes UpdateHeaderVisibility to show raid
