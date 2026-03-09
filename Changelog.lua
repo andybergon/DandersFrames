@@ -1,5 +1,5 @@
 local addonName, DF = ...
-DF.BUILD_DATE = "2026-03-08T15:59:33Z"
+DF.BUILD_DATE = "2026-03-08T21:59:08Z"
 DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
@@ -16,6 +16,15 @@ DF.CHANGELOG_TEXT = [===[
 * (Missing Buff) Fixed missing buff indicator incorrectly showing on NPC followers in follower dungeons
 * (API) Fixed external API functions not returning arena frames — `GetFrameForUnit()`, `GetAllFrames()`, and `IterateFrames()` now work correctly inside arenas
 * (Side Menu) Improved hiding of Blizzard's raid/party side menu when disabled in settings
+* (Raid Frames) **Fixed hidden groups reappearing on roster changes** — groups hidden via group visibility settings would become visible when players joined, left, or moved between groups
+* (Raid Frames) **Fixed frames snapping to random positions on roster changes** — hidden groups corrupted the positioning slot calculations, causing visible groups to shift
+* (Raid Frames) **Fixed group order resetting on roster changes** — custom group display order was not preserved when the roster changed
+* (PvP) **Fixed health bars showing 100% in Battlegrounds** — a race condition caused UNIT_HEALTH events to be silently dropped during zone transitions, leaving health bars stuck at their initial value
+* (PvP) Fixed self-healing cooldown not resetting on zone transitions, delaying map rebuilds after entering a BG
+* (Test Mode) Fixed group visibility setting not applying in raid test mode — hidden groups now stay hidden
+* (Test Mode) Fixed custom group display order not applying in raid test mode
+* (Test Mode) Fixed "Columns Grow From" and "Reverse Order" dropdowns not updating flat raid test frames
+* (Test Mode) Fixed layout settings (spacing, growth direction, groups per row, etc.) not refreshing test frames when changed
 
 ## [4.0.13] - 2026-03-08
 

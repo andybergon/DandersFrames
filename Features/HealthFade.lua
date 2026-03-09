@@ -16,6 +16,7 @@ local UnitExists = UnitExists
 local UnitHealthPercent = UnitHealthPercent
 local CreateColor = CreateColor
 local wipe = wipe
+local issecretvalue = issecretvalue
 
 -- ============================================================
 -- CURVE CACHE
@@ -77,12 +78,14 @@ function DF:ApplyHealthFadeAlpha(frame)
     end
 
     -- Determine below-threshold alpha based on range state
-    -- frame.dfInRange is a non-tainted boolean from Range.lua
-    local belowAlpha
-    if not db.oorEnabled and frame.dfInRange == false then
-        belowAlpha = db.rangeFadeAlpha or 0.4
-    else
-        belowAlpha = 1.0
+    -- frame.dfInRange may be a secret boolean from UnitInRange fallback
+    local belowAlpha = 1.0
+    if not db.oorEnabled then
+        local inRange = frame.dfInRange
+        if not (issecretvalue and issecretvalue(inRange)) and inRange == false then
+            belowAlpha = db.rangeFadeAlpha or 0.4
+        end
+        -- Secret values: can't compare, leave belowAlpha at 1 (OOR handled by frame-level SetAlphaFromBoolean)
     end
 
     local aboveAlpha = db.healthFadeAlpha or 0.5

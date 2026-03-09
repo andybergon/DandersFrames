@@ -1687,6 +1687,7 @@ DF.PartyDefaults = {
     testShowStatusIcons = false,
     testShowTargetedSpell = false,
     testShowClassPower = true,
+    testShowAuraDesigner = false,
 
     -- Tooltip settings
     tooltipAuraAnchor = "DEFAULT",
@@ -1858,6 +1859,8 @@ DF.PartyDefaults = {
             durationColor = {r = 1, g = 1, b = 1, a = 1},
             stackColor = {r = 1, g = 1, b = 1, a = 1},
             hideIcon = false,
+            indicatorFrameLevel = 30,
+            indicatorFrameStrata = "INHERIT",
         },
         auras = {},
         layoutGroups = {},
@@ -2862,6 +2865,7 @@ DF.RaidDefaults = {
     testShowStatusIcons = false,
     testShowTargetedSpell = false,
     testShowClassPower = true,
+    testShowAuraDesigner = false,
 
     -- Tooltip settings
     tooltipAuraAnchor = "DEFAULT",
@@ -3033,6 +3037,8 @@ DF.RaidDefaults = {
             durationColor = {r = 1, g = 1, b = 1, a = 1},
             stackColor = {r = 1, g = 1, b = 1, a = 1},
             hideIcon = false,
+            indicatorFrameLevel = 30,
+            indicatorFrameStrata = "INHERIT",
         },
         auras = {},
         layoutGroups = {},

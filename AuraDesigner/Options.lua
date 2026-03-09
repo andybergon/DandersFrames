@@ -55,6 +55,11 @@ local GROWTH_OPTIONS = {
     _order = {"RIGHT", "LEFT", "UP", "DOWN"},
 }
 
+local FRAME_STRATA_OPTIONS = {
+    INHERIT = "Inherit (Frame)", BACKGROUND = "Background", LOW = "Low", MEDIUM = "Medium", HIGH = "High",
+    _order = {"INHERIT", "BACKGROUND", "LOW", "MEDIUM", "HIGH"},
+}
+
 local BORDER_STYLE_OPTIONS = {
     SOLID = "Solid Border", ANIMATED = "Animated Border", DASHED = "Dashed Border",
     GLOW = "Glow", CORNERS = "Corners Only",
@@ -517,6 +522,7 @@ local TYPE_DEFAULTS = {
         stackColor = {r = 1, g = 1, b = 1, a = 1},
         expiringEnabled = false, expiringThreshold = 30,
         expiringColor = {r = 1, g = 0.2, b = 0.2, a = 1},
+        frameLevel = 30, frameStrata = "INHERIT",
     },
     square = {
         anchor = "TOPLEFT", offsetX = 0, offsetY = 0,
@@ -536,6 +542,7 @@ local TYPE_DEFAULTS = {
         stackColor = {r = 1, g = 1, b = 1, a = 1},
         expiringEnabled = false, expiringThreshold = 30,
         expiringColor = {r = 1, g = 0.2, b = 0.2, a = 1},
+        frameLevel = 30, frameStrata = "INHERIT",
     },
     bar = {
         anchor = "BOTTOM", offsetX = 0, offsetY = 0,
@@ -554,6 +561,7 @@ local TYPE_DEFAULTS = {
         durationScale = 1.0, durationOutline = "OUTLINE",
         durationAnchor = "CENTER", durationX = 0, durationY = 0,
         durationColorByTime = true,
+        frameLevel = 30, frameStrata = "INHERIT",
     },
 }
 
@@ -696,6 +704,7 @@ local GLOBAL_DEFAULT_MAP = {
         stackAnchor = "stackAnchor", stackX = "stackX", stackY = "stackY",
         stackMinimum = "stackMinimum", stackColor = "stackColor",
         hideSwipe = "hideSwipe", hideIcon = "hideIcon",
+        frameLevel = "indicatorFrameLevel", frameStrata = "indicatorFrameStrata",
     },
     square = {
         size = "iconSize", scale = "iconScale", showDuration = "showDuration", showStacks = "showStacks",
@@ -706,11 +715,13 @@ local GLOBAL_DEFAULT_MAP = {
         stackAnchor = "stackAnchor", stackX = "stackX", stackY = "stackY",
         stackMinimum = "stackMinimum", stackColor = "stackColor",
         hideSwipe = "hideSwipe", hideIcon = "hideIcon",
+        frameLevel = "indicatorFrameLevel", frameStrata = "indicatorFrameStrata",
     },
     bar    = {
         durationFont = "durationFont", durationScale = "durationScale", durationOutline = "durationOutline",
         durationAnchor = "durationAnchor", durationX = "durationX", durationY = "durationY",
         durationColorByTime = "durationColorByTime",
+        frameLevel = "indicatorFrameLevel", frameStrata = "indicatorFrameStrata",
     },
 }
 
@@ -1644,6 +1655,7 @@ local function RefreshPlacedIndicators()
                     local iconMap = mockFrame.dfAD_icons
                     local icon = iconMap and iconMap[instanceKey]
                     if icon then
+                        icon:SetFrameStrata(mockFrame:GetFrameStrata())
                         icon:SetFrameLevel(mockFrame:GetFrameLevel() + 8)
                         icon:EnableMouse(true)
                         if icon.SetMouseClickEnabled then
@@ -1686,6 +1698,7 @@ local function RefreshPlacedIndicators()
                     local sqMap = mockFrame.dfAD_squares
                     local sq = sqMap and sqMap[instanceKey]
                     if sq then
+                        sq:SetFrameStrata(mockFrame:GetFrameStrata())
                         sq:SetFrameLevel(mockFrame:GetFrameLevel() + 8)
                         sq:EnableMouse(true)
                         sq:SetScript("OnMouseUp", function(_, button)
@@ -1724,6 +1737,7 @@ local function RefreshPlacedIndicators()
                     local barMap = mockFrame.dfAD_bars
                     local bar = barMap and barMap[instanceKey]
                     if bar then
+                        bar:SetFrameStrata(mockFrame:GetFrameStrata())
                         bar:SetFrameLevel(mockFrame:GetFrameLevel() + 7)
                         bar:EnableMouse(true)
                         bar:SetScript("OnMouseUp", function(_, button)
@@ -2135,6 +2149,8 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
         AddWidget(GUI:CreateSlider(parent, "Size", 8, 64, 1, proxy, "size"), 54)
         AddWidget(GUI:CreateSlider(parent, "Scale", 0.5, 3.0, 0.05, proxy, "scale"), 54)
         AddWidget(GUI:CreateSlider(parent, "Alpha", 0, 1, 0.05, proxy, "alpha"), 54)
+        AddWidget(GUI:CreateSlider(parent, "Frame Level", -10, 30, 1, proxy, "frameLevel"), 54)
+        AddWidget(GUI:CreateDropdown(parent, "Frame Strata", FRAME_STRATA_OPTIONS, proxy, "frameStrata"), 54)
         AddDivider()
         -- Border
         AddWidget(GUI:CreateCheckbox(parent, "Show Border", proxy, "borderEnabled"), 28)
@@ -2200,6 +2216,8 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
             function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
             true), 28)
         AddWidget(GUI:CreateSlider(parent, "Alpha", 0, 1, 0.05, proxy, "alpha"), 54)
+        AddWidget(GUI:CreateSlider(parent, "Frame Level", -10, 30, 1, proxy, "frameLevel"), 54)
+        AddWidget(GUI:CreateDropdown(parent, "Frame Strata", FRAME_STRATA_OPTIONS, proxy, "frameStrata"), 54)
         AddDivider()
         -- Border
         AddWidget(GUI:CreateCheckbox(parent, "Show Border", proxy, "showBorder"), 28)
@@ -2288,6 +2306,8 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
             function() if RefreshPreviewLightweight then RefreshPreviewLightweight() end end,
             true), 28)
         AddWidget(GUI:CreateSlider(parent, "Alpha", 0, 1, 0.05, proxy, "alpha"), 54)
+        AddWidget(GUI:CreateSlider(parent, "Frame Level", -10, 30, 1, proxy, "frameLevel"), 54)
+        AddWidget(GUI:CreateDropdown(parent, "Frame Strata", FRAME_STRATA_OPTIONS, proxy, "frameStrata"), 54)
         AddDivider()
         -- Border
         AddWidget(GUI:CreateCheckbox(parent, "Show Border", proxy, "showBorder"), 28)
@@ -2462,6 +2482,16 @@ local function BuildGlobalView(parent)
     local iconScale = GUI:CreateSlider(parent, "Default Scale", 0.5, 3.0, 0.05, defaults, "iconScale")
     iconScale:SetPoint("TOPLEFT", 5, yPos)
     iconScale:SetWidth(contentWidth - 10)
+    yPos = yPos - 50
+
+    local frameLevelSlider = GUI:CreateSlider(parent, "Default Frame Level", -10, 30, 1, defaults, "indicatorFrameLevel")
+    frameLevelSlider:SetPoint("TOPLEFT", 5, yPos)
+    frameLevelSlider:SetWidth(contentWidth - 10)
+    yPos = yPos - 50
+
+    local frameStrataDropdown = GUI:CreateDropdown(parent, "Default Frame Strata", FRAME_STRATA_OPTIONS, defaults, "indicatorFrameStrata")
+    frameStrataDropdown:SetPoint("TOPLEFT", 5, yPos)
+    frameStrataDropdown:SetWidth(contentWidth - 10)
     yPos = yPos - 50
 
     local showDuration = GUI:CreateCheckbox(parent, "Show Duration", defaults, "showDuration")

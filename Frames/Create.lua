@@ -2518,6 +2518,20 @@ function DF:CreateAuraIcon(parent, index, auraType)
         if icon.SetMouseClickEnabled then
             icon:SetMouseClickEnabled(false)
         end
+        -- Apply user's click-through setting immediately so icons created
+        -- after ADDON_LOADED don't stay in the wrong state until combat.
+        local clickDB = DF.GetFrameDB and DF:GetFrameDB(parent)
+        if clickDB then
+            local disableMouse
+            if auraType == "BUFF" then
+                disableMouse = clickDB.buffDisableMouse
+            elseif auraType == "DEBUFF" then
+                disableMouse = clickDB.debuffDisableMouse
+            end
+            if disableMouse then
+                icon:EnableMouse(false)
+            end
+        end
     else
         DF.auraIconsNeedMouseFix = true
     end

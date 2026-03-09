@@ -35,6 +35,7 @@ local UnitClass = UnitClass
 local IsInGroup = IsInGroup
 local IsInRaid = IsInRaid
 local CreateColor = CreateColor
+local issecretvalue = issecretvalue  -- nil pre-Midnight, function in Midnight+
 
 -- ============================================================
 -- PERFORMANCE FIX: Reusable ColorMixin objects
@@ -71,12 +72,17 @@ local function GetDB(frame)
 end
 
 -- Get current range status for a unit
--- Returns a normal boolean from Range.lua's cache (based on C_Spell_IsSpellInRange)
+-- Returns a boolean (may be secret from UnitInRange fallback)
+-- Downstream callers must use SetAlphaFromBoolean for secret-safe alpha.
 local function GetInRange(frame)
     -- Use cached value from Range.lua if available
-    -- Range.lua uses C_Spell_IsSpellInRange which returns normal booleans
-    if frame.dfInRange ~= nil then
-        return frame.dfInRange
+    -- May be a secret boolean from UnitInRange (classes without friendly spells)
+    local inRange = frame.dfInRange
+    if issecretvalue and issecretvalue(inRange) then
+        return inRange  -- Secret boolean, pass through for SetAlphaFromBoolean
+    end
+    if inRange ~= nil then
+        return inRange
     end
     
     -- Fallback for frames not yet updated by range timer
@@ -94,8 +100,8 @@ local function GetInRange(frame)
 end
 
 -- Apply OOR alpha to any UI element (Frame, Texture, or FontString)
--- dfInRange is always a normal boolean, so we can safely branch on it.
--- Uses SetAlphaFromBoolean when available, falls back to SetAlpha.
+-- inRange may be a secret boolean from UnitInRange fallback (DK/DH/Hunter/Warrior).
+-- SetAlphaFromBoolean handles secret booleans natively (Midnight+ API).
 local function ApplyOORAlpha(element, inRange, inAlpha, oorAlpha)
     if not element then return end
     if element.SetAlphaFromBoolean then

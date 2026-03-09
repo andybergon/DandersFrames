@@ -9,6 +9,7 @@ local addonName, DF = ...
 local pairs, ipairs, type, tonumber, tostring = pairs, ipairs, type, tonumber, tostring
 local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
 local format = string.format
+local issecretvalue = issecretvalue
 
 -- Growth direction helper (file-scope, no closure allocation)
 local function GetGrowthOffset(direction, iconSize, pad)
@@ -1443,9 +1444,9 @@ function DF:ApplyAuraLayout(frame, auraType)
     local primaryX, primaryY = GetGrowthOffset(primary, scaledSize, paddingX)
     local secondaryX, secondaryY = GetGrowthOffset(secondary, scaledSize, paddingY)
     
-    -- Get range state for this frame (may be secret value in M+)
+    -- Get range state for this frame (may be secret boolean from UnitInRange fallback)
     local inRange = frame.dfInRange
-    if inRange == nil then inRange = true end  -- Default to in range if not set
+    if not (issecretvalue and issecretvalue(inRange)) and inRange == nil then inRange = true end
     local oorAurasAlpha = db.oorAurasAlpha or 0.55
     local oorEnabled = db.oorEnabled
     

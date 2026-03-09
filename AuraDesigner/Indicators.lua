@@ -25,11 +25,30 @@ local GetTime = GetTime
 local max, min = math.max, math.min
 local issecretvalue = issecretvalue or function() return false end
 local GetAuraDataByAuraInstanceID = C_UnitAuras and C_UnitAuras.GetAuraDataByAuraInstanceID
+local IsAuraFilteredOut = C_UnitAuras and C_UnitAuras.IsAuraFilteredOutByInstanceID
 
 DF.AuraDesigner = DF.AuraDesigner or {}
 
 local Indicators = {}
 DF.AuraDesigner.Indicators = Indicators
+
+-- Strata ordering for safe strata assignment (never lower an indicator below its parent frame)
+local STRATA_ORDER = {
+    BACKGROUND = 1, LOW = 2, MEDIUM = 3, HIGH = 4,
+    DIALOG = 5, FULLSCREEN = 6, FULLSCREEN_DIALOG = 7, TOOLTIP = 8,
+}
+
+local function SafeSetFrameStrata(widget, frame, targetStrata)
+    local parentStrata = frame:GetFrameStrata()
+    local parentOrder = STRATA_ORDER[parentStrata] or 3
+    local targetOrder = STRATA_ORDER[targetStrata] or 3
+    -- Don't lower below the parent (prevents vanishing in preview panels)
+    if targetOrder < parentOrder then
+        widget:SetFrameStrata(parentStrata)
+    else
+        widget:SetFrameStrata(targetStrata)
+    end
+end
 
 -- ============================================================
 -- SAFE HELPERS (match the pattern in Features/Auras.lua)
@@ -306,8 +325,38 @@ function Indicators:Apply(frame, typeKey, config, auraData, defaults, auraName, 
             local live = GetAuraDataByAuraInstanceID(unit, auraID)
             if not live then return end
         end
+
+        -- Verify the aura belongs to the player (not another player's buff)
+        if unit and IsAuraFilteredOut then
+            if IsAuraFilteredOut(unit, auraID, "HELPFUL|PLAYER") then return end
+        end
     end
 
+    if typeKey == "border" then
+        self:ApplyBorder(frame, config, auraData)
+    elseif typeKey == "healthbar" then
+        self:ApplyHealthBar(frame, config, auraData)
+    elseif typeKey == "nametext" then
+        self:ApplyNameText(frame, config, auraData)
+    elseif typeKey == "healthtext" then
+        self:ApplyHealthText(frame, config, auraData)
+    elseif typeKey == "framealpha" then
+        self:ApplyFrameAlpha(frame, config, auraData)
+    elseif typeKey == "icon" then
+        self:ApplyIcon(frame, config, auraData, defaults, auraName, priority)
+    elseif typeKey == "square" then
+        self:ApplySquare(frame, config, auraData, defaults, auraName, priority)
+    elseif typeKey == "bar" then
+        self:ApplyBar(frame, config, auraData, defaults, auraName, priority)
+    end
+end
+
+-- ============================================================
+-- APPLY (TEST MODE)
+-- Skips aura validation — mock data has no real auraInstanceID
+-- ============================================================
+
+function Indicators:ApplyTest(frame, typeKey, config, auraData, defaults, auraName, priority)
     if typeKey == "border" then
         self:ApplyBorder(frame, config, auraData)
     elseif typeKey == "healthbar" then
@@ -946,10 +995,19 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
     icon:ClearAllPoints()
     icon:SetPoint(anchor, frame, anchor, offsetX, offsetY)
 
-    -- Frame level: higher priority (lower number) = higher frame level
-    local baseLevel = (frame.contentOverlay or frame):GetFrameLevel() + 10
-    local priorityBoost = 20 - (priority or 5)
-    icon:SetFrameLevel(baseLevel + priorityBoost)
+    -- Frame level: base from frame (not contentOverlay) + per-indicator level + small priority tiebreaker
+    local level = config.frameLevel or (defaults and defaults.indicatorFrameLevel) or 2
+    local baseLevel = frame:GetFrameLevel()
+    local priorityBoost = math.floor((20 - (priority or 5)) / 4)  -- 0-5 range for tiebreaking
+    icon:SetFrameLevel(math.max(0, baseLevel + level + priorityBoost))
+
+    -- Frame strata: per-indicator override, falls back to global default
+    local strata = config.frameStrata or (defaults and defaults.indicatorFrameStrata) or "INHERIT"
+    if strata ~= "INHERIT" then
+        SafeSetFrameStrata(icon, frame, strata)
+    else
+        icon:SetFrameStrata(frame:GetFrameStrata())
+    end
 
     -- Hide Icon (text-only mode) — hides texture, border, swipe but keeps text
     local hideIcon = config.hideIcon; if hideIcon == nil then hideIcon = defaults and defaults.hideIcon end
@@ -1342,10 +1400,19 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
     sq:ClearAllPoints()
     sq:SetPoint(anchor, frame, anchor, offsetX, offsetY)
 
-    -- Frame level: higher priority (lower number) = higher frame level
-    local baseLevel = (frame.contentOverlay or frame):GetFrameLevel() + 10
-    local priorityBoost = 20 - (priority or 5)
-    sq:SetFrameLevel(baseLevel + priorityBoost)
+    -- Frame level: base from frame (not contentOverlay) + per-indicator level + small priority tiebreaker
+    local level = config.frameLevel or (defaults and defaults.indicatorFrameLevel) or 2
+    local baseLevel = frame:GetFrameLevel()
+    local priorityBoost = math.floor((20 - (priority or 5)) / 4)  -- 0-5 range for tiebreaking
+    sq:SetFrameLevel(math.max(0, baseLevel + level + priorityBoost))
+
+    -- Frame strata: per-indicator override, falls back to global default
+    local strata = config.frameStrata or (defaults and defaults.indicatorFrameStrata) or "INHERIT"
+    if strata ~= "INHERIT" then
+        SafeSetFrameStrata(sq, frame, strata)
+    else
+        sq:SetFrameStrata(frame:GetFrameStrata())
+    end
 
     -- ========================================
     -- BORDER
@@ -1994,10 +2061,19 @@ function Indicators:ApplyBar(frame, config, auraData, defaults, auraName, priori
     bar:ClearAllPoints()
     bar:SetPoint(anchor, frame, anchor, offsetX, offsetY)
 
-    -- Frame level: higher priority (lower number) = higher frame level
-    local baseLevel = (frame.contentOverlay or frame):GetFrameLevel() + 10
-    local priorityBoost = 20 - (priority or 5)
-    bar:SetFrameLevel(baseLevel + priorityBoost)
+    -- Frame level: base from frame (not contentOverlay) + per-indicator level + small priority tiebreaker
+    local level = config.frameLevel or (defaults and defaults.indicatorFrameLevel) or 2
+    local baseLevel = frame:GetFrameLevel()
+    local priorityBoost = math.floor((20 - (priority or 5)) / 4)  -- 0-5 range for tiebreaking
+    bar:SetFrameLevel(math.max(0, baseLevel + level + priorityBoost))
+
+    -- Frame strata: per-indicator override, falls back to global default
+    local strata = config.frameStrata or (defaults and defaults.indicatorFrameStrata) or "INHERIT"
+    if strata ~= "INHERIT" then
+        SafeSetFrameStrata(bar, frame, strata)
+    else
+        bar:SetFrameStrata(frame:GetFrameStrata())
+    end
 
     -- ========================================
     -- COUNTDOWN DATA (drives bar fill)

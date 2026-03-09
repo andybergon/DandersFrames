@@ -13,6 +13,7 @@ local addonName, DF = ...
 
 local pairs = pairs
 local CreateFrame = CreateFrame
+local issecretvalue = issecretvalue
 
 -- ============================================================
 -- OVERLAY CREATION
@@ -279,7 +280,7 @@ local function ShowOverlay(overlay, db, frame)
     local oorAlpha = db.oorMyBuffIndicatorAlpha or 0.2
     if db.oorEnabled and frame and not DF.testMode and not DF.raidTestMode then
         inRange = frame.dfInRange
-        if inRange == nil then inRange = true end
+        if not (issecretvalue and issecretvalue(inRange)) and inRange == nil then inRange = true end
     end
     
     -- Show/hide borders and apply OOR

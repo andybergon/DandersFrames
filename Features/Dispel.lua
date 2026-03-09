@@ -16,6 +16,7 @@ local addonName, DF = ...
 local pairs, ipairs, type, wipe = pairs, ipairs, type, wipe
 local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
 local CreateColorFromBytes = CreateColorFromBytes
+local issecretvalue = issecretvalue
 
 -- Edge gradient textures: each edge is solid at the outer edge and fades inward
 -- Uses pre-baked gradient texture files + SetVertexColor (handles secret/tainted values)
@@ -680,9 +681,9 @@ function DF:ApplyDispelOverlayAppearance(frame)
     if gradientStyle ~= "EDGE" then return end
     if not db.dispelShowGradient then return end
     
-    -- Get OOR settings
+    -- Get OOR settings (dfInRange may be secret from UnitInRange fallback)
     local inRange = frame.dfInRange
-    if inRange == nil then inRange = true end
+    if not (issecretvalue and issecretvalue(inRange)) and inRange == nil then inRange = true end
     local oorAlpha = db.oorDispelOverlayAlpha or 0.2
     
     -- Get current dispel color from stored type
@@ -762,10 +763,10 @@ local function ShowOverlayWithSecretColor(overlay, db, unit, auraInstanceID, fra
     local showGradient = db.dispelShowGradient ~= false
     local showIcon = db.dispelShowIcon ~= false
     
-    -- Get OOR alpha settings for dispel overlay
+    -- Get OOR alpha settings for dispel overlay (dfInRange may be secret from UnitInRange)
     local inRange = frame and frame.dfInRange
-    -- If dfInRange is nil (not set yet), assume in range
-    if inRange == nil then inRange = true end
+    -- If dfInRange is nil (not set yet), assume in range. Secret values pass through.
+    if not (issecretvalue and issecretvalue(inRange)) and inRange == nil then inRange = true end
     local oorDispelAlpha = db.oorDispelOverlayAlpha or 0.55
     
     ApplyOverlayLayout(overlay, db, frame)

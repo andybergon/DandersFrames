@@ -1057,6 +1057,17 @@ function DF:UpdateTestFrame(frame, index, applyLayout)
         end
     end
 
+    -- Update Aura Designer test indicators
+    if db.testShowAuraDesigner and db.auraDesigner and db.auraDesigner.enabled then
+        local ADEngine = DF.AuraDesigner and DF.AuraDesigner.Engine
+        if ADEngine and ADEngine.UpdateTestFrame then
+            ADEngine:UpdateTestFrame(frame)
+        end
+    else
+        local ADEngine = DF.AuraDesigner and DF.AuraDesigner.Engine
+        if ADEngine then ADEngine:ClearFrame(frame) end
+    end
+
     -- Update selection and aggro highlights for test mode
     -- UpdateHighlights now handles test mode internally
     if DF.UpdateHighlights then
@@ -3866,9 +3877,13 @@ function DF:HideTestFrames(silent)
     end
     
     -- Hide all test party frames and clean up test elements
+    local ADEngine = DF.AuraDesigner and DF.AuraDesigner.Engine
     for i = 0, 4 do
         local frame = DF.testPartyFrames[i]
         if frame then
+            -- Clear Aura Designer indicators (borders are parented to UIParent
+            -- and survive frame:Hide, so they must be explicitly cleared)
+            if ADEngine then ADEngine:ClearFrame(frame) end
             frame:Hide()
             -- Clean up test mode visuals
             if frame.absorbAttachedTexture then frame.absorbAttachedTexture:Hide() end
@@ -4081,9 +4096,13 @@ function DF:HideRaidTestFrames()
     end
     
     -- Hide all test raid frames and clean up test elements
+    local ADEngine = DF.AuraDesigner and DF.AuraDesigner.Engine
     for i = 1, 40 do
         local frame = DF.testRaidFrames[i]
         if frame then
+            -- Clear Aura Designer indicators (borders are parented to UIParent
+            -- and survive frame:Hide, so they must be explicitly cleared)
+            if ADEngine then ADEngine:ClearFrame(frame) end
             frame:Hide()
             -- Clean up test mode visuals
             if frame.absorbAttachedTexture then frame.absorbAttachedTexture:Hide() end
@@ -5821,39 +5840,84 @@ end
 
 
 -- ============================================================
+-- AURA DESIGNER TEST MODE
+-- Iterates all visible test frames and calls the AD Engine's
+-- test path to show/hide configured indicators with mock data.
+-- ============================================================
+
+function DF:UpdateAllTestAuraDesigner()
+    local ADEngine = DF.AuraDesigner and DF.AuraDesigner.Engine
+    if not ADEngine then return end
+
+    local function UpdateFrame(frame)
+        if not frame or not frame:IsShown() then return end
+        local db = DF:GetFrameDB(frame)
+        if db and db.testShowAuraDesigner and db.auraDesigner and db.auraDesigner.enabled then
+            ADEngine:UpdateTestFrame(frame)
+        else
+            ADEngine:ClearFrame(frame)
+        end
+    end
+
+    if DF.testMode then
+        for i = 0, 4 do
+            local frame = DF.testPartyFrames and DF.testPartyFrames[i]
+            if frame then UpdateFrame(frame) end
+        end
+    end
+
+    if DF.raidTestMode then
+        local raidDb = DF:GetRaidDB()
+        local testFrameCount = raidDb and raidDb.raidTestFrameCount or 10
+        for i = 1, testFrameCount do
+            local frame = DF.testRaidFrames and DF.testRaidFrames[i]
+            if frame then UpdateFrame(frame) end
+        end
+    end
+end
+
+-- ============================================================
 -- FLOATING TEST PANEL
 -- ============================================================
 
 function DF:CreateTestPanel()
     if DF.TestPanel then return DF.TestPanel end
-    
-    -- Color constants
-    local C_PARTY = {r = 0.45, g = 0.45, b = 0.95, a = 1}  -- Purple-Blue for party
-    local C_RAID = {r = 1.0, g = 0.5, b = 0.2, a = 1}   -- Orange for raid
-    local C_BG = {r = 0.08, g = 0.08, b = 0.08, a = 0.95}
-    local C_ELEMENT = {r = 0.18, g = 0.18, b = 0.18, a = 1}
-    local C_BORDER = {r = 0.25, g = 0.25, b = 0.25, a = 1}
-    local C_TEXT = {r = 0.9, g = 0.9, b = 0.9, a = 1}
-    local C_TEXT_DIM = {r = 0.6, g = 0.6, b = 0.6, a = 1}
-    
-    -- Helper to get theme color based on mode
+
+    -- ============================================================
+    -- COLOUR CONSTANTS
+    -- ============================================================
+    local C_PARTY    = {r = 0.45, g = 0.45, b = 0.95, a = 1}
+    local C_RAID     = {r = 1.0,  g = 0.5,  b = 0.2,  a = 1}
+    local C_BG       = {r = 0.08, g = 0.08, b = 0.08, a = 0.95}
+    local C_PANEL    = {r = 0.12, g = 0.12, b = 0.12, a = 1}
+    local C_ELEMENT  = {r = 0.18, g = 0.18, b = 0.18, a = 1}
+    local C_BORDER   = {r = 0.25, g = 0.25, b = 0.25, a = 1}
+    local C_HOVER    = {r = 0.22, g = 0.22, b = 0.22, a = 1}
+    local C_TEXT     = {r = 0.9,  g = 0.9,  b = 0.9,  a = 1}
+    local C_TEXT_DIM = {r = 0.6,  g = 0.6,  b = 0.6,  a = 1}
+
+    local PANEL_WIDTH   = 320
+    local CONTENT_WIDTH = PANEL_WIDTH - 24  -- 12px padding each side
+    local HEADER_TOP    = 108  -- Space used by title + toggle button + description + separator
+
     local function GetThemeColor()
         local isRaidMode = DF.GUI and DF.GUI.SelectedMode == "raid"
         return isRaidMode and C_RAID or C_PARTY
     end
-    
-    -- Helper to check if test mode is active
+
     local function IsTestActive()
         local isRaidMode = DF.GUI and DF.GUI.SelectedMode == "raid"
         return isRaidMode and DF.raidTestMode or DF.testMode
     end
-    
-    -- Main panel
+
+    -- ============================================================
+    -- MAIN PANEL FRAME
+    -- ============================================================
     local panel = CreateFrame("Frame", "DandersFramesTestPanel", UIParent, "BackdropTemplate")
-    panel:SetSize(275, 420)
+    panel:SetSize(PANEL_WIDTH, 420)
     panel:SetPoint("CENTER", UIParent, "CENTER", 300, 0)
     panel:SetFrameStrata("FULLSCREEN_DIALOG")
-    panel:SetFrameLevel(100)  -- High level to ensure it's on top
+    panel:SetFrameLevel(100)
     panel:SetMovable(true)
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
@@ -5867,68 +5931,89 @@ function DF:CreateTestPanel()
     panel:SetBackdropColor(C_BG.r, C_BG.g, C_BG.b, C_BG.a)
     panel:SetBackdropBorderColor(0, 0, 0, 1)
     panel:Hide()
-    
-    -- Apply scale from settings
+
     local function ApplyScale(self)
         local guiScale = DF.db and DF.db.party and DF.db.party.guiScale or 1.0
         self:SetScale(guiScale)
     end
-    
-    -- Set initial scale and update on show
-    panel:SetScript("OnShow", function(self)
-        ApplyScale(self)
-    end)
-    
-    -- Auto-disable test mode when panel closes
+
     panel:SetScript("OnHide", function()
-        -- Disable party test mode if active
         if DF.testMode then
             local db = DF:GetDB()
-            -- Only disable if frames are locked
-            if db.locked then
-                DF:HideTestFrames()
-            end
+            if db.locked then DF:HideTestFrames() end
         end
-        -- Disable raid test mode if active
         if DF.raidTestMode then
             local db = DF:GetRaidDB()
-            -- Only disable if frames are locked
-            if db.raidLocked then
-                DF:HideRaidTestFrames()
-            end
+            if db.raidLocked then DF:HideRaidTestFrames() end
         end
-        -- Update GUI test button highlight (tracks panel visibility)
         if DF.GUI and DF.GUI.UpdateTestButtonState then
             DF.GUI.UpdateTestButtonState()
         end
     end)
-    
-    -- Make closable with Escape
+
     tinsert(UISpecialFrames, "DandersFramesTestPanel")
-    
-    -- Title bar
+
+    -- ============================================================
+    -- HEADER
+    -- ============================================================
+    -- Title
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("TOPLEFT", 12, -8)
+    title:SetPoint("TOPLEFT", 12, -10)
     title:SetText("Test Mode")
     panel.title = title
-    
+
+    -- Mode badge
+    local badge = CreateFrame("Frame", nil, panel, "BackdropTemplate")
+    badge:SetSize(40, 18)
+    badge:SetPoint("LEFT", title, "RIGHT", 8, 0)
+    badge:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    badge.text = badge:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    badge.text:SetPoint("CENTER", 0, 0)
+    badge.text:SetText("Party")
+    panel.badge = badge
+
     -- Close button
-    local closeBtn = CreateFrame("Button", nil, panel)
-    closeBtn:SetSize(20, 20)
-    closeBtn:SetPoint("TOPRIGHT", -8, -4)
-    closeBtn:SetNormalFontObject(GameFontNormalLarge)
-    closeBtn:SetText("x")
-    closeBtn:GetFontString():SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
+    local closeBtn = CreateFrame("Button", nil, panel, "BackdropTemplate")
+    closeBtn:SetSize(22, 22)
+    closeBtn:SetPoint("TOPRIGHT", -8, -6)
+    closeBtn:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    closeBtn:SetBackdropColor(1, 1, 1, 0.04)
+    closeBtn:SetBackdropBorderColor(0, 0, 0, 0)
+    closeBtn.Text = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    closeBtn.Text:SetPoint("CENTER", 0, 0)
+    closeBtn.Text:SetText("×")
+    closeBtn.Text:SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
     closeBtn:SetScript("OnClick", function() panel:Hide() end)
-    closeBtn:SetScript("OnEnter", function(self) self:GetFontString():SetTextColor(1, 0.3, 0.3) end)
-    closeBtn:SetScript("OnLeave", function(self) self:GetFontString():SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b) end)
-    
-    local y = -30
-    
-    -- Enable/Disable Test Mode button
+    closeBtn:SetScript("OnEnter", function(self)
+        self:SetBackdropColor(0.85, 0.24, 0.24, 0.25)
+        self.Text:SetTextColor(0.9, 0.33, 0.33)
+    end)
+    closeBtn:SetScript("OnLeave", function(self)
+        self:SetBackdropColor(1, 1, 1, 0.04)
+        self.Text:SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
+    end)
+
+    -- Separator below header
+    local headerSep = panel:CreateTexture(nil, "ARTWORK")
+    headerSep:SetPoint("TOPLEFT", 0, -32)
+    headerSep:SetPoint("TOPRIGHT", 0, -32)
+    headerSep:SetHeight(1)
+    headerSep:SetColorTexture(1, 1, 1, 0.06)
+
+    -- ============================================================
+    -- TOGGLE BUTTON
+    -- ============================================================
     local toggleBtn = CreateFrame("Button", nil, panel, "BackdropTemplate")
-    toggleBtn:SetPoint("TOPLEFT", 12, y)
-    toggleBtn:SetSize(251, 28)
+    toggleBtn:SetPoint("TOPLEFT", 12, -38)
+    toggleBtn:SetSize(CONTENT_WIDTH, 30)
     toggleBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -5942,109 +6027,81 @@ function DF:CreateTestPanel()
         panel:UpdateState()
     end)
     panel.toggleBtn = toggleBtn
-    y = y - 38
-    
-    -- Separator
-    local sep1 = panel:CreateTexture(nil, "ARTWORK")
-    sep1:SetPoint("TOPLEFT", 12, y)
-    sep1:SetSize(251, 1)
-    sep1:SetColorTexture(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.5)
-    y = y - 10
-    
-    -- Frame Count
-    local frameCountLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    frameCountLabel:SetPoint("TOPLEFT", 12, y)
-    frameCountLabel:SetText("Frame Count:")
-    frameCountLabel:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-    
-    local frameCountValue = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    frameCountValue:SetPoint("LEFT", frameCountLabel, "RIGHT", 5, 0)
-    panel.frameCountValue = frameCountValue
-    y = y - 22
-    
-    local frameCountSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
-    frameCountSlider:SetPoint("TOPLEFT", 12, y)
-    frameCountSlider:SetSize(251, 16)
-    frameCountSlider:SetMinMaxValues(1, 5)
-    frameCountSlider:SetValueStep(1)
-    frameCountSlider:SetObeyStepOnDrag(true)
-    frameCountSlider.Low:SetText("1")
-    frameCountSlider.High:SetText("5")
-    frameCountSlider.Text:SetText("")
-    
-    -- Track drag state with lightweight callback for smooth updates
-    local frameCountDragging = false
-    frameCountSlider:SetScript("OnMouseDown", function(self, button)
-        if button == "LeftButton" then
-            frameCountDragging = true
-            DF:OnSliderDragStart(function()
-                -- Lightweight: update frame visibility without full layout
-                if DF.LightweightUpdateTestFrameCount then
-                    DF:LightweightUpdateTestFrameCount()
-                end
-            end)
-        end
-    end)
-    frameCountSlider:SetScript("OnMouseUp", function(self, button)
-        if button == "LeftButton" and frameCountDragging then
-            frameCountDragging = false
-            DF:OnSliderDragStop()
-        end
-    end)
-    
-    frameCountSlider:SetScript("OnValueChanged", function(self, value)
-        local isRaidMode = DF.GUI and DF.GUI.SelectedMode == "raid"
-        local db = isRaidMode and DF:GetRaidDB() or DF:GetDB()
-        local dbKey = isRaidMode and "raidTestFrameCount" or "testFrameCount"
-        db[dbKey] = math.floor(value)
-        frameCountValue:SetText(tostring(db[dbKey]))
-        
-        -- Update appropriate frames (throttled for smooth slider dragging)
-        if isRaidMode and DF.raidTestMode then
-            DF:ThrottledUpdateRaidTestFrames()
-            -- Update raid pet group layout (only when not dragging to avoid lag)
-            if not DF.sliderDragging and DF.UpdateAllRaidPetFrames then
-                DF:UpdateAllRaidPetFrames(true)
-            end
-        elseif not isRaidMode and DF.testMode then
-            DF:ThrottledUpdateAll()
-            -- Update party pet group layout (only when not dragging to avoid lag)
-            if not DF.sliderDragging and DF.UpdateAllPetFrames then
-                DF:UpdateAllPetFrames(true)
+
+    -- Description text
+    local desc = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    desc:SetPoint("TOPLEFT", 12, -74)
+    desc:SetPoint("TOPRIGHT", -12, -74)
+    desc:SetJustifyH("LEFT")
+    desc:SetSpacing(2)
+    desc:SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b, 0.8)
+    desc:SetText("Expand sections to toggle features. Click label text to jump to its settings page.")
+
+    -- ============================================================
+    -- THEMED CHECKBOX HELPER
+    -- ============================================================
+    local function CreateThemedCheckbox(parent, text, dbKey, callback, pageId)
+        local container = CreateFrame("Frame", nil, parent)
+        container:SetSize(CONTENT_WIDTH / 2 - 4, 22)
+
+        -- Checkbox square
+        local box = CreateFrame("Button", nil, container, "BackdropTemplate")
+        box:SetSize(16, 16)
+        box:SetPoint("LEFT", 0, 0)
+        box:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        box:SetBackdropColor(C_ELEMENT.r, C_ELEMENT.g, C_ELEMENT.b, 1)
+        box:SetBackdropBorderColor(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.7)
+        container.box = box
+
+        -- Checkmark texture (solid square, same pattern as GUI:CreateCheckbox)
+        local mark = box:CreateTexture(nil, "OVERLAY")
+        mark:SetTexture("Interface\\Buttons\\WHITE8x8")
+        mark:SetPoint("CENTER")
+        mark:SetSize(10, 10)
+        mark:Hide()
+        container.mark = mark
+
+        -- State
+        container.checked = false
+        container.dbKey = dbKey
+
+        container.SetChecked = function(self, val)
+            self.checked = val and true or false
+            if self.checked then
+                local c = GetThemeColor()
+                self.mark:SetVertexColor(c.r, c.g, c.b)
+                self.mark:Show()
+                self.box:SetBackdropBorderColor(c.r, c.g, c.b, 0.5)
+                self.box:SetBackdropColor(c.r * 0.15, c.g * 0.15, c.b * 0.15, 1)
+            else
+                self.mark:Hide()
+                self.box:SetBackdropBorderColor(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.7)
+                self.box:SetBackdropColor(C_ELEMENT.r, C_ELEMENT.g, C_ELEMENT.b, 1)
             end
         end
-    end)
-    panel.frameCountSlider = frameCountSlider
-    y = y - 28
-    
-    -- Compact checkbox helper (supports column positioning)
-    local function CreateCheckbox(parent, yPos, xOffset, text, dbKey, callback, pageId)
-        local check = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-        check:SetPoint("TOPLEFT", xOffset, yPos)
-        check:SetSize(22, 22)
-        check.dbKey = dbKey
-        check.pageId = pageId
-        
-        -- If pageId is provided, make the label a clickable button
+
+        container.GetChecked = function(self)
+            return self.checked
+        end
+
+        -- Label
         if pageId then
-            local labelBtn = CreateFrame("Button", nil, parent)
-            labelBtn:SetPoint("LEFT", check, "RIGHT", 0, 0)
+            local labelBtn = CreateFrame("Button", nil, container)
+            labelBtn:SetPoint("LEFT", box, "RIGHT", 6, 0)
             labelBtn:SetHeight(18)
-            
             local labelText = labelBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             labelText:SetPoint("LEFT", 0, 0)
             labelText:SetText(text)
             labelText:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-            
-            -- Add a small arrow/indicator
             local arrow = labelBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             arrow:SetPoint("LEFT", labelText, "RIGHT", 2, 0)
             arrow:SetText("›")
-            arrow:SetTextColor(0.5, 0.5, 0.5)
-            
-            labelBtn:SetWidth(labelText:GetStringWidth() + 12)
-            
-            -- Highlight on hover
+            arrow:SetTextColor(0.4, 0.4, 0.4, 0.6)
+            labelBtn:SetWidth(labelText:GetStringWidth() + 14)
             labelBtn:SetScript("OnEnter", function(self)
                 labelText:SetTextColor(1, 0.82, 0)
                 arrow:SetTextColor(1, 0.82, 0)
@@ -6054,122 +6111,315 @@ function DF:CreateTestPanel()
             end)
             labelBtn:SetScript("OnLeave", function(self)
                 labelText:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-                arrow:SetTextColor(0.5, 0.5, 0.5)
+                arrow:SetTextColor(0.4, 0.4, 0.4, 0.6)
                 GameTooltip:Hide()
             end)
-            
-            -- Navigate to settings page on click
             labelBtn:SetScript("OnClick", function()
                 if DF.GUI and DF.GUI.SelectTab then
-                    -- Show the main GUI if not visible
-                    if DF.GUIFrame and not DF.GUIFrame:IsShown() then
-                        DF.GUIFrame:Show()
-                    end
-                    -- Navigate to the page
+                    if DF.GUIFrame and not DF.GUIFrame:IsShown() then DF.GUIFrame:Show() end
                     DF.GUI.SelectTab(pageId)
                 end
             end)
-            
-            check.text = labelText
-            check.labelBtn = labelBtn
-            check.arrow = arrow
+            container.labelText = labelText
         else
-            -- Standard non-clickable label
-            check.text = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            check.text:SetPoint("LEFT", check, "RIGHT", 0, 0)
-            check.text:SetText(text)
-            check.text:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+            local labelText = container:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            labelText:SetPoint("LEFT", box, "RIGHT", 6, 0)
+            labelText:SetText(text)
+            labelText:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+            container.labelText = labelText
         end
-        
-        check:SetScript("OnClick", function(self)
+
+        -- Click the box to toggle
+        box:SetScript("OnClick", function()
+            container:SetChecked(not container.checked)
             local isRaidMode = DF.GUI and DF.GUI.SelectedMode == "raid"
             local db = isRaidMode and DF:GetRaidDB() or DF:GetDB()
-            db[dbKey] = self:GetChecked()
-            if callback then callback(db[dbKey], isRaidMode) end
+            db[dbKey] = container.checked
+            if callback then callback(container.checked, isRaidMode) end
             if isRaidMode and DF.raidTestMode then
                 DF:UpdateRaidTestFrames()
             elseif not isRaidMode and DF.testMode then
                 DF:UpdateAllFrames()
                 if DF.RefreshTestFrames then DF:RefreshTestFrames() end
             end
-        end)
-        return check
-    end
-    
-    -- Two-column checkbox layout
-    local col1X, col2X = 6, 130
-    local checkHeight = 22
-    
-    -- Row 1: Animate Health | Absorbs
-    panel.animHealthCheck = CreateCheckbox(panel, y, col1X, "Animate Health", "testAnimateHealth", function(enabled, isRaidMode)
-        if isRaidMode then
-            if DF.raidTestMode then
-                if enabled then DF:StartTestAnimation()
-                else
-                    local partyDb = DF:GetDB()
-                    if not (DF.testMode and partyDb.testAnimateHealth) then DF:StopTestAnimation() end
-                end
+            -- Update badge on parent section
+            if container.section and container.section.UpdateBadge then
+                container.section:UpdateBadge()
             end
-        else
-            if DF.testMode then
-                if enabled then DF:StartTestAnimation()
-                else
-                    local raidDb = DF:GetRaidDB()
-                    if not (DF.raidTestMode and raidDb.testAnimateHealth) then DF:StopTestAnimation() end
-                end
+        end)
+
+        -- Hover on whole container toggles too
+        container:EnableMouse(true)
+        container:SetScript("OnMouseDown", function()
+            box:GetScript("OnClick")(box)
+        end)
+        container:SetScript("OnEnter", function()
+            box:SetBackdropBorderColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b, 0.8)
+        end)
+        container:SetScript("OnLeave", function()
+            if container.checked then
+                local c = GetThemeColor()
+                box:SetBackdropBorderColor(c.r, c.g, c.b, 0.5)
+            else
+                box:SetBackdropBorderColor(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.7)
+            end
+        end)
+
+        return container
+    end
+
+    -- ============================================================
+    -- THEMED MINI-SLIDER HELPER
+    -- Matches addon slider style: track + fill + thumb, no Blizzard template
+    -- ============================================================
+    local function CreateThemedSlider(parent, width, minVal, maxVal, step)
+        local container = CreateFrame("Frame", nil, parent)
+        container:SetSize(width, 8)
+
+        -- Background track
+        local track = CreateFrame("Frame", nil, container, "BackdropTemplate")
+        track:SetAllPoints()
+        track:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        track:SetBackdropColor(C_ELEMENT.r, C_ELEMENT.g, C_ELEMENT.b, 1)
+        track:SetBackdropBorderColor(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.5)
+
+        -- Fill track (coloured portion)
+        local fill = track:CreateTexture(nil, "ARTWORK")
+        fill:SetPoint("LEFT", 1, 0)
+        fill:SetHeight(6)
+        local c = GetThemeColor()
+        fill:SetColorTexture(c.r, c.g, c.b, 0.8)
+        fill:SetWidth(1)
+
+        -- Actual slider control (invisible, overlays the track)
+        local slider = CreateFrame("Slider", nil, container)
+        slider:SetAllPoints()
+        slider:SetOrientation("HORIZONTAL")
+        slider:SetMinMaxValues(minVal, maxVal)
+        slider:SetValueStep(step)
+        slider:SetObeyStepOnDrag(true)
+        slider:SetHitRectInsets(-4, -4, -8, -8)
+
+        -- Thumb
+        local thumb = slider:CreateTexture(nil, "OVERLAY")
+        thumb:SetSize(10, 14)
+        thumb:SetColorTexture(c.r, c.g, c.b, 1)
+        slider:SetThumbTexture(thumb)
+
+        local trackWidth = width - 2  -- Account for border insets
+
+        local function UpdateFill()
+            local val = slider:GetValue()
+            local pct = (val - minVal) / (maxVal - minVal)
+            fill:SetWidth(math.max(1, pct * trackWidth))
+        end
+
+        slider:HookScript("OnValueChanged", function()
+            UpdateFill()
+        end)
+
+        -- Expose for theme updates
+        container.slider = slider
+        container.fill = fill
+        container.thumb = thumb
+        container.UpdateFill = UpdateFill
+
+        container.UpdateTheme = function()
+            local nc = GetThemeColor()
+            thumb:SetColorTexture(nc.r, nc.g, nc.b, 1)
+            fill:SetColorTexture(nc.r, nc.g, nc.b, 0.8)
+        end
+
+        -- Forward slider API to container for convenience
+        container.SetValue = function(self, v) slider:SetValue(v) end
+        container.GetValue = function(self) return slider:GetValue() end
+        container.SetMinMaxValues = function(self, lo, hi)
+            slider:SetMinMaxValues(lo, hi)
+            minVal = lo
+            maxVal = hi
+            trackWidth = width - 2
+        end
+        container.SetScript = function(self, event, fn) slider:SetScript(event, fn) end
+        container.HookScript = function(self, event, fn) slider:HookScript(event, fn) end
+
+        return container
+    end
+
+    -- ============================================================
+    -- COLLAPSIBLE SECTION HELPER
+    -- ============================================================
+    local allSections = {}
+
+    local function CreateSection(parentFrame, sectionTitle, sectionKey)
+        local section = CreateFrame("Frame", nil, parentFrame)
+        section:SetSize(CONTENT_WIDTH, 30)  -- Height updated by RecalculateLayout
+        section.sectionKey = sectionKey
+        section.expanded = false  -- Default collapsed
+        section.checkboxes = {}
+        section.extraWidgets = {}  -- {widget, height}
+
+        -- Header bar
+        local header = CreateFrame("Button", nil, section, "BackdropTemplate")
+        header:SetSize(CONTENT_WIDTH, 26)
+        header:SetPoint("TOPLEFT", 0, 0)
+        header:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        header:SetBackdropColor(C_PANEL.r, C_PANEL.g, C_PANEL.b, 0.8)
+        header:SetBackdropBorderColor(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.3)
+        section.header = header
+
+        -- Chevron (starts collapsed)
+        local chevron = header:CreateTexture(nil, "OVERLAY")
+        chevron:SetSize(12, 12)
+        chevron:SetPoint("LEFT", 8, 0)
+        chevron:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\chevron_right")
+        chevron:SetVertexColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
+        section.chevron = chevron
+
+        -- Title
+        local titleText = header:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        titleText:SetPoint("LEFT", 26, 0)
+        titleText:SetText(string.upper(sectionTitle))
+        titleText:SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
+        section.titleText = titleText
+
+        -- Active count badge
+        local badgeText = header:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        badgeText:SetPoint("RIGHT", -8, 0)
+        badgeText:SetText("")
+        section.badgeText = badgeText
+
+        -- Content container (starts hidden since collapsed by default)
+        local content = CreateFrame("Frame", nil, section)
+        content:SetPoint("TOPLEFT", 0, -28)
+        content:SetWidth(CONTENT_WIDTH)
+        content:Hide()
+        section.content = content
+
+        -- Grid for checkboxes (2 columns)
+        local gridRow = 0
+        local gridCol = 0
+        local COL_WIDTH = (CONTENT_WIDTH - 8) / 2
+
+        section.AddCheckbox = function(self, text, dbKey, callback, pageId)
+            local cb = CreateThemedCheckbox(content, text, dbKey, callback, pageId)
+            cb.section = self
+            local xOff = gridCol * COL_WIDTH + 4
+            local yOff = -(gridRow * 24 + 4)
+            cb:SetPoint("TOPLEFT", content, "TOPLEFT", xOff, yOff)
+            table.insert(self.checkboxes, cb)
+            -- Advance grid position
+            gridCol = gridCol + 1
+            if gridCol >= 2 then
+                gridCol = 0
+                gridRow = gridRow + 1
+            end
+            return cb
+        end
+
+        -- Returns the Y offset below the checkbox grid
+        local function GetGridBottom()
+            local rows = math.ceil(#section.checkboxes / 2)
+            return -(rows * 24 + 4)
+        end
+
+        section.AddWidget = function(self, widget, height)
+            widget:SetParent(content)
+            local yOff = GetGridBottom()
+            -- Account for previous extra widgets
+            for _, entry in ipairs(self.extraWidgets) do
+                yOff = yOff - entry.height
+            end
+            widget:SetPoint("TOPLEFT", content, "TOPLEFT", 4, yOff - 2)
+            widget:SetWidth(CONTENT_WIDTH - 8)
+            table.insert(self.extraWidgets, {widget = widget, height = height})
+        end
+
+        section.GetContentHeight = function(self)
+            local rows = math.ceil(#self.checkboxes / 2)
+            local h = rows * 24 + 8  -- Grid height + padding
+            for _, entry in ipairs(self.extraWidgets) do
+                h = h + entry.height
+            end
+            return h
+        end
+
+        section.GetTotalHeight = function(self)
+            if self.expanded then
+                return 26 + self:GetContentHeight() + 4  -- header + content + gap
+            end
+            return 26 + 4  -- Just header + gap
+        end
+
+        section.UpdateBadge = function(self)
+            local count = 0
+            for _, cb in ipairs(self.checkboxes) do
+                if cb.checked then count = count + 1 end
+            end
+            if count > 0 then
+                local c = GetThemeColor()
+                self.badgeText:SetText(tostring(count))
+                self.badgeText:SetTextColor(c.r, c.g, c.b, 0.8)
+            else
+                self.badgeText:SetText("")
             end
         end
-    end)
-    panel.showAbsorbsCheck = CreateCheckbox(panel, y, col2X, "Absorbs", "testShowAbsorbs", nil, "bars_absorb")
-    y = y - checkHeight
-    
-    -- Row 2: Heal Prediction | Out of Range
-    panel.showHealPredictCheck = CreateCheckbox(panel, y, col1X, "Heal Prediction", "testShowHealPrediction", nil, "bars_healpred")
-    panel.showOutOfRangeCheck = CreateCheckbox(panel, y, col2X, "Out of Range", "testShowOutOfRange", nil, "display_fading")
-    y = y - checkHeight
-    
-    -- Row 3: Dispel Overlay (My Buff Indicator removed — feature deprecated)
-    panel.showDispelGlowCheck = CreateCheckbox(panel, y, col1X, "Dispel Overlay", "testShowDispelGlow", function()
-        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestDispelGlow() end
-    end, "auras_dispel")
-    y = y - checkHeight
-    
-    -- Row 4: Defensive Icon | Missing Buff
-    panel.showExternalDefCheck = CreateCheckbox(panel, y, col1X, "Defensive Icon", "testShowExternalDef", function()
-        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestDefensiveBar() end
-    end, "auras_defensiveicon")
-    panel.showMissingBuffCheck = CreateCheckbox(panel, y, col2X, "Missing Buff", "testShowMissingBuff", function()
-        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestMissingBuff() end
-    end, "auras_missingbuffs")
-    y = y - checkHeight
-    
-    -- Row 5: Targeted Spell | Status/Ready
-    panel.showTargetedSpellCheck = CreateCheckbox(panel, y, col1X, "Targeted Spell", "testShowTargetedSpell", function()
-        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestTargetedSpell() end
-    end, "indicators_targetedspells")
-    panel.showStatusIconsCheck = CreateCheckbox(panel, y, col2X, "Status/Ready", "testShowStatusIcons", function()
-        if DF.testMode or DF.raidTestMode then DF:RefreshTestFrames() end
-    end, "indicators_icons")
-    y = y - checkHeight
-    
-    -- Row 6: Role/Leader | Selection
-    panel.showIconsCheck = CreateCheckbox(panel, y, col1X, "Role/Leader", "testShowIcons", nil, "indicators_icons")
-    panel.showSelectionCheck = CreateCheckbox(panel, y, col2X, "Selection", "testShowSelection", function()
-        if DF.UpdateAllTestHighlights then DF:UpdateAllTestHighlights() end
-    end, "indicators_highlights")
-    y = y - checkHeight
-    
-    -- Row 7: Aggro | Show Auras
-    panel.showAggroCheck = CreateCheckbox(panel, y, col1X, "Aggro", "testShowAggro", function()
-        if DF.UpdateAllTestHighlights then DF:UpdateAllTestHighlights() end
-    end, "indicators_highlights")
-    panel.showAurasCheck = CreateCheckbox(panel, y, col2X, "Show Auras", "testShowAuras", function(enabled, isRaidMode)
-        if enabled and not isRaidMode and DF.testMode then DF:RefreshTestFramesWithLayout() end
-    end, "auras_buffs")
-    y = y - checkHeight
-    
-    -- Row 8: Show Pets | Boss Debuffs
-    panel.showPetsCheck = CreateCheckbox(panel, y, col1X, "Show Pets", "testShowPets", function(enabled, isRaidMode)
+
+        section.SetExpanded = function(self, expanded)
+            self.expanded = expanded
+            if self.expanded then
+                self.chevron:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\expand_more")
+                self.content:Show()
+            else
+                self.chevron:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\chevron_right")
+                self.content:Hide()
+            end
+        end
+
+        section.Toggle = function(self)
+            self:SetExpanded(not self.expanded)
+            -- Save collapsed state to DB
+            if self.sectionKey and DF.db then
+                if not DF.db.testPanelSections then DF.db.testPanelSections = {} end
+                DF.db.testPanelSections[self.sectionKey] = self.expanded
+            end
+            panel:RecalculateLayout()
+        end
+
+        -- Hover effects on header
+        header:SetScript("OnEnter", function(self)
+            self:SetBackdropColor(C_HOVER.r, C_HOVER.g, C_HOVER.b, 0.8)
+        end)
+        header:SetScript("OnLeave", function(self)
+            self:SetBackdropColor(C_PANEL.r, C_PANEL.g, C_PANEL.b, 0.8)
+        end)
+        header:SetScript("OnClick", function()
+            section:Toggle()
+            PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
+        end)
+
+        -- Set content height
+        content:SetHeight(1)  -- Will be updated
+
+        table.insert(allSections, section)
+        return section
+    end
+
+    -- ============================================================
+    -- CREATE SECTIONS
+    -- ============================================================
+
+    -- --- GENERAL ---
+    local secGeneral = CreateSection(panel, "General", "general")
+
+    panel.showPetsCheck = secGeneral:AddCheckbox("Show Pets", "testShowPets", function(enabled, isRaidMode)
         if isRaidMode then
             if DF.raidTestMode then
                 if enabled then
@@ -6190,17 +6440,99 @@ function DF:CreateTestPanel()
             end
         end
     end, "display_pets")
-    panel.showBossDebuffsCheck = CreateCheckbox(panel, y, col2X, "Boss Debuffs", "testShowBossDebuffs", function(enabled, isRaidMode)
+
+    panel.animHealthCheck = secGeneral:AddCheckbox("Animate Health", "testAnimateHealth", function(enabled, isRaidMode)
+        if isRaidMode then
+            if DF.raidTestMode then
+                if enabled then DF:StartTestAnimation()
+                else
+                    local partyDb = DF:GetDB()
+                    if not (DF.testMode and partyDb.testAnimateHealth) then DF:StopTestAnimation() end
+                end
+            end
+        else
+            if DF.testMode then
+                if enabled then DF:StartTestAnimation()
+                else
+                    local raidDb = DF:GetRaidDB()
+                    if not (DF.raidTestMode and raidDb.testAnimateHealth) then DF:StopTestAnimation() end
+                end
+            end
+        end
+    end)
+
+    -- Frame count slider (below checkboxes)
+    local fcRow = CreateFrame("Frame", nil, secGeneral.content)
+    fcRow:SetHeight(28)
+    local fcLabel = fcRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    fcLabel:SetPoint("LEFT", 0, 0)
+    fcLabel:SetText("Frame Count")
+    fcLabel:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+    local fcValue = fcRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    fcValue:SetPoint("LEFT", fcLabel, "RIGHT", 6, 0)
+    panel.frameCountValue = fcValue
+
+    local frameCountSlider = CreateThemedSlider(fcRow, 140, 1, 5, 1)
+    frameCountSlider:SetPoint("LEFT", fcValue, "RIGHT", 8, 0)
+
+    local frameCountDragging = false
+    frameCountSlider:SetScript("OnMouseDown", function(self, button)
+        if button == "LeftButton" then
+            frameCountDragging = true
+            DF:OnSliderDragStart(function()
+                if DF.LightweightUpdateTestFrameCount then DF:LightweightUpdateTestFrameCount() end
+            end)
+        end
+    end)
+    frameCountSlider:SetScript("OnMouseUp", function(self, button)
+        if button == "LeftButton" and frameCountDragging then
+            frameCountDragging = false
+            DF:OnSliderDragStop()
+        end
+    end)
+    frameCountSlider:HookScript("OnValueChanged", function(self, value)
+        local isRaidMode = DF.GUI and DF.GUI.SelectedMode == "raid"
+        local db = isRaidMode and DF:GetRaidDB() or DF:GetDB()
+        local dbKey = isRaidMode and "raidTestFrameCount" or "testFrameCount"
+        db[dbKey] = math.floor(value)
+        fcValue:SetText(tostring(db[dbKey]))
+        if isRaidMode and DF.raidTestMode then
+            DF:ThrottledUpdateRaidTestFrames()
+            if not DF.sliderDragging and DF.UpdateAllRaidPetFrames then DF:UpdateAllRaidPetFrames(true) end
+        elseif not isRaidMode and DF.testMode then
+            DF:ThrottledUpdateAll()
+            if not DF.sliderDragging and DF.UpdateAllPetFrames then DF:UpdateAllPetFrames(true) end
+        end
+    end)
+    panel.frameCountSlider = frameCountSlider
+    secGeneral:AddWidget(fcRow, 28)
+
+    -- --- BARS & OVERLAYS ---
+    local secBars = CreateSection(panel, "Bars & Overlays", "bars")
+    panel.showAbsorbsCheck = secBars:AddCheckbox("Absorbs", "testShowAbsorbs", nil, "bars_absorb")
+    panel.showHealPredictCheck = secBars:AddCheckbox("Heal Prediction", "testShowHealPrediction", nil, "bars_healpred")
+    panel.showClassPowerCheck = secBars:AddCheckbox("Class Power", "testShowClassPower", function(enabled)
+        if enabled then
+            if DF.UpdateAllTestClassPower then DF:UpdateAllTestClassPower() end
+        else
+            if DF.CleanupTestClassPower then DF:CleanupTestClassPower() end
+        end
+    end, "bars_classpower")
+    panel.showOutOfRangeCheck = secBars:AddCheckbox("Out of Range", "testShowOutOfRange", nil, "display_fading")
+
+    -- --- AURAS ---
+    local secAuras = CreateSection(panel, "Auras", "auras")
+    panel.showAurasCheck = secAuras:AddCheckbox("Show Auras", "testShowAuras", function(enabled, isRaidMode)
+        if enabled and not isRaidMode and DF.testMode then DF:RefreshTestFramesWithLayout() end
+    end, "auras_buffs")
+    panel.showBossDebuffsCheck = secAuras:AddCheckbox("Boss Debuffs", "testShowBossDebuffs", function(enabled, isRaidMode)
         if isRaidMode then
             if DF.raidTestMode then
                 for i = 1, 40 do
                     local frame = DF.testRaidFrames[i]
                     if frame then
-                        if enabled then
-                            DF:UpdateTestBossDebuffs(frame)
-                        else
-                            DF:HideTestBossDebuffs(frame)
-                        end
+                        if enabled then DF:UpdateTestBossDebuffs(frame)
+                        else DF:HideTestBossDebuffs(frame) end
                     end
                 end
             end
@@ -6209,108 +6541,51 @@ function DF:CreateTestPanel()
                 for i = 0, 4 do
                     local frame = DF.testPartyFrames[i]
                     if frame then
-                        if enabled then
-                            DF:UpdateTestBossDebuffs(frame)
-                        else
-                            DF:HideTestBossDebuffs(frame)
-                        end
+                        if enabled then DF:UpdateTestBossDebuffs(frame)
+                        else DF:HideTestBossDebuffs(frame) end
                     end
                 end
             end
         end
     end, "auras_bossdebuffs")
-    y = y - checkHeight
-    
-    -- Row 9: Class Power (all relevant class frames)
-    panel.showClassPowerCheck = CreateCheckbox(panel, y, col1X, "Class Power", "testShowClassPower", function(enabled)
-        if enabled then
-            if DF.UpdateAllTestClassPower then DF:UpdateAllTestClassPower() end
-        else
-            if DF.CleanupTestClassPower then DF:CleanupTestClassPower() end
-        end
-    end, "bars_classpower")
-    y = y - checkHeight + 2  -- Slightly reduced gap before sliders
-    
-    -- Helper to create clickable label that links to settings
-    local function CreateClickableLabel(parent, text, pageId)
-        local btn = CreateFrame("Button", nil, parent)
-        btn:SetHeight(18)
-        
-        local labelText = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        labelText:SetPoint("LEFT", 0, 0)
-        labelText:SetText(text)
-        labelText:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-        
-        local arrow = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        arrow:SetPoint("LEFT", labelText, "RIGHT", 1, 0)
-        arrow:SetText("›")
-        arrow:SetTextColor(0.5, 0.5, 0.5)
-        
-        btn:SetWidth(labelText:GetStringWidth() + 10)
-        
-        btn:SetScript("OnEnter", function(self)
-            labelText:SetTextColor(1, 0.82, 0)
-            arrow:SetTextColor(1, 0.82, 0)
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText("Click to open settings", 1, 1, 1)
-            GameTooltip:Show()
-        end)
-        btn:SetScript("OnLeave", function(self)
-            labelText:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-            arrow:SetTextColor(0.5, 0.5, 0.5)
-            GameTooltip:Hide()
-        end)
-        btn:SetScript("OnClick", function()
-            if DF.GUI and DF.GUI.SelectTab then
-                if DF.GUIFrame and not DF.GUIFrame:IsShown() then
-                    DF.GUIFrame:Show()
-                end
-                DF.GUI.SelectTab(pageId)
-            end
-        end)
-        
-        btn.text = labelText
-        btn.arrow = arrow
-        return btn
-    end
-    
-    -- Compact buff/debuff sliders on same row
-    local buffLabel = CreateClickableLabel(panel, "Buffs:", "auras_buffs")
-    buffLabel:SetPoint("TOPLEFT", 10, y)
-    
-    local buffSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
+    panel.showDispelGlowCheck = secAuras:AddCheckbox("Dispel Overlay", "testShowDispelGlow", function()
+        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestDispelGlow() end
+    end, "auras_dispel")
+    panel.showMissingBuffCheck = secAuras:AddCheckbox("Missing Buff", "testShowMissingBuff", function()
+        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestMissingBuff() end
+    end, "auras_missingbuffs")
+    panel.showADCheck = secAuras:AddCheckbox("Aura Designer", "testShowAuraDesigner", function(enabled)
+        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestAuraDesigner() end
+    end, "auras_auradesigner")
+
+    -- Buff/Debuff count sliders
+    local auraSliderRow = CreateFrame("Frame", nil, secAuras.content)
+    auraSliderRow:SetHeight(18)
+
+    local buffLabel = auraSliderRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    buffLabel:SetPoint("LEFT", 0, 0)
+    buffLabel:SetText("Buffs:")
+    buffLabel:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+
+    local buffSlider = CreateThemedSlider(auraSliderRow, 55, 0, 5, 1)
     buffSlider:SetPoint("LEFT", buffLabel, "RIGHT", 5, 0)
-    buffSlider:SetSize(60, 14)
-    buffSlider:SetMinMaxValues(0, 5)
-    buffSlider:SetValueStep(1)
-    buffSlider:SetObeyStepOnDrag(true)
-    buffSlider.Low:SetText("")
-    buffSlider.High:SetText("")
-    buffSlider.Text:SetText("")
-    
-    local buffValue = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    buffValue:SetPoint("LEFT", buffSlider, "RIGHT", 3, 0)
+    local buffValue = auraSliderRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    buffValue:SetPoint("LEFT", buffSlider, "RIGHT", 4, 0)
     buffValue:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-    buffSlider.valueText = buffValue
-    
-    local debuffLabel = CreateClickableLabel(panel, "Debuffs:", "auras_debuffs")
-    debuffLabel:SetPoint("LEFT", buffValue, "RIGHT", 10, 0)
-    
-    local debuffSlider = CreateFrame("Slider", nil, panel, "OptionsSliderTemplate")
+    panel.buffValueText = buffValue
+
+    local debuffLabel = auraSliderRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    debuffLabel:SetPoint("LEFT", buffValue, "RIGHT", 12, 0)
+    debuffLabel:SetText("Debuffs:")
+    debuffLabel:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+
+    local debuffSlider = CreateThemedSlider(auraSliderRow, 55, 0, 5, 1)
     debuffSlider:SetPoint("LEFT", debuffLabel, "RIGHT", 5, 0)
-    debuffSlider:SetSize(60, 14)
-    debuffSlider:SetMinMaxValues(0, 5)
-    debuffSlider:SetValueStep(1)
-    debuffSlider:SetObeyStepOnDrag(true)
-    debuffSlider.Low:SetText("")
-    debuffSlider.High:SetText("")
-    debuffSlider.Text:SetText("")
-    
-    local debuffValue = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    debuffValue:SetPoint("LEFT", debuffSlider, "RIGHT", 3, 0)
+    local debuffValue = auraSliderRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    debuffValue:SetPoint("LEFT", debuffSlider, "RIGHT", 4, 0)
     debuffValue:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-    debuffSlider.valueText = debuffValue
-    
+    panel.debuffValueText = debuffValue
+
     -- Buff slider callbacks
     local buffSliderDragging = false
     buffSlider:SetScript("OnMouseDown", function(self, button)
@@ -6325,17 +6600,17 @@ function DF:CreateTestPanel()
             DF:OnSliderDragStop()
         end
     end)
-    buffSlider:SetScript("OnValueChanged", function(self, value)
+    buffSlider:HookScript("OnValueChanged", function(self, value)
         value = math.floor(value + 0.5)
         local isRaidMode = DF.raidTestMode
         local db = isRaidMode and DF:GetRaidDB() or DF:GetDB()
         db.testBuffCount = value
-        self.valueText:SetText(value)
+        buffValue:SetText(value)
         if DF.raidTestMode then DF:ThrottledUpdateRaidTestFrames()
         elseif DF.testMode then DF:ThrottledUpdateAll() end
     end)
     panel.buffSlider = buffSlider
-    
+
     -- Debuff slider callbacks
     local debuffSliderDragging = false
     debuffSlider:SetScript("OnMouseDown", function(self, button)
@@ -6350,43 +6625,72 @@ function DF:CreateTestPanel()
             DF:OnSliderDragStop()
         end
     end)
-    debuffSlider:SetScript("OnValueChanged", function(self, value)
+    debuffSlider:HookScript("OnValueChanged", function(self, value)
         value = math.floor(value + 0.5)
         local isRaidMode = DF.raidTestMode
         local db = isRaidMode and DF:GetRaidDB() or DF:GetDB()
         db.testDebuffCount = value
-        self.valueText:SetText(value)
+        debuffValue:SetText(value)
         if DF.raidTestMode then DF:ThrottledUpdateRaidTestFrames()
         elseif DF.testMode then DF:ThrottledUpdateAll() end
     end)
     panel.debuffSlider = debuffSlider
-    y = y - 30
-    
-    -- Separator
-    local sep2 = panel:CreateTexture(nil, "ARTWORK")
-    sep2:SetPoint("TOPLEFT", 12, y)
-    sep2:SetSize(251, 1)
-    sep2:SetColorTexture(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.5)
-    y = y - 12
-    
-    -- Quick Presets label
-    local presetLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    presetLabel:SetPoint("TOPLEFT", 12, y)
-    presetLabel:SetText("Quick Presets:")
-    presetLabel:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+
+    secAuras:AddWidget(auraSliderRow, 22)
+
+    -- --- INDICATORS & ICONS ---
+    local secIndicators = CreateSection(panel, "Indicators & Icons", "indicators")
+    panel.showExternalDefCheck = secIndicators:AddCheckbox("Defensive Icon", "testShowExternalDef", function()
+        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestDefensiveBar() end
+    end, "auras_defensiveicon")
+    panel.showTargetedSpellCheck = secIndicators:AddCheckbox("Targeted Spell", "testShowTargetedSpell", function()
+        if DF.testMode or DF.raidTestMode then DF:UpdateAllTestTargetedSpell() end
+    end, "indicators_targetedspells")
+    panel.showStatusIconsCheck = secIndicators:AddCheckbox("Status / Ready", "testShowStatusIcons", function()
+        if DF.testMode or DF.raidTestMode then DF:RefreshTestFrames() end
+    end, "indicators_icons")
+    panel.showIconsCheck = secIndicators:AddCheckbox("Role / Leader", "testShowIcons", nil, "indicators_icons")
+
+    -- --- HIGHLIGHTS ---
+    local secHighlights = CreateSection(panel, "Highlights", "highlights")
+    panel.showSelectionCheck = secHighlights:AddCheckbox("Selection", "testShowSelection", function()
+        if DF.UpdateAllTestHighlights then DF:UpdateAllTestHighlights() end
+    end, "indicators_highlights")
+    panel.showAggroCheck = secHighlights:AddCheckbox("Aggro", "testShowAggro", function()
+        if DF.UpdateAllTestHighlights then DF:UpdateAllTestHighlights() end
+    end, "indicators_highlights")
+
+    -- ============================================================
+    -- PRESETS FOOTER
+    -- ============================================================
+    local presetsFooter = CreateFrame("Frame", nil, panel)
+    presetsFooter:SetPoint("BOTTOMLEFT", 0, 0)
+    presetsFooter:SetPoint("BOTTOMRIGHT", 0, 0)
+    presetsFooter:SetHeight(58)
+
+    local presetSep = presetsFooter:CreateTexture(nil, "ARTWORK")
+    presetSep:SetPoint("TOPLEFT", 0, 0)
+    presetSep:SetPoint("TOPRIGHT", 0, 0)
+    presetSep:SetHeight(1)
+    presetSep:SetColorTexture(1, 1, 1, 0.06)
+
+    local presetLabel = presetsFooter:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    presetLabel:SetPoint("TOPLEFT", 12, -8)
+    presetLabel:SetText("QUICK PRESETS")
+    presetLabel:SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b, 0.7)
     panel.presetLabel = presetLabel
-    y = y - 25
-    
-    -- Preset buttons
+
     local presets = {"STATIC", "COMBAT", "HEALER", "FULL"}
     local presetNames = {STATIC = "Static", COMBAT = "Combat", HEALER = "Healer", FULL = "Full"}
-    local btnWidth = 50
+    local btnSpacing = 4
+    local btnCount = #presets
+    local btnWidth = math.floor((CONTENT_WIDTH - (btnSpacing * (btnCount - 1))) / btnCount)
     panel.presetBtns = {}
-    
+
     for i, preset in ipairs(presets) do
-        local btn = CreateFrame("Button", nil, panel, "BackdropTemplate")
-        btn:SetSize(btnWidth, 22)
-        btn:SetPoint("TOPLEFT", 12 + (i-1) * (btnWidth + 4), y)
+        local btn = CreateFrame("Button", nil, presetsFooter, "BackdropTemplate")
+        btn:SetSize(btnWidth, 24)
+        btn:SetPoint("TOPLEFT", 12 + (i - 1) * (btnWidth + btnSpacing), -26)
         btn:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
             edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -6418,33 +6722,45 @@ function DF:CreateTestPanel()
         end)
         panel.presetBtns[i] = btn
     end
-    
-    -- Update state function
-    function panel:UpdateState()
+
+    -- ============================================================
+    -- LAYOUT CALCULATION
+    -- ============================================================
+    function panel:RecalculateLayout()
+        local y = -HEADER_TOP
+        for _, sec in ipairs(allSections) do
+            sec:ClearAllPoints()
+            sec:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, y)
+            sec.content:SetHeight(sec:GetContentHeight())
+            sec:SetHeight(sec:GetTotalHeight())  -- Section needs valid height for children to render
+            y = y - sec:GetTotalHeight()
+        end
+        -- Set panel height: sections + header + presets footer
+        local totalHeight = HEADER_TOP + math.abs(y - (-HEADER_TOP)) + 62  -- 62 = presets footer
+        self:SetHeight(math.max(totalHeight, 200))
+    end
+
+    -- ============================================================
+    -- UPDATE STATE
+    -- ============================================================
+    local function UpdateStateInternal(self, callbackEnabled)
         local isRaidMode = DF.GUI and DF.GUI.SelectedMode == "raid"
         local db = isRaidMode and DF:GetRaidDB() or DF:GetDB()
         local themeColor = GetThemeColor()
         local testActive = IsTestActive()
-        
-        -- Update title
-        if isRaidMode then
-            self.title:SetText("Raid Test Mode")
-        else
-            self.title:SetText("Party Test Mode")
-        end
+
+        -- Title
+        self.title:SetText("Test Mode")
         self.title:SetTextColor(themeColor.r, themeColor.g, themeColor.b)
-        
-        -- Update slider range based on mode
-        local maxFrames = isRaidMode and 40 or 5
-        local dbKey = isRaidMode and "raidTestFrameCount" or "testFrameCount"
-        local currentCount = db[dbKey] or (isRaidMode and 10 or 5)
-        
-        self.frameCountSlider:SetMinMaxValues(1, maxFrames)
-        self.frameCountSlider.High:SetText(tostring(maxFrames))
-        self.frameCountSlider:SetValue(currentCount)
-        self.frameCountValue:SetText(tostring(currentCount))
-        self.frameCountValue:SetTextColor(themeColor.r, themeColor.g, themeColor.b)
-        
+
+        -- Badge
+        local badgeLabel = isRaidMode and "Raid" or "Party"
+        self.badge.text:SetText(badgeLabel)
+        self.badge:SetSize(self.badge.text:GetStringWidth() + 14, 18)
+        self.badge:SetBackdropColor(themeColor.r * 0.15, themeColor.g * 0.15, themeColor.b * 0.15, 1)
+        self.badge:SetBackdropBorderColor(themeColor.r, themeColor.g, themeColor.b, 0.3)
+        self.badge.text:SetTextColor(themeColor.r, themeColor.g, themeColor.b)
+
         -- Toggle button
         if testActive then
             self.toggleBtn:SetBackdropColor(themeColor.r * 0.3, themeColor.g * 0.3, themeColor.b * 0.3, 1)
@@ -6457,54 +6773,55 @@ function DF:CreateTestPanel()
             self.toggleBtn.Text:SetText("Enable Test Mode")
             self.toggleBtn.Text:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
         end
-        
-        -- Show all controls for both party and raid modes now
-        self.animHealthCheck:Show()
-        self.showAbsorbsCheck:Show()
-        self.showAurasCheck:Show()
-        self.buffSlider:Show()
-        self.debuffSlider:Show()
-        self.showOutOfRangeCheck:Show()
-        self.showDispelGlowCheck:Show()
-        self.showMissingBuffCheck:Show()
-        self.showExternalDefCheck:Show()
-        self.showTargetedSpellCheck:Show()
-        self.showIconsCheck:Show()
-        self.showAggroCheck:Show()
-        self.showSelectionCheck:Show()
-        self.presetLabel:Show()
-        for _, btn in ipairs(self.presetBtns) do
-            btn:Show()
-        end
-        
-        -- Full height for both modes (compact layout)
-        self:SetHeight(420)
-        
-        -- Checkboxes (both modes)
+
+        -- Frame count slider
+        local maxFrames = isRaidMode and 40 or 5
+        local fcKey = isRaidMode and "raidTestFrameCount" or "testFrameCount"
+        local currentCount = db[fcKey] or (isRaidMode and 10 or 5)
+        self.frameCountSlider:SetMinMaxValues(1, maxFrames)
+        self.frameCountSlider:SetValue(currentCount)
+        if self.frameCountSlider.UpdateTheme then self.frameCountSlider:UpdateTheme() end
+        self.frameCountValue:SetText(tostring(currentCount))
+        self.frameCountValue:SetTextColor(themeColor.r, themeColor.g, themeColor.b)
+
+        -- Checkboxes from DB
         self.animHealthCheck:SetChecked(db.testAnimateHealth)
+        self.showPetsCheck:SetChecked(db.testShowPets ~= false)
         self.showAbsorbsCheck:SetChecked(db.testShowAbsorbs)
         self.showHealPredictCheck:SetChecked(db.testShowHealPrediction ~= false)
-        self.showAurasCheck:SetChecked(db.testShowAuras)
+        self.showClassPowerCheck:SetChecked(db.testShowClassPower ~= false)
         self.showOutOfRangeCheck:SetChecked(db.testShowOutOfRange)
+        self.showAurasCheck:SetChecked(db.testShowAuras)
+        self.showBossDebuffsCheck:SetChecked(db.testShowBossDebuffs)
         self.showDispelGlowCheck:SetChecked(db.testShowDispelGlow)
         self.showMissingBuffCheck:SetChecked(db.testShowMissingBuff)
+        self.showADCheck:SetChecked(db.testShowAuraDesigner)
         self.showExternalDefCheck:SetChecked(db.testShowExternalDef)
         self.showTargetedSpellCheck:SetChecked(db.testShowTargetedSpell)
-        self.showBossDebuffsCheck:SetChecked(db.testShowBossDebuffs)
-        self.showIconsCheck:SetChecked(db.testShowIcons ~= false)
         self.showStatusIconsCheck:SetChecked(db.testShowStatusIcons ~= false)
-        self.showAggroCheck:SetChecked(db.testShowAggro)
+        self.showIconsCheck:SetChecked(db.testShowIcons ~= false)
         self.showSelectionCheck:SetChecked(db.testShowSelection)
-        self.showPetsCheck:SetChecked(db.testShowPets ~= false)
+        self.showAggroCheck:SetChecked(db.testShowAggro)
 
-        -- Sliders
+        -- Buff/Debuff sliders
         local buffCount = db.testBuffCount or 3
         self.buffSlider:SetValue(buffCount)
-        self.buffSlider.valueText:SetText(buffCount)
+        self.buffValueText:SetText(buffCount)
+        if self.buffSlider.UpdateTheme then self.buffSlider:UpdateTheme() end
         local debuffCount = db.testDebuffCount or 3
         self.debuffSlider:SetValue(debuffCount)
-        self.debuffSlider.valueText:SetText(debuffCount)
-        
+        self.debuffValueText:SetText(debuffCount)
+        if self.debuffSlider.UpdateTheme then self.debuffSlider:UpdateTheme() end
+
+        -- Restore section collapsed states from DB and update badges
+        local savedSections = DF.db and DF.db.testPanelSections
+        for _, sec in ipairs(allSections) do
+            if savedSections and sec.sectionKey and savedSections[sec.sectionKey] ~= nil then
+                sec:SetExpanded(savedSections[sec.sectionKey])
+            end
+            sec:UpdateBadge()
+        end
+
         -- Preset buttons
         for _, btn in ipairs(self.presetBtns) do
             if btn.preset == db.testPreset then
@@ -6517,118 +6834,31 @@ function DF:CreateTestPanel()
                 btn.Text:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
             end
         end
-        
-        -- Update GUI test button if it exists
-        if DF.GUI and DF.GUI.UpdateTestButtonState then
+
+        -- Recalculate layout
+        self:RecalculateLayout()
+
+        if callbackEnabled and DF.GUI and DF.GUI.UpdateTestButtonState then
             DF.GUI.UpdateTestButtonState()
         end
     end
-    
-    -- Version without callback to avoid circular dependency
-    function panel:UpdateStateNoCallback()
-        local isRaidMode = DF.GUI and DF.GUI.SelectedMode == "raid"
-        local db = isRaidMode and DF:GetRaidDB() or DF:GetDB()
-        local themeColor = GetThemeColor()
-        local testActive = IsTestActive()
-        
-        -- Update title
-        if isRaidMode then
-            self.title:SetText("Raid Test Mode")
-        else
-            self.title:SetText("Party Test Mode")
-        end
-        self.title:SetTextColor(themeColor.r, themeColor.g, themeColor.b)
-        
-        -- Update slider range based on mode
-        local maxFrames = isRaidMode and 40 or 5
-        local dbKey = isRaidMode and "raidTestFrameCount" or "testFrameCount"
-        local currentCount = db[dbKey] or (isRaidMode and 10 or 5)
-        
-        self.frameCountSlider:SetMinMaxValues(1, maxFrames)
-        self.frameCountSlider.High:SetText(tostring(maxFrames))
-        self.frameCountSlider:SetValue(currentCount)
-        self.frameCountValue:SetText(tostring(currentCount))
-        self.frameCountValue:SetTextColor(themeColor.r, themeColor.g, themeColor.b)
-        
-        -- Toggle button
-        if testActive then
-            self.toggleBtn:SetBackdropColor(themeColor.r * 0.3, themeColor.g * 0.3, themeColor.b * 0.3, 1)
-            self.toggleBtn:SetBackdropBorderColor(themeColor.r, themeColor.g, themeColor.b, 1)
-            self.toggleBtn.Text:SetText("Disable Test Mode")
-            self.toggleBtn.Text:SetTextColor(themeColor.r, themeColor.g, themeColor.b)
-        else
-            self.toggleBtn:SetBackdropColor(C_ELEMENT.r, C_ELEMENT.g, C_ELEMENT.b, 1)
-            self.toggleBtn:SetBackdropBorderColor(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.5)
-            self.toggleBtn.Text:SetText("Enable Test Mode")
-            self.toggleBtn.Text:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-        end
-        
-        -- Show all controls for both party and raid modes now
-        self.animHealthCheck:Show()
-        self.showAbsorbsCheck:Show()
-        self.showAurasCheck:Show()
-        self.buffSlider:Show()
-        self.debuffSlider:Show()
-        self.showOutOfRangeCheck:Show()
-        self.showDispelGlowCheck:Show()
-        self.showMissingBuffCheck:Show()
-        self.showExternalDefCheck:Show()
-        self.showTargetedSpellCheck:Show()
-        self.showIconsCheck:Show()
-        self.showAggroCheck:Show()
-        self.showSelectionCheck:Show()
-        self.presetLabel:Show()
-        for _, btn in ipairs(self.presetBtns) do
-            btn:Show()
-        end
-        
-        -- Full height for both modes (compact layout)
-        self:SetHeight(420)
-        
-        -- Checkboxes (both modes)
-        self.animHealthCheck:SetChecked(db.testAnimateHealth)
-        self.showAbsorbsCheck:SetChecked(db.testShowAbsorbs)
-        self.showHealPredictCheck:SetChecked(db.testShowHealPrediction ~= false)
-        self.showAurasCheck:SetChecked(db.testShowAuras)
-        self.showOutOfRangeCheck:SetChecked(db.testShowOutOfRange)
-        self.showDispelGlowCheck:SetChecked(db.testShowDispelGlow)
-        self.showMissingBuffCheck:SetChecked(db.testShowMissingBuff)
-        self.showExternalDefCheck:SetChecked(db.testShowExternalDef)
-        self.showTargetedSpellCheck:SetChecked(db.testShowTargetedSpell)
-        self.showBossDebuffsCheck:SetChecked(db.testShowBossDebuffs)
-        self.showIconsCheck:SetChecked(db.testShowIcons ~= false)
-        self.showStatusIconsCheck:SetChecked(db.testShowStatusIcons ~= false)
-        self.showAggroCheck:SetChecked(db.testShowAggro)
-        self.showSelectionCheck:SetChecked(db.testShowSelection)
-        self.showPetsCheck:SetChecked(db.testShowPets ~= false)
-        
-        -- Sliders
-        local buffCount = db.testBuffCount or 3
-        self.buffSlider:SetValue(buffCount)
-        self.buffSlider.valueText:SetText(buffCount)
-        local debuffCount = db.testDebuffCount or 3
-        self.debuffSlider:SetValue(debuffCount)
-        self.debuffSlider.valueText:SetText(debuffCount)
-        
-        -- Preset buttons
-        for _, btn in ipairs(self.presetBtns) do
-            if btn.preset == db.testPreset then
-                btn:SetBackdropColor(themeColor.r * 0.3, themeColor.g * 0.3, themeColor.b * 0.3, 1)
-                btn:SetBackdropBorderColor(themeColor.r, themeColor.g, themeColor.b, 1)
-                btn.Text:SetTextColor(themeColor.r, themeColor.g, themeColor.b)
-            else
-                btn:SetBackdropColor(C_ELEMENT.r, C_ELEMENT.g, C_ELEMENT.b, 1)
-                btn:SetBackdropBorderColor(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.5)
-                btn.Text:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
-            end
-        end
-        -- NOTE: No callback to UpdateTestButtonState here to avoid circular dependency
+
+    function panel:UpdateState()
+        UpdateStateInternal(self, true)
     end
-    
+
+    function panel:UpdateStateNoCallback()
+        UpdateStateInternal(self, false)
+    end
+
+    -- ============================================================
+    -- ONSHOW
+    -- ============================================================
     panel:SetScript("OnShow", function(self)
+        ApplyScale(self)
         self:UpdateState()
     end)
-    
+
     DF.TestPanel = panel
     return panel
 end

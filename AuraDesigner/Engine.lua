@@ -456,6 +456,161 @@ function Engine:ClearFrame(frame)
 end
 
 -- ============================================================
+-- TEST MODE UPDATE
+-- Renders AD indicators on test frames using mock aura data
+-- built from the user's configured auras for their spec.
+-- ============================================================
+
+function Engine:UpdateTestFrame(frame)
+    -- Lazy init references
+    if not Adapter then
+        Adapter = DF.AuraDesigner.Adapter
+    end
+    if not Indicators then
+        Indicators = DF.AuraDesigner.Indicators
+    end
+    if not Indicators then return end
+
+    local db = DF:GetFrameDB(frame)
+    if not db then return end
+    local adDB = db.auraDesigner
+    if not adDB or not adDB.enabled then
+        Indicators:HideAll(frame)
+        return
+    end
+
+    local spec = self:ResolveSpec(adDB)
+    if not spec then
+        Indicators:HideAll(frame)
+        return
+    end
+
+    -- Lazy migration
+    if (not adDB._specScopedV1 or not adDB._specScopedV2) and DF.MigrateAuraDesignerSpecScope then
+        DF.MigrateAuraDesignerSpecScope(adDB)
+    end
+
+    local specAuras = adDB.auras and adDB.auras[spec]
+    if not specAuras then
+        Indicators:HideAll(frame)
+        return
+    end
+
+    -- Build mock activeAuras from configured auras
+    local specSpellIDs = DF.AuraDesigner.SpellIDs and DF.AuraDesigner.SpellIDs[spec] or {}
+    local iconTextures = DF.AuraDesigner.IconTextures or {}
+    local now = GetTime()
+    local mockCounter = 99000
+
+    wipe(activeIndicators)
+
+    for auraName, auraCfg in pairs(specAuras) do
+      if type(auraCfg) == "table" then
+        -- Build mock aura data for this configured aura
+        local spellId = specSpellIDs[auraName] or 0
+        local icon = iconTextures[auraName]
+        if not icon and spellId > 0 and C_Spell and C_Spell.GetSpellTexture then
+            icon = C_Spell.GetSpellTexture(spellId)
+        end
+        mockCounter = mockCounter + 1
+
+        local auraData = {
+            spellId = spellId,
+            icon = icon or 136243,  -- question mark fallback
+            duration = 0,           -- 0 = permanent (bars show full fill, no countdown)
+            expirationTime = 0,
+            stacks = 0,
+            caster = "player",
+            auraInstanceID = nil,   -- nil so bar OnUpdate skips expiration guard
+        }
+
+        local priority = auraCfg.priority or 5
+
+        -- Placed indicators
+        if auraCfg.indicators then
+            for _, indicator in ipairs(auraCfg.indicators) do
+                tinsert(activeIndicators, {
+                    auraName    = auraName,
+                    instanceKey = auraName .. "#" .. indicator.id,
+                    typeKey     = indicator.type,
+                    placed      = true,
+                    config      = indicator,
+                    auraData    = auraData,
+                    priority    = priority,
+                })
+            end
+        end
+
+        -- Frame-level indicators
+        for _, typeDef in ipairs(FRAME_LEVEL_TYPES) do
+            local typeCfg = auraCfg[typeDef.key]
+            if typeCfg then
+                tinsert(activeIndicators, {
+                    auraName = auraName,
+                    typeKey  = typeDef.key,
+                    placed   = false,
+                    config   = typeCfg,
+                    auraData = auraData,
+                    priority = priority,
+                })
+            end
+        end
+      end
+    end
+
+    -- Sort by priority
+    if #activeIndicators > 1 then
+        sort(activeIndicators, prioritySort)
+    end
+
+    -- Resolve layout groups
+    ResolveLayoutGroups(adDB, activeIndicators, spec)
+
+    -- Dispatch to indicator renderers (using ApplyTest to skip aura validation)
+    Indicators:BeginFrame(frame)
+
+    local setmetatable = setmetatable
+    for _, ind in ipairs(activeIndicators) do
+        local key = ind.placed and ind.instanceKey or ind.auraName
+        local config = ind.config
+
+        -- Layout group position override (same as production)
+        if ind.placed and ind.instanceKey then
+            local entry = groupLookup[ind.instanceKey]
+            if entry then
+                local group = entry.group
+                local actives = groupActiveMembers[group.id]
+                local activeIdx = 0
+                if actives then
+                    for i, am in ipairs(actives) do
+                        if am.indicator == ind then activeIdx = i - 1; break end
+                    end
+                end
+                local size = config.size or (adDB.defaults and adDB.defaults.iconSize) or 24
+                local scale = config.scale or (adDB.defaults and adDB.defaults.iconScale) or 1.0
+                local step = (size * scale) + (group.spacing or 2)
+                local oX, oY = group.offsetX or 0, group.offsetY or 0
+                local dir = group.growDirection or "RIGHT"
+                if dir == "RIGHT" then     oX = oX + (activeIdx * step)
+                elseif dir == "LEFT" then  oX = oX - (activeIdx * step)
+                elseif dir == "DOWN" then  oY = oY - (activeIdx * step)
+                elseif dir == "UP" then    oY = oY + (activeIdx * step)
+                end
+                config = setmetatable({
+                    anchor = group.anchor or "TOPLEFT",
+                    offsetX = oX,
+                    offsetY = oY,
+                }, { __index = ind.config })
+            end
+        end
+
+        Indicators:ApplyTest(frame, ind.typeKey, config, ind.auraData, adDB.defaults, key, ind.priority)
+    end
+
+    Indicators:EndFrame(frame)
+end
+
+-- ============================================================
 -- FORCE REFRESH ALL AD-ENABLED FRAMES
 -- Re-runs UpdateFrame on every visible AD frame so changed
 -- global defaults (fonts, sizes, etc.) take effect immediately.

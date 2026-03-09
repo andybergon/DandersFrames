@@ -4,28 +4,19 @@ local addonName, DF = ...
 -- OUT OF RANGE ALPHA SYSTEM
 -- Fades frames/elements when party members are out of range
 --
--- RANGE CHECK STRATEGY:
--- 1. IsSpellInRange() - Primary check using spec-specific spells.
---    Validated with IsPlayerSpell() to handle talent/spec changes.
---    Returns normal booleans that are fully cacheable.
---    Cache avoids redundant appearance updates for performance.
---    Guarded with issecretvalue() in case Midnight+ taints these returns.
--- 2. CheckInteractDistance() - Fallback when out of combat and
---    IsSpellInRange returns nil (no spell, target dead/offline/phased).
--- 3. NIL-ON-ALIVE: If a friendly spell returned nil on an alive, connected
---    target during combat, treat as OUT OF RANGE. IsSpellInRange returns nil
---    (not false) for extremely distant targets outside the game's position-
---    awareness range, and the old fallback chain defaulted to "in range".
--- 4. UnitInRange() - In-combat fallback for classes with no friendly
---    spell (Warrior, DH, Hunter). Returns secret values in Midnight+
---    so we check with issecretvalue() before using the result.
---    If non-secret and says OOR, we trust it. If secret, assume in range.
--- 5. If no method available → in range (better than fading entire raid).
+-- RANGE CHECK STRATEGY (matches Grid2's proven approach):
+-- 1. Player → always in range
+-- 2. Phased units → always out of range (UnitPhaseReason)
+-- 3. Hostile → IsSpellInRange(hostileSpell)
+-- 4. Dead friendly → IsSpellInRange(rezSpell)
+-- 5. Friendly with spell → IsSpellInRange(friendlySpell)
+--    OR CheckInteractDistance out of combat
+-- 6. No friendly spell → CheckInteractDistance out of combat,
+--    UnitInRange() in combat, default in-range as last resort
 --
--- NOTE: UnitInRange() is only used as a last-resort fallback for classes
--- with no friendly spell (Warrior, DH, Hunter) during combat. In Midnight
--- it can return "secret" values, so we guard with issecretvalue() and only
--- use clean boolean results. The primary spell-based approach avoids secrets.
+-- IsSpellInRange returns normal booleans - NOT secret values.
+-- We trust the result directly (== true) like Grid2 does.
+-- UnitInRange() may return secret values so we still guard that.
 --
 -- DEBUG: /dfrange debug  - toggle debug output
 --        /dfrange stats  - show cache statistics
@@ -54,6 +45,7 @@ local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 local UnitIsConnected = UnitIsConnected
 local UnitInRange = UnitInRange
 local issecretvalue = issecretvalue  -- nil pre-Midnight, function in Midnight+
+local UnitPhaseReason = UnitPhaseReason
 
 -- Player info
 local _, playerClass = UnitClass("player")
@@ -66,18 +58,21 @@ local _, playerClass = UnitClass("player")
 
 local specSpells = {
     -- ==================== DEATH KNIGHT ====================
+    -- Death Coil (47541) can only heal undead minions, NOT friendly players.
+    -- IsSpellInRange returns nil on player targets → no friendly spell available.
+    -- Range falls back to CheckInteractDistance (OOC) or UnitInRange (combat).
     [250] = { -- Blood
-        friendly = 47541,   -- Death Coil (can heal undead allies, works on DK)
+        friendly = nil,
         hostile = 47541,    -- Death Coil
         range = "40yd"
     },
     [251] = { -- Frost
-        friendly = 47541,
+        friendly = nil,
         hostile = 47541,
         range = "40yd"
     },
     [252] = { -- Unholy
-        friendly = 47541,
+        friendly = nil,
         hostile = 47541,
         range = "40yd"
     },
@@ -125,17 +120,17 @@ local specSpells = {
     
     -- ==================== EVOKER ====================
     [1467] = { -- Devastation
-        friendly = 360995,  -- Emerald Blossom (all evokers)
+        friendly = 355913,  -- Emerald Blossom (all evokers have this)
         hostile = 361469,   -- Living Flame
         range = "25yd"
     },
     [1468] = { -- Preservation
-        friendly = 355913,  -- Emerald Blossom (rank 2)
+        friendly = 355913,  -- Emerald Blossom
         hostile = 361469,
         range = "25yd"      -- Note: Evoker has shorter range!
     },
     [1473] = { -- Augmentation
-        friendly = 360995,
+        friendly = 355913,  -- Emerald Blossom
         hostile = 361469,
         range = "25yd"
     },
@@ -296,10 +291,10 @@ local specSpells = {
 
 -- Class fallbacks (used if spec not detected or not in table)
 local classFallbacks = {
-    DEATHKNIGHT = { friendly = 47541, hostile = 47541 },
+    DEATHKNIGHT = { friendly = nil, hostile = 47541 },
     DEMONHUNTER = { friendly = nil, hostile = 185123 },
     DRUID       = { friendly = 8936, hostile = 8921 },  -- Regrowth (all druids have it)
-    EVOKER      = { friendly = 360995, hostile = 361469 },
+    EVOKER      = { friendly = 355913, hostile = 361469 },  -- Emerald Blossom
     HUNTER      = { friendly = nil, hostile = 75 },  -- Auto Shot
     MAGE        = { friendly = 1459, hostile = 116 },
     MONK        = { friendly = 116670, hostile = 115546 },
@@ -434,8 +429,10 @@ end
 
 -- ============================================================
 -- RANGE CHECK FUNCTION
--- Returns: inRange (boolean)
---   Always returns a normal boolean - safe to cache, compare, and test.
+-- Returns: inRange (boolean or secret boolean)
+--   Spell-based checks return normal booleans (cacheable, fast).
+--   UnitInRange fallback may return secret booleans (Midnight+)
+--   which propagate through SetAlphaFromBoolean downstream.
 --   Falls back to CheckInteractDistance when spells return nil.
 -- ============================================================
 
@@ -443,93 +440,96 @@ local function CheckUnitRange(unit)
     if UnitIsUnit(unit, "player") then
         return true
     end
-    
+
     if not UnitExists(unit) then
         return true
     end
-    
+
+    -- Phased units are always out of range (matches Grid2)
+    -- UnitPhaseReason returns nil for same-phase, a number if phased
+    if UnitPhaseReason and UnitPhaseReason(unit) then
+        return false
+    end
+
     -- Branch on UnitCanAttack (not UnitCanAssist) to handle cross-faction party members.
     -- In the open world, cross-faction group members may have UnitCanAssist=false
     -- but UnitCanAttack is also false (they're in your group). Using UnitCanAttack
     -- ensures they fall through to the friendly path.
     if UnitCanAttack("player", unit) then
-        -- For hostile units
+        -- HOSTILE UNITS: IsSpellInRange returns clean booleans, trust directly
         if currentHostileSpell then
             local inRange = C_Spell_IsSpellInRange(currentHostileSpell, unit)
-            -- Guard against secret/tainted values (Midnight+)
-            if issecretvalue and issecretvalue(inRange) then
-                -- Fall through to fallback
-            elseif inRange ~= nil then
+            if inRange ~= nil then
                 return inRange
             end
         end
-        
         -- No hostile spell or returned nil - assume in range
         return true
-    else
-        -- For friendly units (party/raid members)
-        local spellReturnedNil = false
-        
-        if currentFriendlySpell then
-            local inRange = C_Spell_IsSpellInRange(currentFriendlySpell, unit)
-            -- Guard against secret/tainted values (Midnight+)
-            if issecretvalue and issecretvalue(inRange) then
-                -- Secret value - can't trust, fall through to fallbacks
-                spellReturnedNil = true
-            elseif inRange ~= nil then
-                return inRange
-            else
-                spellReturnedNil = true
-            end
-        end
-        
-        -- Friendly spell returned nil (target is dead, offline, phased, etc.)
-        -- If target is dead and we have a rez spell, try that for accurate range
-        if currentRezSpell and UnitIsDeadOrGhost(unit) then
-            local inRange = C_Spell_IsSpellInRange(currentRezSpell, unit)
-            if issecretvalue and issecretvalue(inRange) then
-                -- Fall through
-            elseif inRange ~= nil then
-                return inRange
-            end
-        end
-        
-        -- All spell checks returned nil or no friendly spell available
-        -- Out of combat: use interact distance (~28 yards) for accurate check
-        if not InCombatLockdown() then
-            return CheckInteractDistance(unit, 4)
-        end
-        
-        -- IN COMBAT FALLBACKS:
-        -- If we HAD a friendly spell and it returned nil on a target that is
-        -- alive and connected, the target is likely very far away (outside the
-        -- game's position-awareness range). Treat as out of range.
-        -- This fixes the bug where IsSpellInRange returns nil (not false) for
-        -- extremely distant targets, and the fallback chain defaults to "in range".
-        if spellReturnedNil and UnitIsConnected(unit) and not UnitIsDeadOrGhost(unit) then
-            DebugPrint("OOR-NIL", unit, "spell returned nil on alive/connected target in combat")
-            return false
-        end
-        
-        -- In combat with no spell data: try UnitInRange as last resort
-        -- UnitInRange may return secret/tainted values in Midnight+ so we
-        -- check with issecretvalue before using the result
-        if UnitInRange then
-            local inRange, checked = UnitInRange(unit)
-            if issecretvalue and (issecretvalue(inRange) or issecretvalue(checked)) then
-                -- Secret value - can't cache or compare, assume in range
+    end
+
+    -- FRIENDLY UNITS (party/raid members)
+    -- IsSpellInRange returns clean booleans - NOT secret values.
+    -- We trust the result directly (== true/false) like Grid2 does.
+    if currentFriendlySpell then
+        local inRange = C_Spell_IsSpellInRange(currentFriendlySpell, unit)
+        if inRange == true then
+            return true
+        elseif inRange == false then
+            -- Spell says OOR; OR with CheckInteractDistance out of combat
+            -- for leniency (avoids false OOR from spec/talent edge cases).
+            -- Both Grid2 and LibRangeCheck gate this behind !InCombat.
+            if not InCombatLockdown() and CheckInteractDistance(unit, 4) then
                 return true
             end
-            -- Clean boolean - safe to use
-            if checked and not inRange then
-                return false
-            end
+            return false
         end
-        
-        -- No method available or UnitInRange inconclusive - assume in range
-        -- (Better than fading out entire raid for Warrior/DH/Hunter)
-        return true
+        -- inRange == nil: spell can't target this unit (dead, offline, etc.)
     end
+
+    -- Dead target: try rez spell for accurate range on corpses
+    if currentRezSpell and UnitIsDeadOrGhost(unit) then
+        local inRange = C_Spell_IsSpellInRange(currentRezSpell, unit)
+        if inRange ~= nil then
+            return inRange
+        end
+    end
+
+    -- No spell result available.
+    -- Out of combat: CheckInteractDistance (~28yd follow distance)
+    -- Both Grid2 and LibRangeCheck avoid CheckInteractDistance in combat.
+    if not InCombatLockdown() then
+        return CheckInteractDistance(unit, 4) and true or false
+    end
+
+    -- IN COMBAT FALLBACKS:
+
+    -- If we had a friendly spell and it returned nil on a living, connected
+    -- target, they're likely extremely far away — treat as out of range.
+    -- (IsSpellInRange returns nil for targets outside position-awareness range)
+    if currentFriendlySpell and UnitIsConnected(unit) and not UnitIsDeadOrGhost(unit) then
+        DebugPrint("OOR-NIL", unit, "spell returned nil on alive/connected target in combat")
+        return false
+    end
+
+    -- UnitInRange as combat fallback (returns secret booleans in Midnight+)
+    -- Secret booleans propagate through the pipeline:
+    --   dfInRange → GetInRange → SetAlphaFromBoolean → SetAlpha
+    -- This gives DK/DH/Hunter/Warrior actual range fading in combat.
+    if UnitInRange then
+        local inRange = UnitInRange(unit)
+        if issecretvalue and issecretvalue(inRange) then
+            return inRange  -- Secret boolean, handled by SetAlphaFromBoolean downstream
+        end
+        if inRange ~= nil then
+            return inRange  -- Normal boolean
+        end
+    end
+
+    -- No method available or inconclusive — assume in range.
+    -- This matches Grid2's approach for classes without friendly spells
+    -- in combat: "return InCombat or CheckInteractDistance(unit, 4)"
+    -- which always returns true when in combat.
+    return true
 end
 
 -- ============================================================
@@ -543,24 +543,34 @@ function DF:UpdateRange(frame)
     if DF.testMode or DF.raidTestMode then return end
     
     local unit = frame.unit
-    
+
+    -- Player is always in range — skip all checks and cache logic
+    if UnitIsUnit(unit, "player") then
+        frame.dfInRange = true
+        return
+    end
+
     if not IsInGroup() and not IsInRaid() then
         frame.dfInRange = true
         return
     end
-    
+
     local inRange = CheckUnitRange(unit)
     
     debugStats.checks = debugStats.checks + 1
     
-    -- All range results are normal booleans - safe to cache and compare
+    -- Cache comparison: secret values (from UnitInRange fallback) can't be
+    -- compared with == so we always update when secrets are involved.
+    -- Spell-based results are normal booleans and cache efficiently.
     local cached = rangeCache[unit]
-    if cached == inRange then
+    local isSecret = issecretvalue and (issecretvalue(inRange) or issecretvalue(cached))
+    if not isSecret and cached == inRange then
         debugStats.cacheHits = debugStats.cacheHits + 1
         DebugPrint("SKIP", unit, "cached:", tostring(cached))
         -- Still need to update THIS frame if it hasn't been initialized
         -- (multiple frames can share the same unit, e.g. pinned frames)
-        if frame.dfInRange ~= inRange then
+        local dfSecret = issecretvalue and issecretvalue(frame.dfInRange)
+        if dfSecret or frame.dfInRange ~= inRange then
             frame.dfInRange = inRange
             if DF.UpdateRangeAppearance then
                 DF:UpdateRangeAppearance(frame)
@@ -568,7 +578,7 @@ function DF:UpdateRange(frame)
         end
         return
     end
-    
+
     debugStats.cacheMisses = debugStats.cacheMisses + 1
     rangeCache[unit] = inRange
     DebugPrint("UPDATE", unit, "was:", tostring(cached), "now:", tostring(inRange))
@@ -809,6 +819,10 @@ function DF:GetRangeSpellOptions()
             if name then
                 options[1].label = "Auto: " .. name .. " (" .. GetSpellRange(spells.friendly, spells.range) .. ")"
             end
+        else
+            -- Classes without friendly spells (DK, DH, Hunter, Warrior)
+            -- use UnitInRange/CheckInteractDistance as fallback
+            options[1].label = "Auto: UnitInRange (~40yd)"
         end
     end
     
@@ -853,21 +867,28 @@ end
 -- Get current range spell info for display
 function DF:GetCurrentRangeSpellInfo()
     local spellID = currentFriendlySpell or currentHostileSpell
-    local spellName = spellID and C_Spell_GetSpellName(spellID) or "None"
-    local range = "Unknown"
-    
-    -- Get actual range from spell data (accounts for talents that extend range)
-    if spellID and C_Spell.GetSpellInfo then
-        local spellInfo = C_Spell.GetSpellInfo(spellID)
-        if spellInfo and spellInfo.maxRange and spellInfo.maxRange > 0 then
-            range = math.floor(spellInfo.maxRange) .. "yd"
+    local spellName, range
+
+    if currentFriendlySpell then
+        -- Has a friendly spell - show it with actual range
+        spellName = C_Spell_GetSpellName(currentFriendlySpell) or "Unknown"
+        if C_Spell.GetSpellInfo then
+            local spellInfo = C_Spell.GetSpellInfo(currentFriendlySpell)
+            if spellInfo and spellInfo.maxRange and spellInfo.maxRange > 0 then
+                range = math.floor(spellInfo.maxRange) .. "yd"
+            end
         end
+    else
+        -- No friendly spell (DK, DH, Hunter, Warrior) - show fallback method
+        spellName = "UnitInRange"
+        range = "~40yd"
     end
-    
-    -- Fallback to hardcoded range if API didn't return anything
-    if range == "Unknown" and currentSpecID and specSpells[currentSpecID] then
+
+    -- Fallback to hardcoded range if nothing found yet
+    if not range and currentSpecID and specSpells[currentSpecID] then
         range = specSpells[currentSpecID].range or "40yd"
     end
+    range = range or "Unknown"
     
     -- Check if using custom override or auto
     local isCustom = false

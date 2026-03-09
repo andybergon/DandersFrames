@@ -415,12 +415,14 @@ function DF:UpdateAbsorb(frame, testIndex)
     customBar:Show()
     customBar:ClearAllPoints()
     -- Reset frame alpha (may have been set to 0 by ATTACHED_OVERFLOW mode)
-    -- Respect OOR fade: if unit is out of range, use the configured OOR alpha instead of 1
-    local absorbAlpha = 1
-    if db.oorEnabled and frame.dfInRange == false then
-        absorbAlpha = db.oorAbsorbBarAlpha or 0.5
+    -- Respect OOR fade: use SetAlphaFromBoolean to handle secret values from UnitInRange
+    if db.oorEnabled and customBar.SetAlphaFromBoolean then
+        local inRange = frame.dfInRange
+        if not (issecretvalue and issecretvalue(inRange)) and inRange == nil then inRange = true end
+        customBar:SetAlphaFromBoolean(inRange, 1, db.oorAbsorbBarAlpha or 0.5)
+    else
+        customBar:SetAlpha(1)
     end
-    customBar:SetAlpha(absorbAlpha)
     
     -- ============================================================
     -- MODE: FLOATING
@@ -902,9 +904,16 @@ function DF:UpdateAbsorb(frame, testIndex)
         -- When clamped: show overflow, hide attached
         -- When not clamped: hide overflow, show attached
         -- Respect OOR fade: use OOR alpha instead of 1 when unit is out of range
+        -- dfInRange may be a secret boolean from UnitInRange fallback
         local visAlpha = 1
-        if db.oorEnabled and frame.dfInRange == false then
-            visAlpha = db.oorAbsorbBarAlpha or 0.5
+        if db.oorEnabled then
+            local inRange = frame.dfInRange
+            if not (issecretvalue and issecretvalue(inRange)) then
+                if inRange == false then
+                    visAlpha = db.oorAbsorbBarAlpha or 0.5
+                end
+            end
+            -- Secret values: can't compare, leave visAlpha at 1 (OOR handled by frame-level fade)
         end
         overflowVisHelper:Show()
         overflowVisHelper:SetAlphaFromBoolean(isClamped, visAlpha, 0)
