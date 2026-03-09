@@ -671,7 +671,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         
         local oorTargetedSpell = oorGroup:AddWidget(GUI:CreateSlider(self.child, "Targeted Spell Alpha", 0.0, 1.0, 0.05, db, "oorTargetedSpellAlpha", nil, function() DF:RefreshAllVisibleFrames() end, true), 55)
         oorTargetedSpell.hideOn = HideOOROptions
-        
+
+        local oorAuraDesigner = oorGroup:AddWidget(GUI:CreateSlider(self.child, "Aura Designer Alpha", 0.0, 1.0, 0.05, db, "oorAuraDesignerAlpha", nil, function() DF:RefreshAllVisibleFrames() end, true), 55)
+        oorAuraDesigner.hideOn = HideOOROptions
+
         Add(oorGroup, nil, 1)
         
         -- ===== DEAD/OFFLINE FADING GROUP (Column 2) =====

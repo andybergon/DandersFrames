@@ -387,21 +387,22 @@ end
 function DF:UpdateNameTextAppearance(frame)
     if not IsDandersFrame(frame) then return end
     if not frame.nameText then return end
-    
+
     -- Skip test frames - they handle their own appearance in TestMode.lua
     if frame.dfIsTestFrame then return end
-    
+
     local db = GetDB(frame)
     if not db then return end
-    
+
     local deadOrOffline = IsDeadOrOffline(frame)
     local inRange = GetInRange(frame)
-    
+
     -- ========================================
     -- DETERMINE COLOR
     -- ========================================
     local r, g, b = 1, 1, 1  -- Default white
-    
+    local baseAlpha = 1.0     -- From color picker
+
     if db.nameTextUseClassColor then
         -- Class color always applies, even when dead/offline
         local classColor = GetClassColor(frame)
@@ -412,31 +413,32 @@ function DF:UpdateNameTextAppearance(frame)
     else
         local c = db.nameTextColor or DEFAULT_COLOR_WHITE
         r, g, b = c.r, c.g, c.b
+        baseAlpha = c.a or 1.0
     end
-    
+
     -- ========================================
     -- DETERMINE ALPHA
+    -- All alpha goes through SetAlpha/SetAlphaFromBoolean,
+    -- never through SetTextColor's alpha channel.
     -- ========================================
-    local alpha = 1.0
-    
+    local alpha = baseAlpha
+
     if deadOrOffline and db.fadeDeadFrames then
         alpha = db.fadeDeadName or 1.0
     end
-    
+
     -- ========================================
     -- APPLY APPEARANCE
+    -- Color always uses alpha=1.0; opacity is controlled
+    -- solely via SetAlpha so it works with SetAlphaFromBoolean.
     -- ========================================
+    frame.nameText:SetTextColor(r, g, b, 1.0)
+
     if db.oorEnabled then
         local oorAlpha = db.oorNameTextAlpha or 1
-
-        -- Set color with dead/offline alpha (not hardcoded 1.0)
-        frame.nameText:SetTextColor(r, g, b, alpha)
-
-        -- Apply OOR alpha on top
         ApplyOORAlpha(frame.nameText, inRange, alpha, oorAlpha)
     else
-        -- Frame-level OOR: just apply color with alpha
-        frame.nameText:SetTextColor(r, g, b, alpha)
+        frame.nameText:SetAlpha(alpha)
     end
 end
 
@@ -447,49 +449,53 @@ end
 function DF:UpdateHealthTextAppearance(frame)
     if not IsDandersFrame(frame) then return end
     if not frame.healthText then return end
-    
+
     local db = GetDB(frame)
     if not db then return end
-    
+
     -- Skip during test mode
     if DF.testMode or DF.raidTestMode then return end
-    
+
     local deadOrOffline = IsDeadOrOffline(frame)
     local inRange = GetInRange(frame)
-    
+
     -- ========================================
     -- DETERMINE COLOR
     -- ========================================
     local r, g, b = 1, 1, 1  -- Default white
-    
+    local baseAlpha = 1.0     -- From color picker
+
     if db.healthTextUseClassColor then
         local classColor = GetClassColor(frame)
         r, g, b = classColor.r, classColor.g, classColor.b
     else
         local c = db.healthTextColor or DEFAULT_COLOR_WHITE
         r, g, b = c.r, c.g, c.b
+        baseAlpha = c.a or 1.0
     end
-    
+
     -- ========================================
     -- DETERMINE ALPHA
+    -- All alpha goes through SetAlpha/SetAlphaFromBoolean.
     -- ========================================
-    local alpha = 1.0
-    
+    local alpha = baseAlpha
+
     if deadOrOffline and db.fadeDeadFrames then
         alpha = db.fadeDeadHealthBar or 1  -- Health text follows health bar alpha
     end
-    
+
     -- ========================================
     -- APPLY APPEARANCE
+    -- Color always uses alpha=1.0; opacity is controlled
+    -- solely via SetAlpha so it works with SetAlphaFromBoolean.
     -- ========================================
+    frame.healthText:SetTextColor(r, g, b, 1.0)
+
     if db.oorEnabled then
         local oorAlpha = db.oorHealthTextAlpha or 0.25
-
-        -- Set color with dead/offline alpha (not hardcoded 1.0)
-        frame.healthText:SetTextColor(r, g, b, alpha)
         ApplyOORAlpha(frame.healthText, inRange, alpha, oorAlpha)
     else
-        frame.healthText:SetTextColor(r, g, b, alpha)
+        frame.healthText:SetAlpha(alpha)
     end
 end
 
@@ -500,25 +506,28 @@ end
 function DF:UpdateStatusTextAppearance(frame)
     if not IsDandersFrame(frame) then return end
     if not frame.statusText then return end
-    
+
     local db = GetDB(frame)
     if not db then return end
-    
+
     -- Skip during test mode
     if DF.testMode or DF.raidTestMode then return end
-    
+
     local deadOrOffline = IsDeadOrOffline(frame)
-    
+
     -- Status text color (usually white)
     local c = db.statusTextColor or DEFAULT_COLOR_WHITE
     local r, g, b = c.r, c.g, c.b
-    
-    local alpha = 1.0
+    local baseAlpha = c.a or 1.0
+
+    local alpha = baseAlpha
     if deadOrOffline and db.fadeDeadFrames then
         alpha = db.fadeDeadStatusText or 1.0
     end
-    
-    frame.statusText:SetTextColor(r, g, b, alpha)
+
+    -- Color always uses alpha=1.0; opacity via SetAlpha
+    frame.statusText:SetTextColor(r, g, b, 1.0)
+    frame.statusText:SetAlpha(alpha)
 end
 
 -- ============================================================
@@ -995,6 +1004,69 @@ function DF:UpdateTargetedSpellAppearance(frame)
 end
 
 -- ============================================================
+-- AURA DESIGNER INDICATORS APPEARANCE
+-- Handles OOR alpha for placed AD indicators (icons, squares, bars)
+-- ============================================================
+
+function DF:UpdateAuraDesignerAppearance(frame)
+    if not IsDandersFrame(frame) then return end
+
+    local db = GetDB(frame)
+    if not db then return end
+
+    if DF.testMode or DF.raidTestMode then return end
+
+    local inRange = GetInRange(frame)
+    local alpha = 1.0
+
+    if db.oorEnabled then
+        local oorAlpha = db.oorAuraDesignerAlpha or 0.2
+
+        -- Icons
+        if frame.dfAD_icons then
+            for _, icon in pairs(frame.dfAD_icons) do
+                if icon and icon:IsShown() then
+                    ApplyOORAlpha(icon, inRange, alpha, oorAlpha)
+                end
+            end
+        end
+        -- Squares
+        if frame.dfAD_squares then
+            for _, sq in pairs(frame.dfAD_squares) do
+                if sq and sq:IsShown() then
+                    ApplyOORAlpha(sq, inRange, alpha, oorAlpha)
+                end
+            end
+        end
+        -- Bars
+        if frame.dfAD_bars then
+            for _, bar in pairs(frame.dfAD_bars) do
+                if bar and bar:IsShown() then
+                    ApplyOORAlpha(bar, inRange, alpha, oorAlpha)
+                end
+            end
+        end
+    else
+        -- Frame-level mode: reset to full alpha (frame SetAlpha cascades)
+        if frame.dfAD_icons then
+            for _, icon in pairs(frame.dfAD_icons) do
+                if icon then icon:SetAlpha(alpha) end
+            end
+        end
+        if frame.dfAD_squares then
+            for _, sq in pairs(frame.dfAD_squares) do
+                if sq then sq:SetAlpha(alpha) end
+            end
+        end
+        if frame.dfAD_bars then
+            for _, bar in pairs(frame.dfAD_bars) do
+                if bar then bar:SetAlpha(alpha) end
+            end
+        end
+    end
+end
+
+-- ============================================================
 -- FRAME-LEVEL APPEARANCE (for non-oorEnabled mode)
 -- ============================================================
 
@@ -1083,6 +1155,7 @@ function DF:UpdateAllElementAppearances(frame)
     DF:UpdateHealPredictionBarAppearance(frame)
     DF:UpdateDefensiveIconAppearance(frame)
     DF:UpdateTargetedSpellAppearance(frame)
+    DF:UpdateAuraDesignerAppearance(frame)
     -- Class power pips (player frame only): reparent/alpha for health fade (party or raid player frame)
     if DF.UpdateClassPowerAlpha and (frame == DF.playerFrame or (frame.unit and frame.isRaidFrame and UnitIsUnit(frame.unit, "player"))) then
         DF.UpdateClassPowerAlpha()

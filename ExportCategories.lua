@@ -910,7 +910,8 @@ DF.ExportCategories = {
         "oorDefensiveIconAlpha",
         "oorMissingBuffAlpha",
         "oorTargetedSpellAlpha",
-        
+        "oorAuraDesignerAlpha",
+
         -- Dead/Offline
         "deadFadeEnabled",
         "deadUseCustomBgColor",

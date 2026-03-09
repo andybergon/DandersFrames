@@ -4,7 +4,7 @@
 
 ### Bug Fixes
 * (Fading) **Fixed power/resource bar not fading when out of range**
-* (Fading) **Fixed name text and health text not fading when units are dead or offline**
+* (Fading) **Fixed name text and health text not fading when out of range or dead/offline** in element-specific alpha mode
 * (Fading) **Fixed debuff borders staying visible when faded**
 * (Fading) Fixed defensive icons not fading when using Direct API mode with multiple defensives
 * (Fading) Fixed name text flickering or staying at full alpha after switching specs
@@ -26,6 +26,7 @@
 * (Range) **Overhauled range check system** — improved accuracy for Death Knights, Evokers, and classes without healing spells; phased units now correctly show as out of range
 * (Aura Designer) **Strata and frame level controls** — indicators can now be placed on different frame strata with a configurable default frame level
 * (Test Mode) **Aura Designer support in test mode** — Aura Designer indicators now render on test frames
+* (Aura Designer) **Out of range alpha** — new element-specific alpha slider for Aura Designer indicators (icons, squares, bars)
 
 ### Improvements
 * (Test Mode) Redesigned test mode panel with collapsible sections, active count badges, and settings page quick-links

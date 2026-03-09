@@ -414,6 +414,11 @@ function Indicators:EndFrame(frame)
     self:HideUnusedIcons(frame, state.activeIcons)
     self:HideUnusedSquares(frame, state.activeSquares)
     self:HideUnusedBars(frame, state.activeBars)
+
+    -- Re-apply OOR alpha after AD has set config alphas on all indicators
+    if DF.UpdateAuraDesignerAppearance then
+        DF:UpdateAuraDesignerAppearance(frame)
+    end
 end
 
 -- ============================================================

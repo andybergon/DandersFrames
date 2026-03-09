@@ -1292,6 +1292,7 @@ DF.PartyDefaults = {
     oorNameTextAlpha = 1,
     oorPowerBarAlpha = 0.20000000298023,
     oorTargetedSpellAlpha = 0.5,
+    oorAuraDesignerAlpha = 0.20000000298023,
 
     -- Personal Targeted Spells (Nameplate)
     personalTargetedSpellAlpha = 1,
@@ -2470,6 +2471,7 @@ DF.RaidDefaults = {
     oorNameTextAlpha = 1,
     oorPowerBarAlpha = 0.20000000298023,
     oorTargetedSpellAlpha = 0.5,
+    oorAuraDesignerAlpha = 0.20000000298023,
 
     -- Personal Targeted Spells (Nameplate)
     personalTargetedSpellAlpha = 1,
