@@ -503,18 +503,11 @@ local function CheckUnitRange(unit)
 
     -- IN COMBAT FALLBACKS:
 
-    -- If we had a friendly spell and it returned nil on a living, connected
-    -- target, they're likely extremely far away — treat as out of range.
-    -- (IsSpellInRange returns nil for targets outside position-awareness range)
-    if currentFriendlySpell and UnitIsConnected(unit) and not UnitIsDeadOrGhost(unit) then
-        DebugPrint("OOR-NIL", unit, "spell returned nil on alive/connected target in combat")
-        return false
-    end
-
-    -- UnitInRange as combat fallback (returns secret booleans in Midnight+)
+    -- UnitInRange as primary combat fallback (returns secret booleans in Midnight+)
     -- Secret booleans propagate through the pipeline:
     --   dfInRange → GetInRange → SetAlphaFromBoolean → SetAlpha
-    -- This gives DK/DH/Hunter/Warrior actual range fading in combat.
+    -- This gives DK/DH/Hunter/Warrior actual range fading in combat,
+    -- AND acts as a safety net when IsSpellInRange returns nil transiently.
     if UnitInRange then
         local inRange = UnitInRange(unit)
         if issecretvalue and issecretvalue(inRange) then
@@ -523,6 +516,14 @@ local function CheckUnitRange(unit)
         if inRange ~= nil then
             return inRange  -- Normal boolean
         end
+    end
+
+    -- If UnitInRange also failed (non-grouped unit, or API unavailable),
+    -- and we had a friendly spell that returned nil on a living connected
+    -- target, they're likely extremely far away — treat as out of range.
+    if currentFriendlySpell and UnitIsConnected(unit) and not UnitIsDeadOrGhost(unit) then
+        DebugPrint("OOR-NIL", unit, "spell AND UnitInRange both failed on alive/connected target in combat")
+        return false
     end
 
     -- No method available or inconclusive — assume in range.
@@ -630,108 +631,39 @@ function DF:UpdatePetRange(frame)
 end
 
 -- ============================================================
--- RANGE UPDATE TIMER
+-- PET RANGE HELPER
+-- UNIT_IN_RANGE_UPDATE doesn't fire for pet units. When the
+-- owner's range event fires we piggyback a pet range update.
 -- ============================================================
 
-local rangeAnimFrame = CreateFrame("Frame")
-local rangeAnimGroup = rangeAnimFrame:CreateAnimationGroup()
-local rangeAnim = rangeAnimGroup:CreateAnimation()
-rangeAnim:SetDuration(0.5)  -- Default 0.5s. Configurable via options.
-rangeAnimGroup:SetLooping("REPEAT")
-
--- Hoisted callback - avoids creating a new closure every 0.5s tick
-local function RangeCheckFrame(frame)
-    if frame and frame:IsShown() then
-        DF:UpdateRange(frame)
-        if DF.UpdateHealthFade then
-            DF:UpdateHealthFade(frame)
-        end
-    end
-end
-
-rangeAnimGroup:SetScript("OnLoop", function()
-    if DF.PerfTest and not DF.PerfTest.enableRange then return end
-    if not DF.partyHeader then return end
-    
-    local contentType = DF:GetContentType()
-    
-    if contentType == "arena" then
-        -- Arena: only arena frames, no pets, no highlights
-        if DF.IterateArenaFrames then
-            DF:IterateArenaFrames(RangeCheckFrame)
-        end
-    elseif contentType then
-        -- Raid content (battleground/mythic/instanced/openWorld): raid frames + raid pets + raid highlights
-        DF:IterateRaidFrames(RangeCheckFrame)
-        
-        -- Raid pinned frames (only if initialized for raid mode and header is shown/enabled)
-        if DF.PinnedFrames and DF.PinnedFrames.initialized and DF.PinnedFrames.currentMode == "raid" then
-            for setIndex = 1, 2 do
-                local header = DF.PinnedFrames.headers[setIndex]
-                if header and header:IsShown() then
-                    for i = 1, 40 do
-                        local child = header:GetAttribute("child" .. i)
-                        if child then
-                            RangeCheckFrame(child)
-                        end
-                    end
-                end
-            end
-        end
-        
-        if DF.raidPetFrames then
-            for i = 1, 40 do
-                local frame = DF.raidPetFrames[i]
-                if frame and not frame.dfPetHidden then
-                    DF:UpdatePetRange(frame)
-                    if DF.UpdatePetHealthFade then
-                        DF:UpdatePetHealthFade(frame)
-                    end
-                end
-            end
-        end
-    else
-        -- Party/solo: party frames + player pet + party pets + party highlights
-        DF:IteratePartyFrames(RangeCheckFrame)
-        
-        -- Party pinned frames (only if initialized for party mode and header is shown/enabled)
-        if DF.PinnedFrames and DF.PinnedFrames.initialized and DF.PinnedFrames.currentMode == "party" then
-            for setIndex = 1, 2 do
-                local header = DF.PinnedFrames.headers[setIndex]
-                if header and header:IsShown() then
-                    for i = 1, 5 do
-                        local child = header:GetAttribute("child" .. i)
-                        if child then
-                            RangeCheckFrame(child)
-                        end
-                    end
-                end
-            end
-        end
-        
+local function UpdatePetForOwner(ownerUnit)
+    if ownerUnit == "player" then
+        -- Player's own pet
         if DF.petFrames and DF.petFrames.player then
             local petFrame = DF.petFrames.player
             if not petFrame.dfPetHidden then
                 DF:UpdatePetRange(petFrame)
-                if DF.UpdatePetHealthFade then
-                    DF:UpdatePetHealthFade(petFrame)
-                end
             end
         end
-        
-        if DF.partyPetFrames then
-            for i = 1, 4 do
-                local frame = DF.partyPetFrames[i]
-                if frame and not frame.dfPetHidden then
-                    DF:UpdatePetRange(frame)
-                    if DF.UpdatePetHealthFade then
-                        DF:UpdatePetHealthFade(frame)
-                    end
-                end
+    else
+        -- Party/raid pet — parse the index from the owner unit token
+        local prefix, index = ownerUnit:match("^(%a+)(%d+)$")
+        if not index then return end
+        index = tonumber(index)
+
+        if prefix == "party" and DF.partyPetFrames then
+            local petFrame = DF.partyPetFrames[index]
+            if petFrame and not petFrame.dfPetHidden then
+                DF:UpdatePetRange(petFrame)
+            end
+        elseif prefix == "raid" and DF.raidPetFrames then
+            local petFrame = DF.raidPetFrames[index]
+            if petFrame and not petFrame.dfPetHidden then
+                DF:UpdatePetRange(petFrame)
             end
         end
     end
-end)
+end
 
 -- ============================================================
 -- EVENT HANDLERS
@@ -743,8 +675,52 @@ eventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 eventFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
 eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+eventFrame:RegisterEvent("UNIT_IN_RANGE_UPDATE")
+
+-- Lazy-cached reference to unitFrameMap (populated by Headers.lua after load)
+local unitFrameMap
 
 eventFrame:SetScript("OnEvent", function(self, event, ...)
+    if event == "UNIT_IN_RANGE_UPDATE" then
+        -- Event-driven range update — instant response instead of waiting for poll timer
+        local unit = ...
+        if not unit then return end
+        if UnitIsUnit(unit, "player") then return end
+
+        -- Lazy-init the unitFrameMap reference
+        if not unitFrameMap then
+            unitFrameMap = DF.unitFrameMap
+            if not unitFrameMap then return end
+        end
+
+        -- Main frame: O(1) lookup
+        local frame = unitFrameMap[unit]
+        if frame and frame:IsShown() then
+            DF:UpdateRange(frame)
+        end
+
+        -- Pinned frames: may show the same unit on a second frame
+        if DF.PinnedFrames and DF.PinnedFrames.initialized and DF.PinnedFrames.headers then
+            for setIndex = 1, 2 do
+                local header = DF.PinnedFrames.headers[setIndex]
+                if header and header:IsShown() then
+                    local maxChildren = DF.PinnedFrames.currentMode == "raid" and 40 or 5
+                    for i = 1, maxChildren do
+                        local child = header:GetAttribute("child" .. i)
+                        if child and child:IsShown() and child.unit == unit then
+                            DF:UpdateRange(child)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Pet frames: UNIT_IN_RANGE_UPDATE doesn't fire for pets,
+        -- but pet range is derived from the owner — update it here.
+        UpdatePetForOwner(unit)
+        return
+    end
+
     if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "PLAYER_TALENT_UPDATE" then
         local unit = ...
         -- PLAYER_TALENT_UPDATE fires without a unit arg, so always update
@@ -765,7 +741,7 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
 end)
 
 -- ============================================================
--- START TIMER & INITIALIZE
+-- INITIALIZE
 -- ============================================================
 
 -- Also initialize immediately in case we loaded late
@@ -774,21 +750,7 @@ UpdateRangeSpell()
 C_Timer.After(1, function()
     -- Re-check after 1 second to ensure spec info is available
     UpdateRangeSpell()
-    -- Apply configured interval from DB (default 0.5s)
-    if DF.db then
-        local db = DF:GetDB()
-        local interval = db and db.rangeUpdateInterval or 0.5
-        rangeAnim:SetDuration(interval)
-    end
-    rangeAnimGroup:Play()
-    DF.RangeTimer = rangeAnimGroup
 end)
-
--- Called by Options panel when user changes the range update interval slider
-function DF:SetRangeUpdateInterval(interval)
-    interval = interval or 0.5
-    rangeAnim:SetDuration(interval)
-end
 
 -- ============================================================
 -- API FOR OPTIONS UI

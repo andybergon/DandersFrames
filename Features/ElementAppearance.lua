@@ -1017,7 +1017,6 @@ function DF:UpdateAuraDesignerAppearance(frame)
     if DF.testMode or DF.raidTestMode then return end
 
     local inRange = GetInRange(frame)
-    local alpha = 1.0
 
     if db.oorEnabled then
         local oorAlpha = db.oorAuraDesignerAlpha or 0.2
@@ -1026,7 +1025,7 @@ function DF:UpdateAuraDesignerAppearance(frame)
         if frame.dfAD_icons then
             for _, icon in pairs(frame.dfAD_icons) do
                 if icon and icon:IsShown() then
-                    ApplyOORAlpha(icon, inRange, alpha, oorAlpha)
+                    ApplyOORAlpha(icon, inRange, icon.dfBaseAlpha or 1.0, oorAlpha)
                 end
             end
         end
@@ -1034,7 +1033,7 @@ function DF:UpdateAuraDesignerAppearance(frame)
         if frame.dfAD_squares then
             for _, sq in pairs(frame.dfAD_squares) do
                 if sq and sq:IsShown() then
-                    ApplyOORAlpha(sq, inRange, alpha, oorAlpha)
+                    ApplyOORAlpha(sq, inRange, sq.dfBaseAlpha or 1.0, oorAlpha)
                 end
             end
         end
@@ -1042,25 +1041,25 @@ function DF:UpdateAuraDesignerAppearance(frame)
         if frame.dfAD_bars then
             for _, bar in pairs(frame.dfAD_bars) do
                 if bar and bar:IsShown() then
-                    ApplyOORAlpha(bar, inRange, alpha, oorAlpha)
+                    ApplyOORAlpha(bar, inRange, bar.dfBaseAlpha or 1.0, oorAlpha)
                 end
             end
         end
     else
-        -- Frame-level mode: reset to full alpha (frame SetAlpha cascades)
+        -- Frame-level mode: restore each indicator's base alpha
         if frame.dfAD_icons then
             for _, icon in pairs(frame.dfAD_icons) do
-                if icon then icon:SetAlpha(alpha) end
+                if icon then icon:SetAlpha(icon.dfBaseAlpha or 1.0) end
             end
         end
         if frame.dfAD_squares then
             for _, sq in pairs(frame.dfAD_squares) do
-                if sq then sq:SetAlpha(alpha) end
+                if sq then sq:SetAlpha(sq.dfBaseAlpha or 1.0) end
             end
         end
         if frame.dfAD_bars then
             for _, bar in pairs(frame.dfAD_bars) do
-                if bar then bar:SetAlpha(alpha) end
+                if bar then bar:SetAlpha(bar.dfBaseAlpha or 1.0) end
             end
         end
     end

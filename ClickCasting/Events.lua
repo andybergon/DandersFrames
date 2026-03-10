@@ -22,8 +22,6 @@ function CC:RegisterEvents()
     eventFrame:RegisterEvent("TRAIT_CONFIG_CREATED")
     eventFrame:RegisterEvent("ACTIVE_PLAYER_SPECIALIZATION_CHANGED")
     eventFrame:RegisterEvent("ACTIVE_COMBAT_CONFIG_CHANGED")  -- Fires when loadout is switched
-    eventFrame:RegisterEvent("SPELLS_CHANGED")  -- Fires when known spells change (talent application completing)
-    
     -- Events for dynamic frames (boss/arena)
     eventFrame:RegisterEvent("ARENA_PREP_OPPONENT_SPECIALIZATIONS")
     eventFrame:RegisterEvent("INSTANCE_ENCOUNTER_ENGAGE_UNIT")
@@ -60,20 +58,6 @@ function CC:RegisterEvents()
                 end)
             else
                 CC.pendingLoadoutCheck = true
-                CC.needsBindingRefresh = true
-            end
-        elseif event == "SPELLS_CHANGED" then
-            -- Known spells changed (talent application completing, learning new spells)
-            -- Reapply bindings so macros use current spell availability
-            if not InCombatLockdown() then
-                if CC.spellsChangedTimer then
-                    CC.spellsChangedTimer:Cancel()
-                end
-                CC.spellsChangedTimer = C_Timer.NewTimer(0.3, function()
-                    CC.spellsChangedTimer = nil
-                    CC:ApplyBindings()
-                end)
-            else
                 CC.needsBindingRefresh = true
             end
         elseif event == "PLAYER_LEVEL_UP" then

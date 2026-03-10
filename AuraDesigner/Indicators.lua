@@ -987,7 +987,9 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
     icon:SetScale(scale)
 
     -- Alpha
-    icon:SetAlpha(config.alpha or 1.0)
+    local iconAlpha = config.alpha or 1.0
+    icon.dfBaseAlpha = iconAlpha
+    icon:SetAlpha(iconAlpha)
 
     -- Position — each aura has its own anchor, no growth
     local anchor = config.anchor or "TOPLEFT"
@@ -1376,7 +1378,9 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
     sq:SetScale(scale)
 
     -- Alpha
-    sq:SetAlpha(config.alpha or 1.0)
+    local sqAlpha = config.alpha or 1.0
+    sq.dfBaseAlpha = sqAlpha
+    sq:SetAlpha(sqAlpha)
 
     -- Hide Icon (text-only mode) — hides texture, border, swipe but keeps text
     local hideIcon = config.hideIcon; if hideIcon == nil then hideIcon = defaults and defaults.hideIcon end
@@ -1886,7 +1890,9 @@ function Indicators:ApplyBar(frame, config, auraData, defaults, auraName, priori
     if matchH then height = frame:GetHeight() end
     bar:SetSize(width, height)
 
-    bar:SetAlpha(config.alpha or 1.0)
+    local barAlpha = config.alpha or 1.0
+    bar.dfBaseAlpha = barAlpha
+    bar:SetAlpha(barAlpha)
 
     local orientation = config.orientation or "HORIZONTAL"
     bar:SetOrientation(orientation)

@@ -616,17 +616,6 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local infoLabel = oorGroup:AddWidget(GUI:CreateLabel(self.child, "|cFFAAAAAA" .. "Active: " .. rangeInfoText .. "|r", 250), 25)
         self.rangeSpellInfoLabel = infoLabel
         
-        -- Range update interval
-        if db.rangeUpdateInterval == nil then
-            db.rangeUpdateInterval = 0.5
-        end
-        local intervalSlider = oorGroup:AddWidget(GUI:CreateSlider(self.child, "Range Check Interval", 0.1, 1.0, 0.05, db, "rangeUpdateInterval", nil, function()
-            if DF.SetRangeUpdateInterval then
-                DF:SetRangeUpdateInterval(db.rangeUpdateInterval)
-            end
-        end, true), 55)
-        intervalSlider.tooltip = "How often to check range (seconds). Lower = more responsive but higher CPU. Default: 0.5s"
-        
         -- Frame-level alpha (shown when element-specific is disabled)
         local frameLevelAlpha = oorGroup:AddWidget(GUI:CreateSlider(self.child, "Frame Alpha (Out of Range)", 0.1, 1.0, 0.05, db, "rangeFadeAlpha", nil, function() DF:RefreshAllVisibleFrames() end, true), 55)
         frameLevelAlpha.hideOn = HideFrameLevelAlpha
