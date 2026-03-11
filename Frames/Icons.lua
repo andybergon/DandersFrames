@@ -924,12 +924,14 @@ function DF:UpdateDefensiveBar(frame)
         local secondaryX, secondaryY = GetDefensiveGrowthOffset(secondary, scaledSize, spacing)
 
         local count = 0
+        local adIDs = frame.dfAD_activeInstanceIDs  -- Aura Designer dedup
         if cache and cache.defensives then
             for id in pairs(cache.defensives) do
                 if count >= maxDefs then break end
-                -- Validate auraInstanceID is still active before rendering
-                local auraData = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, id)
-                if not auraData then
+                -- Skip defensives already shown by Aura Designer
+                if adIDs and adIDs[id] then
+                    -- dedup: Aura Designer is handling this aura
+                elseif not C_UnitAuras.GetAuraDataByAuraInstanceID(unit, id) then
                     cache.defensives[id] = nil
                 else
                     count = count + 1

@@ -57,6 +57,9 @@ DF.AuraDesigner.IconTextures = {
     EchoDreamBreath     = 7439198,
     DreamFlight         = 4622455,
     Lifebind            = 4630453,
+    TimeDilation        = 4622478,
+    Rewind              = 4622474,
+    VerdantEmbrace      = 4622471,
     -- Augmentation Evoker
     Prescience          = 5199639,
     ShiftingSands       = 5199633,
@@ -72,28 +75,42 @@ DF.AuraDesigner.IconTextures = {
     Germination         = 1033478,
     WildGrowth          = 236153,
     SymbioticRelationship = 1408837,
+    IronBark            = 572025,
     -- Discipline Priest
     PowerWordShield     = 135940,
     Atonement           = 458720,
     VoidShield          = 7514191,
     PrayerOfMending     = 135944,
+    PainSuppression     = 135936,
+    PowerInfusion       = 135939,
     -- Holy Priest
     Renew               = 135953,
     EchoOfLight         = 237537,
+    GuardianSpirit      = 237542,
     -- Mistweaver Monk
     RenewingMist        = 627487,
     EnvelopingMist      = 775461,
     SoothingMist        = 606550,
     AspectOfHarmony     = 5927638,
+    LifeCocoon          = 627485,
+    StrengthOfTheBlackOx = 615340,
     -- Restoration Shaman
     Riptide             = 252995,
     EarthShield         = 136089,
+    -- AncestralVigor      = 237574,
+    -- EarthlivingWeapon   = 237578,
+    Hydrobubble         = 1320371,
     -- Holy Paladin
     BeaconOfFaith       = 1030095,
     EternalFlame        = 135433,
     BeaconOfLight       = 236247,
     BeaconOfVirtue      = 1030094,
     BeaconOfTheSavior   = 7514188,
+    BlessingOfProtection = 135964,
+    HolyArmaments       = 5927636,
+    BlessingOfSacrifice = 135966,
+    BlessingOfFreedom   = 135968,
+    Dawnlight           = 5927633,
 }
 
 -- ============================================================
@@ -105,6 +122,7 @@ DF.AuraDesigner.SpellIDs = {
         Echo = 364343, Reversion = 366155, EchoReversion = 367364,
         DreamBreath = 355941, EchoDreamBreath = 376788,
         DreamFlight = 363502, Lifebind = 373267,
+        TimeDilation = 357170, Rewind = 363534, VerdantEmbrace = 409895,
     },
     AugmentationEvoker = {
         Prescience = 410089, ShiftingSands = 413984, BlisteringScales = 360827,
@@ -114,25 +132,34 @@ DF.AuraDesigner.SpellIDs = {
     RestorationDruid = {
         Rejuvenation = 774, Regrowth = 8936, Lifebloom = 33763,
         Germination = 155777, WildGrowth = 48438, SymbioticRelationship = 474754,
+        IronBark = 102342,
     },
     DisciplinePriest = {
         PowerWordShield = 17, Atonement = 194384,
         VoidShield = 1253593, PrayerOfMending = 41635,
+        PainSuppression = 33206, PowerInfusion = 10060,
     },
     HolyPriest = {
         Renew = 139, EchoOfLight = 77489,
         PrayerOfMending = 41635,
+        GuardianSpirit = 47788, PowerInfusion = 10060,
     },
     MistweaverMonk = {
         RenewingMist = 119611, EnvelopingMist = 124682, SoothingMist = 115175,
         AspectOfHarmony = 450769,
+        LifeCocoon = 116849, StrengthOfTheBlackOx = 443113,
     },
     RestorationShaman = {
         Riptide = 61295, EarthShield = 383648,
+        -- AncestralVigor = 207400, EarthlivingWeapon = 382024,
+        Hydrobubble = 444490,
     },
     HolyPaladin = {
         BeaconOfFaith = 156910, EternalFlame = 156322, BeaconOfLight = 53563,
         BeaconOfTheSavior = 1244893, BeaconOfVirtue = 200025,
+        BlessingOfProtection = 1022, HolyArmaments = 432502,
+        BlessingOfSacrifice = 6940, BlessingOfFreedom = 1044,
+        Dawnlight = 431381,
     },
 }
 
@@ -153,8 +180,82 @@ DF.AuraDesigner.AlternateSpellIDs = {
 }
 
 -- ============================================================
+-- SECRET AURA FINGERPRINTS
+-- Identifies auras with secret spell IDs using filter fingerprinting.
+-- Each aura's fingerprint = which WoW filter strings it passes + point count.
+-- Credit: Filter fingerprinting technique and aura data from Harrek's
+-- Advanced Raid Frames (used with permission, credit to Harrek).
+-- ============================================================
+DF.AuraDesigner.SecretAuraInfo = {
+    PreservationEvoker = {
+        auras = {
+            TimeDilation   = { signature = "1:1:1:0" },
+            Rewind         = { signature = "1:1:0:0" },
+            VerdantEmbrace = { signature = "0:1:0:0" },
+        },
+        casts = {
+            [357170] = { "TimeDilation" },
+            [363534] = { "Rewind" },
+            [360995] = { "Lifebind", "VerdantEmbrace" },
+        },
+    },
+    RestorationDruid = {
+        auras = {
+            IronBark = { signature = "1:1:1:0" },
+        },
+        casts = {
+            [102342] = { "IronBark" },
+        },
+    },
+    DisciplinePriest = {
+        auras = {
+            PainSuppression = { signature = "1:1:1:0" },
+            PowerInfusion   = { signature = "1:0:0:1" },
+        },
+        casts = {
+            [33206] = { "PainSuppression" },
+            [10060] = { "PowerInfusion" },
+        },
+    },
+    HolyPriest = {
+        auras = {
+            GuardianSpirit = { signature = "1:1:1:0" },
+            PowerInfusion  = { signature = "1:0:0:1" },
+        },
+        casts = {
+            [47788] = { "GuardianSpirit" },
+            [10060] = { "PowerInfusion" },
+        },
+    },
+    MistweaverMonk = {
+        auras = {
+            LifeCocoon           = { signature = "1:1:1:0" },
+            StrengthOfTheBlackOx = { signature = "0:1:0:1" },
+        },
+        casts = {},
+    },
+    HolyPaladin = {
+        auras = {
+            BlessingOfProtection = { signature = "1:1:1:1" },
+            HolyArmaments        = { signature = "0:1:0:0" },
+            BlessingOfSacrifice  = { signature = "1:1:1:0" },
+            BlessingOfFreedom    = { signature = "1:0:0:1" },
+            BeaconOfVirtue       = { signature = "1:0:0:0" },
+            Dawnlight            = { signature = "0:1:0:0" },
+        },
+        casts = {
+            [1022]   = { "BlessingOfProtection" },
+            [432472] = { "HolyArmaments" },
+            [6940]   = { "BlessingOfSacrifice" },
+            [200025] = { "BeaconOfVirtue" },
+        },
+    },
+}
+
+-- ============================================================
 -- TRACKABLE AURAS PER SPEC
 -- Each aura: { name = "InternalName", display = "Display Name", color = {r,g,b} }
+-- Secret auras have secret = true (used for visual distinction in Options UI only)
 -- Colors are used for tile accents in the Options UI
 -- ============================================================
 DF.AuraDesigner.TrackableAuras = {
@@ -166,6 +267,9 @@ DF.AuraDesigner.TrackableAuras = {
         { name = "EchoDreamBreath",  display = "Echo Dream Breath", color = {0.36, 0.82, 0.60} },
         { name = "DreamFlight",      display = "Dream Flight",      color = {0.81, 0.58, 0.93} },
         { name = "Lifebind",         display = "Lifebind",          color = {0.94, 0.50, 0.50} },
+        { name = "TimeDilation",     display = "Time Dilation",     color = {0.94, 0.82, 0.31}, secret = true },
+        { name = "Rewind",           display = "Rewind",            color = {0.74, 0.85, 0.40}, secret = true },
+        { name = "VerdantEmbrace",   display = "Verdant Embrace",   color = {0.47, 0.87, 0.47}, secret = true },
     },
     AugmentationEvoker = {
         { name = "Prescience",       display = "Prescience",        color = {0.81, 0.58, 0.85} },
@@ -183,33 +287,48 @@ DF.AuraDesigner.TrackableAuras = {
         { name = "Germination",            display = "Germination",            color = {0.77, 0.89, 0.42} },
         { name = "WildGrowth",             display = "Wild Growth",            color = {0.81, 0.58, 0.93} },
         { name = "SymbioticRelationship",  display = "Symbiotic Relationship", color = {0.40, 0.77, 0.74} },
+        { name = "IronBark",               display = "Ironbark",              color = {0.65, 0.47, 0.33}, secret = true },
     },
     DisciplinePriest = {
         { name = "PowerWordShield", display = "PW: Shield",         color = {1.00, 0.84, 0.28} },
         { name = "Atonement",       display = "Atonement",          color = {0.94, 0.50, 0.50} },
         { name = "VoidShield",      display = "Void Shield",        color = {0.62, 0.47, 0.85} },
         { name = "PrayerOfMending", display = "Prayer of Mending",  color = {0.56, 0.93, 0.56} },
+        { name = "PainSuppression", display = "Pain Suppression",   color = {0.81, 0.58, 0.93}, secret = true },
+        { name = "PowerInfusion",   display = "Power Infusion",     color = {0.94, 0.82, 0.31}, secret = true },
     },
     HolyPriest = {
         { name = "Renew",           display = "Renew",              color = {0.56, 0.93, 0.56} },
         { name = "EchoOfLight",     display = "Echo of Light",      color = {1.00, 0.84, 0.28} },
         { name = "PrayerOfMending", display = "Prayer of Mending",  color = {0.81, 0.58, 0.93} },
+        { name = "GuardianSpirit",  display = "Guardian Spirit",    color = {0.94, 0.50, 0.50}, secret = true },
+        { name = "PowerInfusion",   display = "Power Infusion",     color = {0.94, 0.82, 0.31}, secret = true },
     },
     MistweaverMonk = {
         { name = "RenewingMist",     display = "Renewing Mist",     color = {0.56, 0.93, 0.56} },
         { name = "EnvelopingMist",   display = "Enveloping Mist",   color = {0.31, 0.76, 0.97} },
         { name = "SoothingMist",     display = "Soothing Mist",     color = {0.47, 0.87, 0.47} },
         { name = "AspectOfHarmony",  display = "Aspect of Harmony", color = {0.81, 0.58, 0.93} },
+        { name = "LifeCocoon",       display = "Life Cocoon",       color = {0.31, 0.76, 0.97}, secret = true },
+        { name = "StrengthOfTheBlackOx", display = "Strength of the Black Ox", color = {0.40, 0.77, 0.74}, secret = true },
     },
     RestorationShaman = {
-        { name = "Riptide",     display = "Riptide",      color = {0.31, 0.76, 0.97} },
-        { name = "EarthShield", display = "Earth Shield",  color = {0.65, 0.47, 0.33} },
+        { name = "Riptide",           display = "Riptide",            color = {0.31, 0.76, 0.97} },
+        { name = "EarthShield",       display = "Earth Shield",       color = {0.65, 0.47, 0.33} },
+        -- { name = "AncestralVigor",    display = "Ancestral Vigor",    color = {0.56, 0.93, 0.56} },
+        -- { name = "EarthlivingWeapon", display = "Earthliving Weapon", color = {0.47, 0.87, 0.47} },
+        { name = "Hydrobubble",       display = "Hydrobubble",        color = {0.31, 0.76, 0.97} },
     },
     HolyPaladin = {
         { name = "BeaconOfFaith",       display = "Beacon of Faith",       color = {1.00, 0.84, 0.28} },
         { name = "EternalFlame",        display = "Eternal Flame",         color = {1.00, 0.60, 0.28} },
         { name = "BeaconOfLight",       display = "Beacon of Light",       color = {1.00, 0.93, 0.47} },
-        { name = "BeaconOfVirtue",      display = "Beacon of Virtue",      color = {1.00, 0.88, 0.37} },
+        { name = "BeaconOfVirtue",      display = "Beacon of Virtue",      color = {1.00, 0.88, 0.37}, secret = true },
         { name = "BeaconOfTheSavior",   display = "Beacon of the Savior",  color = {0.93, 0.80, 0.47} },
+        { name = "BlessingOfProtection", display = "Blessing of Protection", color = {0.94, 0.82, 0.31}, secret = true },
+        { name = "HolyArmaments",        display = "Holy Armaments",         color = {0.81, 0.58, 0.93}, secret = true },
+        { name = "BlessingOfSacrifice",  display = "Blessing of Sacrifice",  color = {0.94, 0.50, 0.50}, secret = true },
+        { name = "BlessingOfFreedom",    display = "Blessing of Freedom",    color = {0.56, 0.93, 0.56}, secret = true },
+        { name = "Dawnlight",            display = "Dawnlight",              color = {1.00, 0.84, 0.28}, secret = true },
     },
 }

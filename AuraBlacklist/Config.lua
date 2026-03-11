@@ -8,6 +8,7 @@ local addonName, DF = ...
 -- ============================================================
 
 local pairs = pairs
+local InCombatLockdown = InCombatLockdown
 
 -- Initialize the AuraBlacklist namespace
 DF.AuraBlacklist = DF.AuraBlacklist or {}
@@ -69,10 +70,13 @@ DF.AuraBlacklist.BuffSpells = {
         { spellId = 156322, display = "Eternal Flame",          icon = 135433  },
     },
     SHAMAN = {
-        { spellId = 974,    display = "Earth Shield",           icon = 136089  },
-        { spellId = 61295,  display = "Riptide",                icon = 252995  },
-        { spellId = 462854, display = "Skyfury",                icon = 135831  },
-        { spellId = 369459, display = "Source of Magic",        icon = 4630412 },
+        { spellId = 207400, display = "Ancestral Vigor",        icon = 237574   },
+        { spellId = 974,    display = "Earth Shield",           icon = 136089   },
+        { spellId = 382024, display = "Earthliving Weapon",     icon = 237578   },
+        { spellId = 444490, display = "Hydrobubble",            icon = 1320371  },
+        { spellId = 61295,  display = "Riptide",                icon = 252995   },
+        { spellId = 462854, display = "Skyfury",                icon = 135831   },
+        { spellId = 369459, display = "Source of Magic",        icon = 4630412  },
     },
     MONK = {
         { spellId = 450769, display = "Aspect of Harmony",      icon = 5927638 },
@@ -109,11 +113,19 @@ DF.AuraBlacklist.BuffSpells = {
 -- Sated / Exhaustion family — applied after Heroism/Bloodlust
 -- ============================================================
 DF.AuraBlacklist.DebuffSpells = {
+    -- Sated / Exhaustion family
     { spellId = 57723,  display = "Exhaustion",             icon = 136090  },
     { spellId = 160455, display = "Fatigued",               icon = 132307  },
     { spellId = 95809,  display = "Insanity",               icon = 132127  },
     { spellId = 57724,  display = "Sated",                  icon = 136090  },
     { spellId = 80354,  display = "Temporal Displacement",  icon = 236502  },
+    -- Deserter
+    { spellId = 26013,  display = "BG Deserter",            icon = 135971  },
+    { spellId = 71041,  display = "Dungeon Deserter",       icon = 135971  },
+    -- Skyriding
+    { spellId = 427490, display = "Ride Along Available",   icon = 4640493 },
+    { spellId = 447959, display = "Ride Along Active",      icon = 4640493 },
+    { spellId = 447960, display = "Ride Along Inactive",    icon = 4640493 },
 }
 
 -- ============================================================
@@ -142,9 +154,18 @@ DF.AuraBlacklist.AlternateSpellIDs = {
 -- ============================================================
 function DF.AuraBlacklist.IsBlacklisted(blacklistTable, spellId)
     if not blacklistTable or not spellId then return false end
-    if blacklistTable[spellId] then return true end
-    -- Check if this spell ID is an alternate of a blacklisted primary
-    local primary = DF.AuraBlacklist.AlternateSpellIDs[spellId]
-    if primary and blacklistTable[primary] then return true end
-    return false
+    -- Find the entry (direct or via alternate)
+    local entry = blacklistTable[spellId]
+    if not entry then
+        local primary = DF.AuraBlacklist.AlternateSpellIDs[spellId]
+        if primary then entry = blacklistTable[primary] end
+    end
+    if not entry then return false end
+    -- Legacy support: plain true = always blacklisted
+    if entry == true then return true end
+    -- Table format: check combat/ooc flags
+    if InCombatLockdown() then
+        return entry.combat
+    end
+    return entry.ooc
 end

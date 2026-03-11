@@ -2,7 +2,7 @@ local addonName, DF = ...
 
 -- ============================================================
 -- AURA BLACKLIST - OPTIONS GUI
--- Two-column transfer UI for blacklisting buffs and debuffs.
+-- Single-list UI for blacklisting buffs and debuffs.
 -- Called from Options/Options.lua via DF.BuildAuraBlacklistPage()
 -- ============================================================
 
@@ -29,10 +29,6 @@ function DF.BuildAuraBlacklistPage(guiRef, pageRef, dbRef)
     local page = pageRef
     local parent = page.child
 
-    -- ========== ICON PATHS ==========
-    local ICON_ARROW = "Interface\\AddOns\\DandersFrames\\Media\\Icons\\chevron_right"
-    local ICON_CLOSE = "Interface\\AddOns\\DandersFrames\\Media\\Icons\\close"
-
     -- ========== THEME ==========
     local function GetThemeColor()
         return GUI.GetThemeColor and GUI.GetThemeColor() or {r = 0.90, g = 0.55, b = 0.15}
@@ -42,10 +38,8 @@ function DF.BuildAuraBlacklistPage(guiRef, pageRef, dbRef)
     local selectedClass = "AUTO"
 
     -- Reusable frame pools
-    local buffLeftItems = {}
-    local buffRightItems = {}
-    local debuffLeftItems = {}
-    local debuffRightItems = {}
+    local buffItemPool = {}
+    local debuffItemPool = {}
 
     -- ========== BLACKLIST ACCESS ==========
     local function GetBlacklist()
@@ -66,91 +60,19 @@ function DF.BuildAuraBlacklistPage(guiRef, pageRef, dbRef)
         return selectedClass
     end
 
-    -- ========== GET AVAILABLE BUFFS FOR CLASS ==========
-    local function GetAvailableBuffs()
+    -- ========== GET ALL BUFFS FOR CLASS ==========
+    local function GetAllBuffs()
         local class = ResolveClass()
         local spells = DF.AuraBlacklist and DF.AuraBlacklist.BuffSpells and DF.AuraBlacklist.BuffSpells[class]
         if not spells then return {} end
-
-        local blacklist = GetBlacklist()
-        local available = {}
-        for _, spell in ipairs(spells) do
-            if not blacklist.buffs[spell.spellId] then
-                tinsert(available, spell)
-            end
-        end
-        return available
+        return spells
     end
 
-    -- ========== GET BLACKLISTED BUFFS ==========
-    local function GetBlacklistedBuffs()
-        local blacklist = GetBlacklist()
-        local result = {}
-
-        -- Build reverse lookup from all class spell lists
-        local allSpells = {}
-        if DF.AuraBlacklist and DF.AuraBlacklist.BuffSpells then
-            for _, classSpells in pairs(DF.AuraBlacklist.BuffSpells) do
-                for _, spell in ipairs(classSpells) do
-                    allSpells[spell.spellId] = spell
-                end
-            end
-        end
-
-        for spellId in pairs(blacklist.buffs) do
-            local spell = allSpells[spellId]
-            if spell then
-                tinsert(result, spell)
-            else
-                -- Unknown spell ID in blacklist — show with ID as name
-                tinsert(result, { spellId = spellId, display = "Spell " .. spellId, icon = 134400 })
-            end
-        end
-
-        -- Sort alphabetically by display name
-        table.sort(result, function(a, b) return a.display < b.display end)
-        return result
-    end
-
-    -- ========== GET AVAILABLE DEBUFFS ==========
-    local function GetAvailableDebuffs()
+    -- ========== GET ALL DEBUFFS ==========
+    local function GetAllDebuffs()
         local spells = DF.AuraBlacklist and DF.AuraBlacklist.DebuffSpells
         if not spells then return {} end
-
-        local blacklist = GetBlacklist()
-        local available = {}
-        for _, spell in ipairs(spells) do
-            if not blacklist.debuffs[spell.spellId] then
-                tinsert(available, spell)
-            end
-        end
-        return available
-    end
-
-    -- ========== GET BLACKLISTED DEBUFFS ==========
-    local function GetBlacklistedDebuffs()
-        local blacklist = GetBlacklist()
-        local result = {}
-
-        -- Build reverse lookup from debuff spell list
-        local allSpells = {}
-        if DF.AuraBlacklist and DF.AuraBlacklist.DebuffSpells then
-            for _, spell in ipairs(DF.AuraBlacklist.DebuffSpells) do
-                allSpells[spell.spellId] = spell
-            end
-        end
-
-        for spellId in pairs(blacklist.debuffs) do
-            local spell = allSpells[spellId]
-            if spell then
-                tinsert(result, spell)
-            else
-                tinsert(result, { spellId = spellId, display = "Spell " .. spellId, icon = 134400 })
-            end
-        end
-
-        table.sort(result, function(a, b) return a.display < b.display end)
-        return result
+        return spells
     end
 
     -- ========== NOTIFY AURA SYSTEM ==========
@@ -161,283 +83,265 @@ function DF.BuildAuraBlacklistPage(guiRef, pageRef, dbRef)
         end
     end
 
-    -- ========== AVAILABLE ITEM (Left Column — with right arrow button) ==========
-    local function CreateAvailableItem(parentContent, spell, index, itemHeight, onAdd)
+    -- ========== MINI CHECKBOX HELPER ==========
+    local function CreateMiniCheckbox(parentFrame, label, checked, onChange)
         local tc = GetThemeColor()
+        local cb = CreateFrame("Button", nil, parentFrame)
+        cb:SetSize(12, 12)
 
-        local item = CreateFrame("Frame", nil, parentContent, "BackdropTemplate")
-        item:SetHeight(itemHeight - 2)
-        item:SetPoint("TOPLEFT", 0, -((index - 1) * itemHeight))
-        item:SetPoint("TOPRIGHT", 0, -((index - 1) * itemHeight))
-        item:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8" })
-        item:SetBackdropColor(0, 0, 0, 0)
-        item:EnableMouse(true)
+        -- Dark inset background
+        local bg = cb:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints()
+        bg:SetColorTexture(0.06, 0.06, 0.06, 1)
+
+        -- Subtle border
+        local border = cb:CreateTexture(nil, "BORDER")
+        border:SetPoint("TOPLEFT", -1, 1)
+        border:SetPoint("BOTTOMRIGHT", 1, -1)
+        border:SetColorTexture(0.30, 0.30, 0.30, 1)
+
+        -- Theme-colored fill when checked
+        local fill = cb:CreateTexture(nil, "ARTWORK")
+        fill:SetPoint("TOPLEFT", 2, -2)
+        fill:SetPoint("BOTTOMRIGHT", -2, 2)
+        fill:SetColorTexture(tc.r, tc.g, tc.b, 0.9)
+        fill:SetShown(checked)
+
+        -- Label text
+        local text = cb:CreateFontString(nil, "OVERLAY")
+        text:SetFont("Fonts\\FRIZQT__.TTF", 8, "")
+        text:SetPoint("LEFT", cb, "RIGHT", 4, 0)
+        text:SetText(label)
+        text:SetTextColor(0.55, 0.55, 0.55)
+
+        cb:SetScript("OnClick", function()
+            local newState = not fill:IsShown()
+            fill:SetShown(newState)
+            onChange(newState)
+        end)
+        cb:SetScript("OnEnter", function()
+            border:SetColorTexture(tc.r * 0.6, tc.g * 0.6, tc.b * 0.6, 1)
+            text:SetTextColor(0.80, 0.80, 0.80)
+        end)
+        cb:SetScript("OnLeave", function()
+            border:SetColorTexture(0.30, 0.30, 0.30, 1)
+            text:SetTextColor(0.55, 0.55, 0.55)
+        end)
+
+        cb._check = fill
+        return cb
+    end
+
+    -- ========== SPELL ROW (unified list item) ==========
+    local function CreateSpellRow(scrollContent, spell, index, rowHeight, blacklistKey, refreshFn)
+        local tc = GetThemeColor()
+        local bl = GetBlacklist()
+        local entry = bl[blacklistKey] and bl[blacklistKey][spell.spellId]
+        local isBlacklisted = entry ~= nil
+
+        local row = CreateFrame("Button", nil, scrollContent, "BackdropTemplate")
+        row:SetHeight(rowHeight - 1)
+        row:SetPoint("TOPLEFT", 0, -((index - 1) * rowHeight))
+        row:SetPoint("TOPRIGHT", 0, -((index - 1) * rowHeight))
+        row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8" })
+        row:EnableMouse(true)
+
+        -- Background color based on state
+        if isBlacklisted then
+            row:SetBackdropColor(0.14, 0.14, 0.14, 0.95)
+        else
+            row:SetBackdropColor(0.08, 0.08, 0.08, 0.6)
+        end
+
+        -- Left accent bar (theme-colored, only for blacklisted)
+        local accent = row:CreateTexture(nil, "ARTWORK")
+        accent:SetSize(3, rowHeight - 5)
+        accent:SetPoint("LEFT", 2, 0)
+        accent:SetColorTexture(tc.r, tc.g, tc.b, 1)
+        accent:SetShown(isBlacklisted)
 
         -- Spell icon
-        local icon = item:CreateTexture(nil, "ARTWORK")
-        icon:SetSize(16, 16)
-        icon:SetPoint("LEFT", 4, 0)
+        local icon = row:CreateTexture(nil, "ARTWORK")
+        icon:SetSize(18, 18)
+        icon:SetPoint("LEFT", 10, 0)
         icon:SetTexture(spell.icon or 134400)
+        icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        if not isBlacklisted then
+            icon:SetAlpha(0.5)
+        end
 
         -- Spell name
-        local nameText = item:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         nameText:SetPoint("LEFT", icon, "RIGHT", 6, 0)
-        nameText:SetPoint("RIGHT", -34, 0)
+        nameText:SetPoint("RIGHT", -160, 0)
         nameText:SetJustifyH("LEFT")
         nameText:SetText(spell.display)
-        nameText:SetTextColor(0.85, 0.85, 0.85)
+        if isBlacklisted then
+            nameText:SetTextColor(0.90, 0.90, 0.90)
+        else
+            nameText:SetTextColor(0.55, 0.55, 0.55)
+        end
 
-        -- Right arrow button (add to blacklist)
-        local addBtn = CreateFrame("Button", nil, item, "BackdropTemplate")
-        addBtn:SetSize(26, 20)
-        addBtn:SetPoint("RIGHT", -4, 0)
-        addBtn:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Buttons\\WHITE8x8",
-            edgeSize = 1,
-        })
-        addBtn:SetBackdropColor(tc.r * 0.2, tc.g * 0.2, tc.b * 0.2, 0.8)
-        addBtn:SetBackdropBorderColor(tc.r * 0.5, tc.g * 0.5, tc.b * 0.5, 0.8)
+        -- Checkboxes (always visible — checked state reflects blacklist)
+        local combatChecked = isBlacklisted and type(entry) == "table" and entry.combat or false
+        local oocChecked = isBlacklisted and type(entry) == "table" and entry.ooc or false
 
-        local addIcon = addBtn:CreateTexture(nil, "OVERLAY")
-        addIcon:SetSize(12, 12)
-        addIcon:SetPoint("CENTER", 0, 0)
-        addIcon:SetTexture(ICON_ARROW)
-        addIcon:SetVertexColor(tc.r, tc.g, tc.b)
-
-        addBtn:SetScript("OnClick", function()
-            onAdd(spell.spellId)
+        local combatCB = CreateMiniCheckbox(row, "Combat", combatChecked, function(newState)
+            local blNow = GetBlacklist()
+            local e = blNow[blacklistKey] and blNow[blacklistKey][spell.spellId]
+            if newState and not e then
+                -- Checking combat on a non-blacklisted spell — add it
+                blNow[blacklistKey][spell.spellId] = { combat = true, ooc = false }
+                NotifyBlacklistChanged()
+                refreshFn()
+                return
+            end
+            if type(e) == "table" then
+                e.combat = newState
+                if not e.combat and not e.ooc then
+                    blNow[blacklistKey][spell.spellId] = nil
+                end
+            end
+            NotifyBlacklistChanged()
+            refreshFn()
         end)
-        addBtn:SetScript("OnEnter", function(self)
-            self:SetBackdropColor(tc.r * 0.3, tc.g * 0.3, tc.b * 0.3, 1)
-            self:SetBackdropBorderColor(tc.r, tc.g, tc.b, 1)
+        combatCB:SetPoint("RIGHT", row, "RIGHT", -104, 0)
+
+        local oocCB = CreateMiniCheckbox(row, "OOC", oocChecked, function(newState)
+            local blNow = GetBlacklist()
+            local e = blNow[blacklistKey] and blNow[blacklistKey][spell.spellId]
+            if newState and not e then
+                -- Checking OOC on a non-blacklisted spell — add it
+                blNow[blacklistKey][spell.spellId] = { combat = false, ooc = true }
+                NotifyBlacklistChanged()
+                refreshFn()
+                return
+            end
+            if type(e) == "table" then
+                e.ooc = newState
+                if not e.combat and not e.ooc then
+                    blNow[blacklistKey][spell.spellId] = nil
+                end
+            end
+            NotifyBlacklistChanged()
+            refreshFn()
         end)
-        addBtn:SetScript("OnLeave", function(self)
-            self:SetBackdropColor(tc.r * 0.2, tc.g * 0.2, tc.b * 0.2, 0.8)
-            self:SetBackdropBorderColor(tc.r * 0.5, tc.g * 0.5, tc.b * 0.5, 0.8)
+        oocCB:SetPoint("RIGHT", row, "RIGHT", -44, 0)
+
+        -- Click row to toggle blacklist (toggle both on/off)
+        row:SetScript("OnClick", function()
+            local blNow = GetBlacklist()
+            if blNow[blacklistKey][spell.spellId] then
+                blNow[blacklistKey][spell.spellId] = nil
+            else
+                blNow[blacklistKey][spell.spellId] = { combat = true, ooc = true }
+            end
+            NotifyBlacklistChanged()
+            refreshFn()
         end)
 
-        -- Row hover + tooltip
-        item:SetScript("OnEnter", function(self)
-            self:SetBackdropColor(0.12, 0.12, 0.12, 0.8)
+        -- Hover effect + tooltip
+        row:SetScript("OnEnter", function(self)
+            if isBlacklisted then
+                self:SetBackdropColor(0.18, 0.18, 0.18, 0.95)
+            else
+                self:SetBackdropColor(0.12, 0.12, 0.12, 0.8)
+            end
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:SetSpellByID(spell.spellId)
             GameTooltip:Show()
         end)
-        item:SetScript("OnLeave", function(self)
-            self:SetBackdropColor(0, 0, 0, 0)
+        row:SetScript("OnLeave", function(self)
+            if isBlacklisted then
+                self:SetBackdropColor(0.14, 0.14, 0.14, 0.95)
+            else
+                self:SetBackdropColor(0.08, 0.08, 0.08, 0.6)
+            end
             GameTooltip:Hide()
         end)
 
-        return item
+        return row
     end
 
-    -- ========== BLACKLISTED ITEM (Right Column — with X remove button) ==========
-    local function CreateBlacklistedItem(parentContent, spell, index, itemHeight, onRemove)
-        local item = CreateFrame("Frame", nil, parentContent, "BackdropTemplate")
-        item:SetHeight(itemHeight - 2)
-        item:SetPoint("TOPLEFT", 0, -((index - 1) * itemHeight))
-        item:SetPoint("TOPRIGHT", 0, -((index - 1) * itemHeight))
-        item:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Buttons\\WHITE8x8",
-            edgeSize = 1,
-        })
-        item:SetBackdropColor(0.12, 0.12, 0.12, 0.9)
-        item:SetBackdropBorderColor(0.25, 0.25, 0.25, 1)
-        item:EnableMouse(true)
-
-        -- Spell icon
-        local icon = item:CreateTexture(nil, "ARTWORK")
-        icon:SetSize(16, 16)
-        icon:SetPoint("LEFT", 4, 0)
-        icon:SetTexture(spell.icon or 134400)
-
-        -- Spell name
-        local nameText = item:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        nameText:SetPoint("LEFT", icon, "RIGHT", 6, 0)
-        nameText:SetPoint("RIGHT", -34, 0)
-        nameText:SetJustifyH("LEFT")
-        nameText:SetText(spell.display)
-        nameText:SetTextColor(0.85, 0.85, 0.85)
-
-        -- X remove button
-        local removeBtn = CreateFrame("Button", nil, item, "BackdropTemplate")
-        removeBtn:SetSize(26, 20)
-        removeBtn:SetPoint("RIGHT", -4, 0)
-        removeBtn:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Buttons\\WHITE8x8",
-            edgeSize = 1,
-        })
-        removeBtn:SetBackdropColor(0.25, 0.12, 0.12, 0.8)
-        removeBtn:SetBackdropBorderColor(0.5, 0.25, 0.25, 0.8)
-
-        local removeIcon = removeBtn:CreateTexture(nil, "OVERLAY")
-        removeIcon:SetSize(10, 10)
-        removeIcon:SetPoint("CENTER", 0, 0)
-        removeIcon:SetTexture(ICON_CLOSE)
-        removeIcon:SetVertexColor(0.9, 0.3, 0.3)
-
-        removeBtn:SetScript("OnClick", function()
-            onRemove(spell.spellId)
-        end)
-        removeBtn:SetScript("OnEnter", function(self)
-            self:SetBackdropColor(0.35, 0.15, 0.15, 1)
-            self:SetBackdropBorderColor(0.8, 0.3, 0.3, 1)
-        end)
-        removeBtn:SetScript("OnLeave", function(self)
-            self:SetBackdropColor(0.25, 0.12, 0.12, 0.8)
-            self:SetBackdropBorderColor(0.5, 0.25, 0.25, 0.8)
-        end)
-
-        -- Row hover + tooltip
-        item:SetScript("OnEnter", function(self)
-            self:SetBackdropColor(0.15, 0.15, 0.15, 0.9)
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetSpellByID(spell.spellId)
-            GameTooltip:Show()
-        end)
-        item:SetScript("OnLeave", function(self)
-            self:SetBackdropColor(0.12, 0.12, 0.12, 0.9)
-            GameTooltip:Hide()
-        end)
-
-        return item
-    end
-
-    -- ========== TRANSFER WIDGET BUILDER ==========
-    -- Creates a complete two-column transfer widget (left available + right blacklisted)
-    local function CreateTransferWidget(yAnchorFrame, yOffset, headerText, getAvailableFn, getBlacklistedFn,
-            addToBlacklistFn, removeFromBlacklistFn, leftItemPool, rightItemPool)
-
-        local ITEM_HEIGHT = 26
-        local COL_WIDTH = 224
-        local COL_HEIGHT = 200
-        local COL_GAP = 12
+    -- ========== SPELL LIST WIDGET ==========
+    local function CreateSpellListWidget(yAnchorFrame, yOffset, headerText, getSpellsFn, blacklistKey, itemPool)
+        local ROW_HEIGHT = 28
+        local LIST_WIDTH = 480
+        local LIST_HEIGHT = 220
 
         local container = CreateFrame("Frame", nil, parent)
-        container:SetSize(COL_WIDTH * 2 + COL_GAP, COL_HEIGHT + 40)
+        container:SetSize(LIST_WIDTH, LIST_HEIGHT + 30)
         container:SetPoint("TOPLEFT", yAnchorFrame, "BOTTOMLEFT", 0, yOffset)
 
         -- Header
+        local tc = GetThemeColor()
         local header = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         header:SetPoint("TOPLEFT", 0, 0)
         header:SetText(headerText)
-        local tc = GetThemeColor()
         header:SetTextColor(tc.r, tc.g, tc.b)
 
-        -- ===== LEFT COLUMN =====
-        local leftLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        leftLabel:SetPoint("TOPLEFT", 0, -20)
-        leftLabel:SetText("Available")
-        leftLabel:SetTextColor(0.6, 0.6, 0.6)
+        -- Blacklisted count (right-aligned next to header)
+        local countText = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        countText:SetPoint("LEFT", header, "RIGHT", 10, 0)
+        countText:SetTextColor(0.5, 0.5, 0.5)
 
-        local leftCount = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        leftCount:SetPoint("LEFT", leftLabel, "RIGHT", 8, 0)
-        leftCount:SetTextColor(0.5, 0.5, 0.5)
-
-        local leftBg = CreateFrame("Frame", nil, container, "BackdropTemplate")
-        leftBg:SetPoint("TOPLEFT", 0, -34)
-        leftBg:SetSize(COL_WIDTH, COL_HEIGHT)
-        leftBg:SetBackdrop({
+        -- List background
+        local listBg = CreateFrame("Frame", nil, container, "BackdropTemplate")
+        listBg:SetPoint("TOPLEFT", 0, -18)
+        listBg:SetSize(LIST_WIDTH, LIST_HEIGHT)
+        listBg:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 1,
         })
-        leftBg:SetBackdropColor(0.08, 0.08, 0.08, 0.95)
-        leftBg:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+        listBg:SetBackdropColor(0.06, 0.06, 0.06, 0.95)
+        listBg:SetBackdropBorderColor(0.20, 0.20, 0.20, 1)
 
-        local leftScroll = CreateFrame("ScrollFrame", nil, leftBg, "UIPanelScrollFrameTemplate")
-        leftScroll:SetPoint("TOPLEFT", 4, -4)
-        leftScroll:SetPoint("BOTTOMRIGHT", -24, 4)
+        -- Scroll frame
+        local scrollFrame = CreateFrame("ScrollFrame", nil, listBg, "UIPanelScrollFrameTemplate")
+        scrollFrame:SetPoint("TOPLEFT", 4, -4)
+        scrollFrame:SetPoint("BOTTOMRIGHT", -24, 4)
 
-        local leftContent = CreateFrame("Frame", nil, leftScroll)
-        leftContent:SetSize(COL_WIDTH - 28, 1)
-        leftScroll:SetScrollChild(leftContent)
+        local scrollContent = CreateFrame("Frame", nil, scrollFrame)
+        scrollContent:SetSize(LIST_WIDTH - 28, 1)
+        scrollFrame:SetScrollChild(scrollContent)
 
-        -- ===== RIGHT COLUMN =====
-        local rightLabel = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        rightLabel:SetPoint("TOPLEFT", leftBg, "TOPRIGHT", COL_GAP, 16)
-        rightLabel:SetText("Blacklisted")
-        rightLabel:SetTextColor(0.6, 0.6, 0.6)
+        -- Empty hint
+        local emptyText = listBg:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        emptyText:SetPoint("CENTER", listBg, "CENTER", 0, 0)
+        emptyText:SetText("No spells available for this class")
 
-        local rightCount = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        rightCount:SetPoint("LEFT", rightLabel, "RIGHT", 8, 0)
-        rightCount:SetTextColor(0.5, 0.5, 0.5)
-
-        local rightBg = CreateFrame("Frame", nil, container, "BackdropTemplate")
-        rightBg:SetPoint("TOPLEFT", leftBg, "TOPRIGHT", COL_GAP, 0)
-        rightBg:SetSize(COL_WIDTH, COL_HEIGHT)
-        rightBg:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Buttons\\WHITE8x8",
-            edgeSize = 1,
-        })
-        rightBg:SetBackdropColor(0.08, 0.08, 0.08, 0.95)
-        rightBg:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
-
-        local rightScroll = CreateFrame("ScrollFrame", nil, rightBg, "UIPanelScrollFrameTemplate")
-        rightScroll:SetPoint("TOPLEFT", 4, -4)
-        rightScroll:SetPoint("BOTTOMRIGHT", -24, 4)
-
-        local rightContent = CreateFrame("Frame", nil, rightScroll)
-        rightContent:SetSize(COL_WIDTH - 28, 1)
-        rightScroll:SetScrollChild(rightContent)
-
-        -- ===== EMPTY HINTS =====
-        -- Parent to bg frame so CENTER is visible even when content height is 1
-        local leftEmpty = leftBg:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-        leftEmpty:SetPoint("CENTER", leftBg, "CENTER", 0, 0)
-        leftEmpty:SetText("No spells available")
-
-        local rightEmpty = rightBg:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-        rightEmpty:SetPoint("CENTER", rightBg, "CENTER", 0, 0)
-        rightEmpty:SetText("No spells blacklisted")
-
-        -- ===== REFRESH ==========
+        -- Refresh
         local function Refresh()
-            -- Clear old items — ClearAllPoints + Hide, never SetParent(nil)
-            for _, item in ipairs(leftItemPool) do
+            -- Clear old items
+            for _, item in ipairs(itemPool) do
                 item:ClearAllPoints()
                 item:Hide()
             end
-            wipe(leftItemPool)
+            wipe(itemPool)
 
-            for _, item in ipairs(rightItemPool) do
-                item:ClearAllPoints()
-                item:Hide()
+            local spells = getSpellsFn()
+            emptyText:SetShown(#spells == 0)
+
+            -- Count blacklisted
+            local bl = GetBlacklist()
+            local blCount = 0
+            for _, spell in ipairs(spells) do
+                if bl[blacklistKey][spell.spellId] then
+                    blCount = blCount + 1
+                end
             end
-            wipe(rightItemPool)
-
-            -- Rebuild left column (available spells with right arrow)
-            local available = getAvailableFn()
-            leftEmpty:SetShown(#available == 0)
-            leftCount:SetText("(" .. #available .. ")")
-            leftContent:SetHeight(math.max(1, #available * ITEM_HEIGHT))
-
-            for i, spell in ipairs(available) do
-                local item = CreateAvailableItem(leftContent, spell, i, ITEM_HEIGHT, function(spellId)
-                    addToBlacklistFn(spellId)
-                    NotifyBlacklistChanged()
-                    Refresh()
-                end)
-                tinsert(leftItemPool, item)
+            if blCount > 0 then
+                countText:SetText(blCount .. " blacklisted")
+            else
+                countText:SetText("")
             end
 
-            -- Rebuild right column (blacklisted spells with X button)
-            local blacklisted = getBlacklistedFn()
-            rightEmpty:SetShown(#blacklisted == 0)
-            rightCount:SetText("(" .. #blacklisted .. ")")
-            rightContent:SetHeight(math.max(1, #blacklisted * ITEM_HEIGHT))
+            scrollContent:SetHeight(math.max(1, #spells * ROW_HEIGHT))
 
-            for i, spell in ipairs(blacklisted) do
-                local item = CreateBlacklistedItem(rightContent, spell, i, ITEM_HEIGHT, function(spellId)
-                    removeFromBlacklistFn(spellId)
-                    NotifyBlacklistChanged()
-                    Refresh()
-                end)
-                tinsert(rightItemPool, item)
+            for i, spell in ipairs(spells) do
+                local row = CreateSpellRow(scrollContent, spell, i, ROW_HEIGHT, blacklistKey, Refresh)
+                tinsert(itemPool, row)
             end
         end
 
@@ -452,7 +356,7 @@ function DF.BuildAuraBlacklistPage(guiRef, pageRef, dbRef)
     desc:SetPoint("TOPLEFT", 10, -10)
     desc:SetPoint("RIGHT", -10, 0)
     desc:SetJustifyH("LEFT")
-    desc:SetText("Hide specific buffs and debuffs from your frames. Blacklisted auras will not appear on buff bars or Aura Designer indicators.")
+    desc:SetText("Hide specific buffs and debuffs from your frames. Click a spell to toggle blacklisting. Blacklisted auras will not appear on buff bars or Aura Designer indicators.")
     desc:SetTextColor(0.6, 0.6, 0.6)
 
     -- ========== CLASS DROPDOWN ==========
@@ -587,34 +491,16 @@ function DF.BuildAuraBlacklistPage(guiRef, pageRef, dbRef)
     page._updateDropdownText = UpdateDropdownText
 
     -- ========== BUFF BLACKLIST WIDGET ==========
-    local buffWidget = CreateTransferWidget(
+    local buffWidget = CreateSpellListWidget(
         dropdownContainer, -10, "BUFF BLACKLIST",
-        GetAvailableBuffs, GetBlacklistedBuffs,
-        function(spellId)
-            local bl = GetBlacklist()
-            bl.buffs[spellId] = true
-        end,
-        function(spellId)
-            local bl = GetBlacklist()
-            bl.buffs[spellId] = nil
-        end,
-        buffLeftItems, buffRightItems
+        GetAllBuffs, "buffs", buffItemPool
     )
     page._buffWidget = buffWidget
 
     -- ========== DEBUFF BLACKLIST WIDGET ==========
-    local debuffWidget = CreateTransferWidget(
+    local debuffWidget = CreateSpellListWidget(
         buffWidget, -20, "DEBUFF BLACKLIST",
-        GetAvailableDebuffs, GetBlacklistedDebuffs,
-        function(spellId)
-            local bl = GetBlacklist()
-            bl.debuffs[spellId] = true
-        end,
-        function(spellId)
-            local bl = GetBlacklist()
-            bl.debuffs[spellId] = nil
-        end,
-        debuffLeftItems, debuffRightItems
+        GetAllDebuffs, "debuffs", debuffItemPool
     )
     page._debuffWidget = debuffWidget
 end

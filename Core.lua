@@ -3243,7 +3243,16 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         end
         if not DF.db.auraBlacklist.buffs then DF.db.auraBlacklist.buffs = {} end
         if not DF.db.auraBlacklist.debuffs then DF.db.auraBlacklist.debuffs = {} end
-        
+
+        -- Migrate legacy blacklist entries: true → { combat = true, ooc = true }
+        for _, key in ipairs({"buffs", "debuffs"}) do
+            for spellId, val in pairs(DF.db.auraBlacklist[key]) do
+                if val == true then
+                    DF.db.auraBlacklist[key][spellId] = { combat = true, ooc = true }
+                end
+            end
+        end
+
         -- Migrate any missing settings from defaults
         for key, value in pairs(DF.PartyDefaults) do
             if DF.db.party[key] == nil then
@@ -4479,6 +4488,10 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         -- Snapshot raid buff auras before combat lockdown hides spell IDs
         if DF.SnapshotRaidBuffAuras then
             DF:SnapshotRaidBuffAuras()
+        end
+        -- Refresh auras so combat-aware blacklist filters apply immediately
+        if DF.RefreshAllVisibleFrames then
+            DF:RefreshAllVisibleFrames()
         end
 
     elseif event == "PLAYER_UPDATE_RESTING" then

@@ -132,6 +132,20 @@ function Provider:GetUnitAuras(unit, spec)
         end
     end
 
+    -- Merge secret-tracked auras (fingerprint + cast tracking system)
+    local SecretAurasModule = DF.AuraDesigner.SecretAuras
+    if SecretAurasModule then
+        local secretResult = SecretAurasModule:GetUnitAuras(unit, spec)
+        if secretResult then
+            for auraName, auraData in pairs(secretResult) do
+                if not result[auraName] then
+                    result[auraName] = auraData
+                    matchedCount = matchedCount + 1
+                end
+            end
+        end
+    end
+
     if shouldLog then
         adapterDebugLast = now
         DF:Debug("AD", "unit=%s spec=%s scanned=%d matched=%d",
