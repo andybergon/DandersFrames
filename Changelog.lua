@@ -1,8 +1,34 @@
 local addonName, DF = ...
-DF.BUILD_DATE = "2026-03-10T19:58:12Z"
+DF.BUILD_DATE = "2026-03-11T23:25:33Z"
 DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
+
+## [4.0.16] - 2026-03-11
+
+### Bug Fixes
+* (Click Casting) **Fixed binding tooltip vanishing when pressing modifier keys** — modifier format mismatch caused all bindings to be filtered out
+* (Pet Frames) Fixed taint error from secret boolean in pet range checking
+* (Fading) **Fixed name and health text alpha resetting to 1.0** on zone change, combat res, vehicle exit, and test mode exit
+
+### New Features
+* (Aura Designer) **Secret aura tracking** — tracks auras that WoW hides behind secret spell IDs using signature-based fingerprinting (credit to Harrek for the technique and aura data from Advanced Raid Frames)
+* (Aura Blacklist) **Combat / out-of-combat controls** — per-spell checkboxes to blacklist auras only in combat, only out of combat, or both
+* (Aura Blacklist) Redesigned blacklist UI as a single unified spell list with inline toggle and checkboxes
+
+### New Trackable Auras (Aura Designer)
+* **Preservation Evoker:** Time Dilation, Rewind, Verdant Embrace
+* **Restoration Druid:** Ironbark
+* **Discipline Priest:** Pain Suppression, Power Infusion
+* **Holy Priest:** Guardian Spirit, Power Infusion
+* **Mistweaver Monk:** Life Cocoon, Strength of the Black Ox
+* **Restoration Shaman:** Hydrobubble
+* **Holy Paladin:** Blessing of Protection, Holy Armaments, Blessing of Sacrifice, Blessing of Freedom, Dawnlight, Beacon of Virtue
+
+### Improvements
+* (Aura Designer) Spell cards now show WoW spell tooltips on hover
+* (Aura Designer) Secret auras shown in a distinct section with visual styling to differentiate from regular auras
+* (Aura Designer) Added "unsupported spec" message when viewing a non-healer spec
 
 ## [4.0.15] - 2026-03-10
 
@@ -16,18 +42,10 @@ DF.CHANGELOG_TEXT = [===[
 * (Aura Blacklist) Fixed Harrier's Exhaustion not being filterable
 * (Click Casting) Fixed binding tooltip showing wrong modifier
 * (Aura Designer) Fixed health text showing in indicator preview when disabled
-* (Side Menu) **Fixed side menu showing when not in a party or raid**
 
 ### New Features
 * (Fading) **Hybrid range checking** — range now uses both instant events and a configurable polling timer for maximum reliability
 * (Fading) **Missing health bar out-of-range alpha** — new element-specific alpha slider for the missing health (damage) portion of the health bar
-* (Raid Frames) **Row/column growth direction** — new "Rows Grow From" setting controls whether additional rows of groups appear above or below the first row
-
-### Improvements
-* (Aura Designer) Added disabled state overlay — settings page now clearly shows when Aura Designer is disabled
-* (Aura Designer) Added unsupported spec message — spell picker now explains when a spec doesn't have built-in aura support
-* (Aura Designer) Updated spell picker hint to mention drag-and-drop
-* (Aura Designer) Increased minimum square indicator size from 4 to 8
 
 ## [4.0.14] - 2026-03-08
 
