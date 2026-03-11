@@ -1,5 +1,31 @@
 # DandersFrames Changelog
 
+## [4.0.16] - 2026-03-11
+
+### Bug Fixes
+* (Click Casting) **Fixed binding tooltip vanishing when pressing modifier keys** — modifier format mismatch caused all bindings to be filtered out
+* (Pet Frames) Fixed taint error from secret boolean in pet range checking
+* (Fading) **Fixed name and health text alpha resetting to 1.0** on zone change, combat res, vehicle exit, and test mode exit
+
+### New Features
+* (Aura Designer) **Secret aura tracking** — tracks auras that WoW hides behind secret spell IDs using signature-based fingerprinting (credit to Harrek for the technique and aura data from Advanced Raid Frames)
+* (Aura Blacklist) **Combat / out-of-combat controls** — per-spell checkboxes to blacklist auras only in combat, only out of combat, or both
+* (Aura Blacklist) Redesigned blacklist UI as a single unified spell list with inline toggle and checkboxes
+
+### New Trackable Auras (Aura Designer)
+* **Preservation Evoker:** Time Dilation, Rewind, Verdant Embrace
+* **Restoration Druid:** Ironbark
+* **Discipline Priest:** Pain Suppression, Power Infusion
+* **Holy Priest:** Guardian Spirit, Power Infusion
+* **Mistweaver Monk:** Life Cocoon, Strength of the Black Ox
+* **Restoration Shaman:** Hydrobubble
+* **Holy Paladin:** Blessing of Protection, Holy Armaments, Blessing of Sacrifice, Blessing of Freedom, Dawnlight, Beacon of Virtue
+
+### Improvements
+* (Aura Designer) Spell cards now show WoW spell tooltips on hover
+* (Aura Designer) Secret auras shown in a distinct section with visual styling to differentiate from regular auras
+* (Aura Designer) Added "unsupported spec" message when viewing a non-healer spec
+
 ## [4.0.15] - 2026-03-10
 
 ### Bug Fixes
