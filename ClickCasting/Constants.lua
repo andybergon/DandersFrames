@@ -431,7 +431,7 @@ CC.FRAME_INFO = FRAME_INFO
 -- Targeting Fallback info (checkboxes - for keyboard/hover bindings)
 local FALLBACK_INFO = {
     mouseover = {
-        name = "Mouseover",
+        name = "Global",
         desc = "Cast on nameplates or characters in the world. Not needed for party/raid frames.",
     },
     target = {

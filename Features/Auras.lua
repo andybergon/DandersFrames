@@ -737,6 +737,9 @@ local function BuildDirectDebuffFilters(db)
     if db.directDebuffShowAll then return nil end
     local filters = {}
     if db.directDebuffFilterRaid then filters[#filters + 1] = "HARMFUL|RAID" end
+    if db.directDebuffFilterRaidInCombat and AuraFilters.RaidInCombat then
+        filters[#filters + 1] = "HARMFUL|" .. AuraFilters.RaidInCombat
+    end
     if db.directDebuffFilterCrowdControl and AuraFilters.CrowdControl then
         filters[#filters + 1] = "HARMFUL|" .. AuraFilters.CrowdControl
     end

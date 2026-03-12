@@ -31,6 +31,9 @@
 * (Aura Designer) **Class-colored spec dropdown** — each spec name colored by class for clarity
 * (Aura Designer) **Customise button** on layout group members — jumps directly to that aura's effects settings
 * (Aura Designer) Fixed page scrolling — only the right settings panel scrolls now, preview stays in view
+* (Auras) Added **Raid In Combat** debuff filter option — matches the existing buff filter for better debuff coverage
+* (Click Casting) Renamed "Mouseover" fallback to "Global" for clarity
+* (Click Casting) "Does not work with action bar binds" warning now highlighted in red
 
 ## [4.0.15] - 2026-03-10
 

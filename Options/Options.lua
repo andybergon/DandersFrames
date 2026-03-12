@@ -3777,6 +3777,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         dfRaid.hideOn = HideDebuffSubFilters
         dfRaid.tooltip = "Debuffs relevant in a raid context."
 
+        local dfRaidIC = debuffGroup:AddWidget(GUI:CreateCheckbox(self.child, "Raid In Combat", db, "directDebuffFilterRaidInCombat", DirectFilterChanged), 30)
+        dfRaidIC.hideOn = HideDebuffSubFilters
+        dfRaidIC.tooltip = "Debuffs relevant during combat in a raid context."
+
         local dfCC = debuffGroup:AddWidget(GUI:CreateCheckbox(self.child, "Crowd Control", db, "directDebuffFilterCrowdControl", DirectFilterChanged), 30)
         dfCC.hideOn = HideDebuffSubFilters
         dfCC.tooltip = "CC effects like stuns, roots, and incapacitates."

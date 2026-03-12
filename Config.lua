@@ -866,6 +866,7 @@ DF.PartyDefaults = {
     -- Direct Mode: Debuff Filters
     directDebuffShowAll = false,              -- Show all debuffs (ignores sub-filters)
     directDebuffFilterRaid = true,            -- RAID filter
+    directDebuffFilterRaidInCombat = true,    -- RAID_IN_COMBAT filter
     directDebuffFilterCrowdControl = true,    -- CROWD_CONTROL filter
     directDebuffFilterImportant = true,       -- IMPORTANT filter (12.0.1)
     directDebuffSortOrder = "DEFAULT",        -- "DEFAULT" / "TIME" / "NAME"
@@ -2047,6 +2048,7 @@ DF.RaidDefaults = {
     -- Direct Mode: Debuff Filters
     directDebuffShowAll = false,              -- Show all debuffs (ignores sub-filters)
     directDebuffFilterRaid = true,            -- RAID filter
+    directDebuffFilterRaidInCombat = true,    -- RAID_IN_COMBAT filter
     directDebuffFilterCrowdControl = true,    -- CROWD_CONTROL filter
     directDebuffFilterImportant = true,       -- IMPORTANT filter (12.0.1)
     directDebuffSortOrder = "DEFAULT",        -- "DEFAULT" / "TIME" / "NAME"

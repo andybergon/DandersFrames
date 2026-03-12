@@ -1352,7 +1352,7 @@ function CC:CreateEditBindingPanel()
     fallbackSubtitle:SetWidth(280)
     fallbackSubtitle:SetJustifyH("LEFT")
     fallbackSubtitle:SetWordWrap(true)
-    fallbackSubtitle:SetText("For nameplates & world units. Does not work with action bar binds.")
+    fallbackSubtitle:SetText("For nameplates & world units. |cffff3333Does not work with action bar binds.|r")
     fallbackSubtitle:SetTextColor(0.5, 0.5, 0.5)
     panel.fallbackSubtitle = fallbackSubtitle
     
