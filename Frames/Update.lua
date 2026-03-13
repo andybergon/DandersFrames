@@ -1383,11 +1383,14 @@ function DF:ApplyAuraLayout(frame, auraType)
     local durationX = db[prefix .. "DurationX"] or 0
     local durationY = db[prefix .. "DurationY"] or 0
     local durationColorByTime = db[prefix .. "DurationColorByTime"] or false
+    local durationHideAboveEnabled = db[prefix .. "DurationHideAboveEnabled"] or false
+    local durationHideAboveThreshold = db[prefix .. "DurationHideAboveThreshold"] or 10
     local hideSwipe = db[prefix .. "HideSwipe"] or false
     
     -- Expiring indicator settings (buffs only)
     local expiringEnabled = false
     local expiringThreshold = 30
+    local expiringThresholdMode = "PERCENT"
     local expiringBorderEnabled = false
     local expiringBorderColor = DEFAULT_EXPIRING_BORDER_COLOR
     local expiringBorderColorByTime = false
@@ -1400,6 +1403,7 @@ function DF:ApplyAuraLayout(frame, auraType)
     if auraType == "BUFF" then
         expiringEnabled = db.buffExpiringEnabled or false
         expiringThreshold = db.buffExpiringThreshold or 30
+        expiringThresholdMode = db.buffExpiringThresholdMode or "PERCENT"
         expiringBorderEnabled = db.buffExpiringBorderEnabled or false
         expiringBorderColor = db.buffExpiringBorderColor or DEFAULT_EXPIRING_BORDER_COLOR
         expiringBorderColorByTime = db.buffExpiringBorderColorByTime or false
@@ -1465,11 +1469,14 @@ function DF:ApplyAuraLayout(frame, auraType)
         icon.stackMinimum = stackMinimum
         icon.showDuration = showDuration
         icon.durationColorByTime = durationColorByTime
+        icon.durationHideAboveEnabled = durationHideAboveEnabled
+        icon.durationHideAboveThreshold = durationHideAboveThreshold
         icon.durationAnchor = durationAnchor
         icon.durationX = durationX
         icon.durationY = durationY
         icon.expiringEnabled = expiringEnabled
         icon.expiringThreshold = expiringThreshold
+        icon.expiringThresholdMode = expiringThresholdMode
         icon.expiringBorderEnabled = expiringBorderEnabled
         icon.expiringBorderColor = expiringBorderColor
         icon.expiringBorderColorByTime = expiringBorderColorByTime
@@ -1676,25 +1683,41 @@ function DF:RefreshDurationColorSettings()
         -- Update buff icons
         if frame.buffIcons then
             local colorByTime = db.buffDurationColorByTime or false
+            local hideAboveEnabled = db.buffDurationHideAboveEnabled or false
+            local hideAboveThreshold = db.buffDurationHideAboveThreshold or 10
             for _, icon in ipairs(frame.buffIcons) do
                 icon.durationColorByTime = colorByTime
-                -- If turning off, reset to default color
+                icon.durationHideAboveEnabled = hideAboveEnabled
+                icon.durationHideAboveThreshold = hideAboveThreshold
+                -- If turning off color, reset to default color
                 if not colorByTime and icon.nativeCooldownText then
                     local durationColor = db.buffDurationColor or {r=1, g=1, b=1}
                     icon.nativeCooldownText:SetTextColor(durationColor.r, durationColor.g, durationColor.b, 1)
                 end
+                -- If turning off hide, reset wrapper alpha to 1
+                if not hideAboveEnabled and icon.durationHideWrapper then
+                    icon.durationHideWrapper:SetAlpha(1)
+                end
             end
         end
-        
+
         -- Update debuff icons
         if frame.debuffIcons then
             local colorByTime = db.debuffDurationColorByTime or false
+            local hideAboveEnabled = db.debuffDurationHideAboveEnabled or false
+            local hideAboveThreshold = db.debuffDurationHideAboveThreshold or 10
             for _, icon in ipairs(frame.debuffIcons) do
                 icon.durationColorByTime = colorByTime
-                -- If turning off, reset to default color
+                icon.durationHideAboveEnabled = hideAboveEnabled
+                icon.durationHideAboveThreshold = hideAboveThreshold
+                -- If turning off color, reset to default color
                 if not colorByTime and icon.nativeCooldownText then
                     local durationColor = db.debuffDurationColor or {r=1, g=1, b=1}
                     icon.nativeCooldownText:SetTextColor(durationColor.r, durationColor.g, durationColor.b, 1)
+                end
+                -- If turning off hide, reset wrapper alpha to 1
+                if not hideAboveEnabled and icon.durationHideWrapper then
+                    icon.durationHideWrapper:SetAlpha(1)
                 end
             end
         end

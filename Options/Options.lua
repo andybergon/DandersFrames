@@ -4072,8 +4072,12 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         durY.disableOn = function(d) return not d.buffShowDuration end
         local durColor = durationGroup:AddWidget(GUI:CreateCheckbox(self.child, "Color by Time Remaining", db, "buffDurationColorByTime", function() DF:RefreshDurationColorSettings() end), 30)
         durColor.disableOn = function(d) return not d.buffShowDuration end
+        local durHideAbove = durationGroup:AddWidget(GUI:CreateCheckbox(self.child, "Hide Above Threshold", db, "buffDurationHideAboveEnabled", function() DF:RefreshDurationColorSettings() end), 30)
+        durHideAbove.disableOn = function(d) return not d.buffShowDuration end
+        local durHideAboveSlider = durationGroup:AddWidget(GUI:CreateSlider(self.child, "Hide Above (seconds)", 1, 60, 1, db, "buffDurationHideAboveThreshold", nil, function() DF:RefreshDurationColorSettings() end), 55)
+        durHideAboveSlider.disableOn = function(d) return not d.buffShowDuration or not d.buffDurationHideAboveEnabled end
         AddToSection(durationGroup, nil, 2)
-        
+
         -- Expiring Indicator Group (col2)
         local expiringGroup = GUI:CreateSettingsGroup(self.child, 260)
         expiringGroup:AddWidget(GUI:CreateHeader(self.child, "Expiring Indicator"), 40)
@@ -4082,9 +4086,30 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             DF:UpdateAllFrames()
         end), 30)
         local function HideExpiring(d) return not d.buffExpiringEnabled end
-        local thresholdSlider = expiringGroup:AddWidget(GUI:CreateSlider(self.child, "Expiring Threshold (%)", 5, 95, 5, db, "buffExpiringThreshold", nil), 55)
+        local isSeconds = db.buffExpiringThresholdMode == "SECONDS"
+        local thresholdLabel = isSeconds and "Expiring Threshold (seconds)" or "Expiring Threshold (%)"
+        local thresholdMin = isSeconds and 1 or 5
+        local thresholdMax = isSeconds and 60 or 95
+        local thresholdStep = isSeconds and 1 or 5
+        local thresholdSlider = expiringGroup:AddWidget(GUI:CreateSlider(self.child, thresholdLabel, thresholdMin, thresholdMax, thresholdStep, db, "buffExpiringThreshold", nil), 55)
         thresholdSlider.disableOn = HideExpiring
-        local borderEnabled = expiringGroup:AddWidget(GUI:CreateCheckbox(self.child, "Show Expiring Border", db, "buffExpiringBorderEnabled", function() 
+        local modeBtn = expiringGroup:AddWidget(GUI:CreateCheckbox(self.child, "Use Seconds Instead of Percent", nil, nil,
+            nil,
+            function() return db.buffExpiringThresholdMode == "SECONDS" end,
+            function(val)
+                if val then
+                    db.buffExpiringThresholdMode = "SECONDS"
+                    db.buffExpiringThreshold = 10
+                else
+                    db.buffExpiringThresholdMode = "PERCENT"
+                    db.buffExpiringThreshold = 30
+                end
+                DF:UpdateAllFrames()
+                self:Refresh()
+            end,
+            "buffExpiringThresholdMode"), 30)
+        modeBtn.disableOn = HideExpiring
+        local borderEnabled = expiringGroup:AddWidget(GUI:CreateCheckbox(self.child, "Show Expiring Border", db, "buffExpiringBorderEnabled", function()
             self:RefreshStates()
             DF:UpdateAllFrames() 
         end), 30)
@@ -4299,10 +4324,14 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         durY.disableOn = function(d) return not d.debuffShowDuration end
         local durColor = durationGroup:AddWidget(GUI:CreateCheckbox(self.child, "Color by Time Remaining", db, "debuffDurationColorByTime", function() DF:RefreshDurationColorSettings() end), 30)
         durColor.disableOn = function(d) return not d.debuffShowDuration end
+        local durHideAbove = durationGroup:AddWidget(GUI:CreateCheckbox(self.child, "Hide Above Threshold", db, "debuffDurationHideAboveEnabled", function() DF:RefreshDurationColorSettings() end), 30)
+        durHideAbove.disableOn = function(d) return not d.debuffShowDuration end
+        local durHideAboveSlider = durationGroup:AddWidget(GUI:CreateSlider(self.child, "Hide Above (seconds)", 1, 60, 1, db, "debuffDurationHideAboveThreshold", nil, function() DF:RefreshDurationColorSettings() end), 55)
+        durHideAboveSlider.disableOn = function(d) return not d.debuffShowDuration or not d.debuffDurationHideAboveEnabled end
         AddToSection(durationGroup, nil, 2)
-        
+
         currentSection = nil
-        
+
         -- See Also links
         AddSpace(20, "both")
         Add(GUI:CreateSeeAlso(self.child, {

@@ -19,7 +19,7 @@ DF.AuraBlacklist = DF.AuraBlacklist or {}
 -- ============================================================
 DF.AuraBlacklist.ClassOrder = {
     "DRUID", "PRIEST", "PALADIN", "SHAMAN", "MONK", "EVOKER",
-    "MAGE", "WARRIOR",
+    "MAGE", "WARRIOR", "ROGUE", "HUNTER",
 }
 
 -- ============================================================
@@ -34,6 +34,8 @@ DF.AuraBlacklist.ClassNames = {
     EVOKER  = "Evoker",
     MAGE    = "Mage",
     WARRIOR = "Warrior",
+    ROGUE   = "Rogue",
+    HUNTER  = "Hunter",
 }
 
 -- ============================================================
@@ -68,15 +70,22 @@ DF.AuraBlacklist.BuffSpells = {
         { spellId = 1244893,display = "Beacon of the Savior",   icon = 7514188 },
         { spellId = 200025, display = "Beacon of Virtue",       icon = 1030094 },
         { spellId = 156322, display = "Eternal Flame",          icon = 135433  },
+        { spellId = 433583, display = "Rite of Adjuration",     icon = 237051  },
+        { spellId = 433568, display = "Rite of Sanctification", icon = 237172  },
     },
     SHAMAN = {
         { spellId = 207400, display = "Ancestral Vigor",        icon = 237574   },
         { spellId = 974,    display = "Earth Shield",           icon = 136089   },
         { spellId = 382024, display = "Earthliving Weapon",     icon = 237578   },
+        { spellId = 319778, display = "Flametongue Weapon",     icon = 135814   },
         { spellId = 444490, display = "Hydrobubble",            icon = 1320371  },
+        { spellId = 20608,  display = "Reincarnation",          icon = 451167   },
         { spellId = 61295,  display = "Riptide",                icon = 252995   },
         { spellId = 462854, display = "Skyfury",                icon = 135831   },
         { spellId = 369459, display = "Source of Magic",        icon = 4630412  },
+        { spellId = 462757, display = "Thunderstrike Ward",     icon = 5975854  },
+        { spellId = 457496, display = "Tidecaller's Guard",     icon = 1355357  },
+        { spellId = 319773, display = "Windfury Weapon",        icon = 462329   },
     },
     MONK = {
         { spellId = 450769, display = "Aspect of Harmony",      icon = 5927638 },
@@ -85,6 +94,7 @@ DF.AuraBlacklist.BuffSpells = {
         { spellId = 115175, display = "Soothing Mist",          icon = 606550  },
     },
     EVOKER = {
+        { spellId = 381748, display = "Blessing of the Bronze", icon = 4622448 },
         { spellId = 360827, display = "Blistering Scales",      icon = 5199621 },
         { spellId = 355941, display = "Dream Breath",           icon = 4622454 },
         { spellId = 363502, display = "Dream Flight",           icon = 4622455 },
@@ -102,9 +112,22 @@ DF.AuraBlacklist.BuffSpells = {
     },
     MAGE = {
         { spellId = 1459,   display = "Arcane Intellect",       icon = 135932  },
+        { spellId = 205473, display = "Icicles",                icon = 135855  },
     },
     WARRIOR = {
         { spellId = 6673,   display = "Battle Shout",           icon = 132333  },
+    },
+    ROGUE = {
+        { spellId = 381664, display = "Amplifying Poison",      icon = 134207  },
+        { spellId = 381637, display = "Atrophic Poison",        icon = 132300  },
+        { spellId = 3408,   display = "Crippling Poison",       icon = 132274  },
+        { spellId = 2823,   display = "Deadly Poison",          icon = 132290  },
+        { spellId = 315584, display = "Instant Poison",         icon = 132273  },
+        { spellId = 5761,   display = "Numbing Poison",         icon = 136066  },
+        { spellId = 8679,   display = "Wound Poison",           icon = 134197  },
+    },
+    HUNTER = {
+        { spellId = 260286, display = "Tip of the Spear",       icon = 1117879 },
     },
 }
 
@@ -137,9 +160,29 @@ DF.AuraBlacklist.DebuffSpells = {
 DF.AuraBlacklist.AlternateSpellIDs = {
     -- Earth Shield variants
     [383648] = 974,
+    -- Earthliving Weapon variants
+    [382021] = 382024,
+    [382022] = 382024,
+    -- Tidecaller's Guard variant
+    [457481] = 457496,
+    -- Thunderstrike Ward variant
+    [462742] = 462757,
     -- Symbiotic Relationship variants
     [474750] = 474754,
     [474760] = 474754,
+    -- Blessing of the Bronze (class-specific buff IDs → primary Evoker ID)
+    [381732] = 381748,   -- Death Knight
+    [381741] = 381748,   -- Demon Hunter
+    [381746] = 381748,   -- Druid
+    [381749] = 381748,   -- Hunter
+    [381750] = 381748,   -- Mage
+    [381751] = 381748,   -- Monk
+    [381752] = 381748,   -- Paladin
+    [381753] = 381748,   -- Priest
+    [381754] = 381748,   -- Rogue
+    [381756] = 381748,   -- Shaman
+    [381757] = 381748,   -- Warlock
+    [381758] = 381748,   -- Warrior
     -- Exhaustion variants
     [390435] = 57723,
     [428628] = 57723,    -- Harrier's Exhaustion (Harrier's Cry)

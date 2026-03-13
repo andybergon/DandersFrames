@@ -133,9 +133,10 @@ auraTimerGroup:SetScript("OnLoop", function()
             iconsByFrameType[frameType] = iconsByFrameType[frameType] + 1
             -- Check if features are enabled
             local needsDurationColor = icon.showDuration and icon.durationColorByTime
+            local needsDurationHide = icon.showDuration and icon.durationHideAboveEnabled
             local needsExpiring = icon.expiringEnabled
-            
-            if needsDurationColor or needsExpiring then
+
+            if needsDurationColor or needsDurationHide or needsExpiring then
                 local unit = icon.unitFrame and icon.unitFrame.unit
                 local auraInstanceID = icon.auraData.auraInstanceID
                 
@@ -153,6 +154,14 @@ auraTimerGroup:SetScript("OnLoop", function()
                             for _, region in pairs(regions) do
                                 if region and region.GetObjectType and region:GetObjectType() == "FontString" then
                                     icon.nativeCooldownText = region
+                                    -- Create wrapper for hide-above-threshold alpha control
+                                    if not icon.durationHideWrapper then
+                                        icon.durationHideWrapper = CreateFrame("Frame", nil, icon.cooldown)
+                                        icon.durationHideWrapper:SetAllPoints(icon)
+                                        icon.durationHideWrapper:SetFrameLevel(icon.cooldown:GetFrameLevel() + 2)
+                                        icon.durationHideWrapper:EnableMouse(false)
+                                        region:SetParent(icon.durationHideWrapper)
+                                    end
                                     break
                                 end
                             end
@@ -182,6 +191,7 @@ auraTimerGroup:SetScript("OnLoop", function()
                             local useNewAPI = durationObj and durationObj.EvaluateRemainingDuration
                             
                             -- Duration color
+                            local durR, durG, durB, durA = nil, nil, nil, 1
                             if needsDurationColor and icon.nativeCooldownText and useNewAPI then
                                 if C_CurveUtil and C_CurveUtil.CreateColorCurve then
                                     if not DF.durationColorCurve then
@@ -193,36 +203,92 @@ auraTimerGroup:SetScript("OnLoop", function()
                                         curve:AddPoint(1, CreateColor(0, 1, 0, 1))
                                         DF.durationColorCurve = curve
                                     end
-                                    
+
                                     local result = durationObj:EvaluateRemainingPercent(DF.durationColorCurve)
                                     if result then
                                         if result.GetRGB then
-                                            local r, g, b = result:GetRGB()
-                                            icon.nativeCooldownText:SetTextColor(r, g, b, 1)
+                                            durR, durG, durB = result:GetRGB()
                                         elseif result.r then
-                                            icon.nativeCooldownText:SetTextColor(result.r, result.g, result.b, 1)
+                                            durR, durG, durB = result.r, result.g, result.b
                                         end
                                     end
+                                end
+                            end
+
+                            -- Duration hide above threshold
+                            if needsDurationHide and icon.nativeCooldownText and useNewAPI then
+                                local threshold = icon.durationHideAboveThreshold or 10
+                                if C_CurveUtil and C_CurveUtil.CreateColorCurve then
+                                    DF.durationHideCurves = DF.durationHideCurves or {}
+                                    if not DF.durationHideCurves[threshold] then
+                                        local curve = C_CurveUtil.CreateColorCurve()
+                                        curve:SetType(Enum.LuaCurveType.Step)
+                                        curve:AddPoint(0, CreateColor(1, 1, 1, 1))
+                                        curve:AddPoint(threshold, CreateColor(1, 1, 1, 0))
+                                        curve:AddPoint(600, CreateColor(1, 1, 1, 0))
+                                        DF.durationHideCurves[threshold] = curve
+                                    end
+
+                                    if hasExpiration and durationObj.EvaluateRemainingDuration then
+                                        local hideResult = durationObj:EvaluateRemainingDuration(DF.durationHideCurves[threshold])
+                                        if hideResult then
+                                            if hideResult.GetAlpha then
+                                                durA = hideResult:GetAlpha()
+                                            elseif hideResult.a ~= nil then
+                                                durA = hideResult.a
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+
+                            -- Apply duration color (via SetTextColor) and hide alpha (via wrapper SetAlpha)
+                            -- Blizzard's CooldownFrame resets both SetTextColor alpha and SetAlpha
+                            -- on its FontString every frame, so we use a parent wrapper frame
+                            if icon.nativeCooldownText then
+                                if durR then
+                                    icon.nativeCooldownText:SetTextColor(durR, durG, durB, 1)
+                                end
+                                if (durA ~= 1 or needsDurationHide) and icon.durationHideWrapper then
+                                    icon.durationHideWrapper:SetAlpha(durA)
                                 end
                             end
                             
                             -- Expiring indicators
                             if not icon.testAuraData and needsExpiring and useNewAPI then
                                 local threshold = icon.expiringThreshold or 30
-                                local thresholdDecimal = threshold / 100
-                                
+                                local useSeconds = icon.expiringThresholdMode == "SECONDS"
+
                                 if C_CurveUtil and C_CurveUtil.CreateColorCurve then
                                     DF.expiringCurves = DF.expiringCurves or {}
-                                    if not DF.expiringCurves[threshold] then
+                                    local cacheKey = (useSeconds and "s" or "p") .. threshold
+                                    if not DF.expiringCurves[cacheKey] then
                                         local curve = C_CurveUtil.CreateColorCurve()
                                         curve:SetType(Enum.LuaCurveType.Step)
-                                        curve:AddPoint(0, CreateColor(1, 1, 1, 1))
-                                        curve:AddPoint(thresholdDecimal, CreateColor(0, 0, 0, 0))
-                                        curve:AddPoint(1, CreateColor(0, 0, 0, 0))
-                                        DF.expiringCurves[threshold] = curve
+                                        if useSeconds then
+                                            curve:AddPoint(0, CreateColor(1, 1, 1, 1))
+                                            curve:AddPoint(threshold, CreateColor(0, 0, 0, 0))
+                                            curve:AddPoint(600, CreateColor(0, 0, 0, 0))
+                                        else
+                                            local thresholdDecimal = threshold / 100
+                                            curve:AddPoint(0, CreateColor(1, 1, 1, 1))
+                                            curve:AddPoint(thresholdDecimal, CreateColor(0, 0, 0, 0))
+                                            curve:AddPoint(1, CreateColor(0, 0, 0, 0))
+                                        end
+                                        DF.expiringCurves[cacheKey] = curve
                                     end
-                                    
-                                    local expireResult = durationObj:EvaluateRemainingPercent(DF.expiringCurves[threshold])
+
+                                    local expireResult
+                                    if useSeconds and durationObj.EvaluateRemainingDuration then
+                                        -- Only evaluate seconds mode when the aura actually has an expiration
+                                        -- (prevents false trigger on permanent buffs or freshly-applied auras
+                                        -- where remaining duration briefly reports 0)
+                                        if hasExpiration then
+                                            expireResult = durationObj:EvaluateRemainingDuration(DF.expiringCurves[cacheKey])
+                                        end
+                                    else
+                                        expireResult = durationObj:EvaluateRemainingPercent(DF.expiringCurves[cacheKey])
+                                    end
                                     
                                     if expireResult then
                                         local expiringAlpha = 0
@@ -1563,9 +1629,18 @@ function DF:UpdateAuraIcons_Enhanced(frame, icons, auraType, maxAuras)
                             DF:SafeSetFont(region, durationFont, durationSize, durationOutline)
                         end
 
-                        -- Keep native text as child of cooldown (NOT reparented)
-                        -- When cooldown is hidden for permanent buffs, the text hides automatically as a child
-                        -- Position it where the user configured (ClearAllPoints works across parents)
+                        -- Create wrapper frame for parent-level alpha control (hide duration above threshold).
+                        -- Blizzard's CooldownFrame resets both SetTextColor alpha and SetAlpha on its
+                        -- FontString every frame, so the only reliable hide is via a parent frame's alpha.
+                        if not icon.durationHideWrapper then
+                            icon.durationHideWrapper = CreateFrame("Frame", nil, icon.cooldown)
+                            icon.durationHideWrapper:SetAllPoints(icon)
+                            icon.durationHideWrapper:SetFrameLevel(icon.cooldown:GetFrameLevel() + 2)
+                            icon.durationHideWrapper:EnableMouse(false)
+                        end
+                        region:SetParent(icon.durationHideWrapper)
+
+                        -- Position it where the user configured
                         region:ClearAllPoints()
                         region:SetPoint(durationAnchor, icon, durationAnchor, durationX, durationY)
 
@@ -1913,8 +1988,15 @@ function DF:UpdateAuraIconsDirect(frame, icons, auraType, maxAuras)
                                     DF:SafeSetFont(region, durationFont, durationSize, durationOutline)
                                 end
 
-                                -- Keep native text as child of cooldown (NOT reparented)
-                                -- When cooldown is hidden for permanent buffs, the text hides automatically
+                                -- Create wrapper frame for parent-level alpha control (hide duration above threshold)
+                                if not icon.durationHideWrapper then
+                                    icon.durationHideWrapper = CreateFrame("Frame", nil, icon.cooldown)
+                                    icon.durationHideWrapper:SetAllPoints(icon)
+                                    icon.durationHideWrapper:SetFrameLevel(icon.cooldown:GetFrameLevel() + 2)
+                                    icon.durationHideWrapper:EnableMouse(false)
+                                end
+                                region:SetParent(icon.durationHideWrapper)
+
                                 region:ClearAllPoints()
                                 region:SetPoint(durationAnchor, icon, durationAnchor, durationX, durationY)
 

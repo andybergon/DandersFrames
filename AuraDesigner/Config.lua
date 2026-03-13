@@ -98,7 +98,7 @@ DF.AuraDesigner.IconTextures = {
     Riptide             = 252995,
     EarthShield         = 136089,
     -- AncestralVigor      = 237574,
-    -- EarthlivingWeapon   = 237578,
+    EarthlivingWeapon   = 237578,
     Hydrobubble         = 1320371,
     -- Holy Paladin
     BeaconOfFaith       = 1030095,
@@ -161,7 +161,8 @@ DF.AuraDesigner.SpellIDs = {
     },
     RestorationShaman = {
         Riptide = 61295, EarthShield = 383648,
-        -- AncestralVigor = 207400, EarthlivingWeapon = 382024,
+        -- AncestralVigor = 207400,
+        EarthlivingWeapon = 382024,
         Hydrobubble = 444490,
     },
     HolyPaladin = {
@@ -186,6 +187,8 @@ DF.AuraDesigner.AlternateSpellIDs = {
     },
     RestorationShaman = {
         [974] = "EarthShield",  -- alternate ID for Earth Shield (primary is 383648)
+        [382021] = "EarthlivingWeapon",  -- alternate ID (primary is 382024)
+        [382022] = "EarthlivingWeapon",  -- alternate ID (primary is 382024)
     },
 }
 
@@ -326,7 +329,7 @@ DF.AuraDesigner.TrackableAuras = {
         { name = "Riptide",           display = "Riptide",            color = {0.31, 0.76, 0.97} },
         { name = "EarthShield",       display = "Earth Shield",       color = {0.65, 0.47, 0.33} },
         -- { name = "AncestralVigor",    display = "Ancestral Vigor",    color = {0.56, 0.93, 0.56} },
-        -- { name = "EarthlivingWeapon", display = "Earthliving Weapon", color = {0.47, 0.87, 0.47} },
+        { name = "EarthlivingWeapon", display = "Earthliving Weapon", color = {0.47, 0.87, 0.47} },
         { name = "Hydrobubble",       display = "Hydrobubble",        color = {0.31, 0.76, 0.97} },
     },
     HolyPaladin = {

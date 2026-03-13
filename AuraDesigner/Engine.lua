@@ -278,25 +278,96 @@ function Engine:UpdateFrame(frame)
                     local triggerAuraData = nil
                     local triggers = typeCfg.triggers
                     if triggers then
-                        -- Multi-trigger: fire if ANY trigger aura is active.
-                        -- Pick the trigger with the highest remaining duration
-                        -- so expiring color transitions use the longest-lasting aura.
-                        local bestRemaining = -1
-                        for _, trigName in ipairs(triggers) do
-                            local trigData = activeAuras[trigName]
-                            if trigData then
-                                local expTime = trigData.expirationTime
-                                if not expTime or expTime == 0 then
-                                    -- Permanent buff — always prefer, never expires
-                                    triggerAuraData = trigData
-                                    bestRemaining = math.huge
+                        local useAnd = typeCfg.triggerOperator == "AND"
+                        local pickLowest = typeCfg.triggerDurationPriority ~= "HIGHEST"  -- LOWEST is default
+                        if useAnd then
+                            -- AND mode: fire only if ALL trigger auras are active.
+                            local allActive = true
+                            local bestRemaining = pickLowest and math.huge or -1
+                            local candidate = nil
+                            local secretFallback = nil  -- first active secret aura as fallback
+                            for _, trigName in ipairs(triggers) do
+                                local trigData = activeAuras[trigName]
+                                if not trigData then
+                                    allActive = false
+                                    break
+                                end
+                                if trigData.secret then
+                                    -- Secret aura: can't compare duration in Lua
+                                    -- Keep as fallback only if no whitelist aura is found
+                                    if not secretFallback then
+                                        secretFallback = trigData
+                                    end
                                 else
-                                    local remaining = expTime - now
-                                    if remaining > bestRemaining then
-                                        bestRemaining = remaining
-                                        triggerAuraData = trigData
+                                    local expTime = trigData.expirationTime
+                                    if not expTime or expTime == 0 then
+                                        if not candidate then
+                                            candidate = trigData
+                                        end
+                                        if not pickLowest then
+                                            bestRemaining = math.huge
+                                            candidate = trigData
+                                        end
+                                    else
+                                        local remaining = expTime - now
+                                        if pickLowest then
+                                            if remaining < bestRemaining then
+                                                bestRemaining = remaining
+                                                candidate = trigData
+                                            end
+                                        else
+                                            if remaining > bestRemaining then
+                                                bestRemaining = remaining
+                                                candidate = trigData
+                                            end
+                                        end
                                     end
                                 end
+                            end
+                            if allActive then
+                                triggerAuraData = candidate or secretFallback
+                            end
+                        else
+                            -- OR mode (default): fire if ANY trigger aura is active.
+                            local bestRemaining = pickLowest and math.huge or -1
+                            local secretFallback = nil
+                            for _, trigName in ipairs(triggers) do
+                                local trigData = activeAuras[trigName]
+                                if trigData then
+                                    if trigData.secret then
+                                        -- Secret aura: can't compare duration in Lua
+                                        if not secretFallback then
+                                            secretFallback = trigData
+                                        end
+                                    else
+                                        local expTime = trigData.expirationTime
+                                        if not expTime or expTime == 0 then
+                                            if not pickLowest then
+                                                triggerAuraData = trigData
+                                                bestRemaining = math.huge
+                                            elseif not triggerAuraData then
+                                                triggerAuraData = trigData
+                                            end
+                                        else
+                                            local remaining = expTime - now
+                                            if pickLowest then
+                                                if remaining < bestRemaining then
+                                                    bestRemaining = remaining
+                                                    triggerAuraData = trigData
+                                                end
+                                            else
+                                                if remaining > bestRemaining then
+                                                    bestRemaining = remaining
+                                                    triggerAuraData = trigData
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                            -- Use secret fallback only if no whitelist aura was picked
+                            if not triggerAuraData and secretFallback then
+                                triggerAuraData = secretFallback
                             end
                         end
                     else
