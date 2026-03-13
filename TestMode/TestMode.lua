@@ -3640,6 +3640,12 @@ function DF:ShowTestFrames(silent)
     if not silent then
         print("|cff00ff00DandersFrames:|r Test mode enabled.")
     end
+
+    -- Update permanent mover for party test mode
+    C_Timer.After(0.1, function()
+        DF:UpdatePermanentMoverVisibility()
+        DF:UpdatePermanentMoverAnchor("party")
+    end)
 end
 
 -- Refresh all test frames (call this when settings change in test mode)
@@ -3851,6 +3857,14 @@ function DF:RefreshTestFramesWithLayout()
     if DF.testMode or DF.raidTestMode then
         DF:UpdateAllTestHighlights()
     end
+
+    -- Re-anchor permanent mover to updated test frames
+    if DF.testMode then
+        DF:UpdatePermanentMoverAnchor("party")
+    end
+    if DF.raidTestMode then
+        DF:UpdatePermanentMoverAnchor("raid")
+    end
 end
 
 -- Throttled layout refresh for slider changes (avoids flickering)
@@ -3953,6 +3967,12 @@ function DF:HideTestFrames(silent)
     if not silent then
         print("|cff00ff00DandersFrames:|r Test mode disabled.")
     end
+
+    -- Update permanent mover after exiting party test mode
+    C_Timer.After(0.1, function()
+        DF:UpdatePermanentMoverVisibility()
+        DF:UpdatePermanentMoverAnchor("party")
+    end)
 end
 
 -- Toggle test mode (mode-aware based on GUI.SelectedMode)
@@ -3986,7 +4006,7 @@ function DF:ToggleTestMode()
             print("|cffff9900DandersFrames:|r Cannot disable test mode while frames are unlocked. Lock frames first.")
             return
         end
-        
+
         -- Toggle party test mode
         if DF.testMode then
             DF:HideTestFrames()
@@ -4083,6 +4103,12 @@ function DF:ShowRaidTestFrames()
     if DF.GUI and DF.GUI.UpdateThemeColors then
         DF.GUI.UpdateThemeColors()
     end
+
+    -- Update permanent mover for raid test mode
+    C_Timer.After(0.1, function()
+        DF:UpdatePermanentMoverVisibility()
+        DF:UpdatePermanentMoverAnchor("raid")
+    end)
 end
 
 -- Hide raid test frames
@@ -4173,6 +4199,12 @@ function DF:HideRaidTestFrames()
     if DF.GUI and DF.GUI.UpdateThemeColors then
         DF.GUI.UpdateThemeColors()
     end
+
+    -- Update permanent mover after exiting raid test mode
+    C_Timer.After(0.1, function()
+        DF:UpdatePermanentMoverVisibility()
+        DF:UpdatePermanentMoverAnchor("party")
+    end)
 end
 
 -- Update raid test frames with test data
@@ -6503,6 +6535,10 @@ function DF:CreateTestPanel()
             DF:ThrottledUpdateAll()
             if not DF.sliderDragging and DF.UpdateAllPetFrames then DF:UpdateAllPetFrames(true) end
         end
+        -- Re-anchor permanent mover when frame count changes
+        C_Timer.After(0.1, function()
+            DF:UpdatePermanentMoverAnchor(isRaidMode and "raid" or "party")
+        end)
     end)
     panel.frameCountSlider = frameCountSlider
     secGeneral:AddWidget(fcRow, 28)

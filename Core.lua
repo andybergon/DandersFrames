@@ -3253,15 +3253,23 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
             end
         end
 
-        -- Migrate any missing settings from defaults
-        for key, value in pairs(DF.PartyDefaults) do
-            if DF.db.party[key] == nil then
-                DF.db.party[key] = DF:DeepCopy(value)
-            end
-        end
-        for key, value in pairs(DF.RaidDefaults) do
-            if DF.db.raid[key] == nil then
-                DF.db.raid[key] = DF:DeepCopy(value)
+        -- Migrate any missing settings from defaults (all profiles)
+        if DandersFramesDB_v2 and DandersFramesDB_v2.profiles then
+            for _, profile in pairs(DandersFramesDB_v2.profiles) do
+                if profile.party then
+                    for key, value in pairs(DF.PartyDefaults) do
+                        if profile.party[key] == nil then
+                            profile.party[key] = DF:DeepCopy(value)
+                        end
+                    end
+                end
+                if profile.raid then
+                    for key, value in pairs(DF.RaidDefaults) do
+                        if profile.raid[key] == nil then
+                            profile.raid[key] = DF:DeepCopy(value)
+                        end
+                    end
+                end
             end
         end
 
@@ -4404,7 +4412,12 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         if DF.UpdateAuraClickThrough then
             DF:UpdateAuraClickThrough()
         end
-        
+        -- Update permanent mover combat state (color/visibility) — delayed to run
+        -- after any deferred frame refreshes that might reset backdrop colors
+        if DF.UpdatePermanentMoverCombatState then
+            C_Timer.After(0.05, function() DF:UpdatePermanentMoverCombatState() end)
+        end
+
     elseif event == "PLAYER_REGEN_DISABLED" then
         -- Track combat state
         DF.playerInCombat = true
@@ -4511,6 +4524,11 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         -- Refresh auras so combat-aware blacklist filters apply immediately
         if DF.RefreshAllVisibleFrames then
             DF:RefreshAllVisibleFrames()
+        end
+        -- Update permanent mover combat state (color/visibility) — delayed to run
+        -- after any deferred frame refreshes that might reset backdrop colors
+        if DF.UpdatePermanentMoverCombatState then
+            C_Timer.After(0.05, function() DF:UpdatePermanentMoverCombatState() end)
         end
 
     elseif event == "PLAYER_UPDATE_RESTING" then

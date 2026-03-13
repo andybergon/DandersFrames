@@ -79,7 +79,10 @@ function DF:InitializeFrames()
     
     -- Create mover frame
     DF:CreateMoverFrame()
-    
+
+    -- Create permanent mover handle for party
+    DF:CreatePermanentMover(DF.container, "party")
+
     -- Initialize raid container (needed by Headers.lua)
     DF:InitializeRaidFrames()
 end
@@ -113,6 +116,9 @@ function DF:InitializeRaidFrames()
     
     -- Create raid mover frame
     DF:CreateRaidMoverFrame()
+
+    -- Create permanent mover handle for raid
+    DF:CreatePermanentMover(DF.raidContainer, "raid")
 end
 
 function DF:CreateRaidFrame(unit, index)
@@ -815,6 +821,7 @@ function DF:UnlockRaidFrames()
     
     db.raidLocked = false
     DF.positionPanelMode = "raid"  -- Set mode for position panel
+    DF.hideDragOverlay = false  -- Reset overlay toggle on unlock
     
     -- Make container movable and visible
     DF.raidContainer:SetMovable(true)
@@ -866,6 +873,7 @@ function DF:UnlockRaidFrames()
     DF.raidMoverFrame:SetPoint("CENTER", UIParent, "CENTER", db.raidAnchorX or 0, db.raidAnchorY or 0)
     DF.raidMoverFrame:SetFrameStrata("TOOLTIP")  -- Very high strata
     DF.raidMoverFrame:SetFrameLevel(100)
+    DF.raidMoverFrame:SetAlpha(1)
     DF.raidMoverFrame:Show()
     DF.raidMoverFrame:Raise()
 
@@ -929,6 +937,9 @@ function DF:UnlockRaidFrames()
         if DF.GUI.UpdateTestButtonState then DF.GUI.UpdateTestButtonState() end
     end
     
+    -- Hide permanent mover while full overlay is active
+    if DF.permanentRaidMover then DF.permanentRaidMover:Hide() end
+
     print("|cff00ff00DandersFrames:|r Raid frames unlocked. Drag to move, right-click to lock.")
 end
 
@@ -939,9 +950,11 @@ function DF:LockRaidFrames()
     db.raidLocked = true
     DF.positionPanelMode = nil  -- Clear mode
     
-    DF.raidContainer:SetMovable(false)
     DF.raidMoverFrame:Hide()
-    
+
+    -- Restore permanent mover visibility (keeps container movable if enabled)
+    DF:UpdatePermanentMoverVisibility()
+
     -- Stop any OnUpdate for snap preview
     DF.raidMoverFrame:SetScript("OnUpdate", nil)
     

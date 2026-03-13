@@ -1,8 +1,26 @@
 local addonName, DF = ...
-DF.BUILD_DATE = "2026-03-11T23:30:25Z"
+DF.BUILD_DATE = "2026-03-13T15:34:10Z"
 DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
+
+## [4.0.17] - 2026-03-13
+
+### New Features
+* (Position) **Permanent Mover handle** — a small always-visible drag handle on frames for repositioning without unlocking, with customizable position, size, offset, colors, show-on-hover with fade animation, hide-in-combat option, and red combat indicator
+* (Position) **Permanent Mover quick actions** — left-click, right-click, shift+left-click, and shift+right-click can be bound to 13 preset actions including open settings, quick switch profile/click-cast profile, cycle profiles, toggle test mode, unlock frames, toggle solo mode, ready check, pull timer, reset position, and reload UI
+* (Position) **Permanent Mover attach to unit** — handle can be attached to the container, first visible unit, or last visible unit so it follows the group size
+* (Position) **Hide drag overlay** checkbox in the unlock panel to hide the blue drag area while keeping frames draggable
+* (Position) Fixed nudge buttons causing the blue drag area to vanish
+* (Aura Designer) **Expiring pulsate for icon, square, and health bar indicators** — borders and fills can now pulse when an aura is about to expire
+* (Aura Designer) **Hide duration text above threshold** — duration text can be hidden when the remaining time is above a configurable seconds threshold (icon, square, and bar types)
+* (Aura Designer) **Expiring threshold in seconds** — expiring indicators can now trigger based on remaining seconds as well as remaining percentage
+* (Aura Designer) **Trigger operator (ANY / ALL)** — indicators with multiple trigger spells can now require all triggers to be active (AND mode) or just one (OR mode, default)
+* (Aura Designer) **Duration priority (Highest / Lowest)** — expiring indicators on multi-trigger spells can track the highest or lowest remaining duration buff
+* (Aura Designer) **Custom border mode** — border indicators can now use an independent overlay per aura, so multiple border indicators can be visible at the same time
+* (Aura Designer) **Settings grouped in containers** — all indicator settings panels and global defaults are now organized with bordered section containers
+* (Aura Designer) **Earthliving Weapon** added as a trackable Restoration Shaman aura
+* (Aura Blacklist) **Expanded blacklist coverage** — added Rogue poisons, Shaman weapon imbuements, Blessing of the Bronze (all class variants), Paladin rites, Mage Icicles, Hunter Tip of the Spear, and Shaman Reincarnation
 
 ## [4.0.16] - 2026-03-11
 
@@ -10,6 +28,8 @@ DF.CHANGELOG_TEXT = [===[
 * (Click Casting) **Fixed binding tooltip vanishing when pressing modifier keys** — modifier format mismatch caused all bindings to be filtered out
 * (Pet Frames) Fixed taint error from secret boolean in pet range checking
 * (Fading) **Fixed name and health text alpha resetting to 1.0** on zone change, combat res, vehicle exit, and test mode exit
+* (Aura Designer) **Fixed secret auras not appearing immediately on cast in combat** — inline fingerprint matching eliminates race condition between detection and rendering
+* (Aura Designer) Fixed Verdant Embrace tooltip incorrectly showing Upheaval
 
 ### New Features
 * (Aura Designer) **Secret aura tracking** — tracks auras that WoW hides behind secret spell IDs using signature-based fingerprinting (credit to Harrek for the technique and aura data from Advanced Raid Frames)
@@ -29,6 +49,13 @@ DF.CHANGELOG_TEXT = [===[
 * (Aura Designer) Spell cards now show WoW spell tooltips on hover
 * (Aura Designer) Secret auras shown in a distinct section with visual styling to differentiate from regular auras
 * (Aura Designer) Added "unsupported spec" message when viewing a non-healer spec
+* (Aura Designer) **Class color border** on preview frame window showing the current spec's class
+* (Aura Designer) **Class-colored spec dropdown** — each spec name colored by class for clarity
+* (Aura Designer) **Customise button** on layout group members — jumps directly to that aura's effects settings
+* (Aura Designer) Fixed page scrolling — only the right settings panel scrolls now, preview stays in view
+* (Auras) Added **Raid In Combat** debuff filter option — matches the existing buff filter for better debuff coverage
+* (Click Casting) Renamed "Mouseover" fallback to "Global" for clarity
+* (Click Casting) "Does not work with action bar binds" warning now highlighted in red
 
 ## [4.0.15] - 2026-03-10
 

@@ -126,6 +126,748 @@ function DF:CreateMoverFrame()
 end
 
 -- ============================================================
+-- PERMANENT MOVER HANDLE
+-- Small always-visible drag handle for repositioning without unlock
+-- ============================================================
+
+local InCombatLockdown = InCombatLockdown
+
+-- Quick action dispatch table
+local PERM_MOVER_ACTIONS = {
+    NONE              = { label = "None",                         combatSafe = true },
+    OPEN_SETTINGS     = { label = "Open Settings",                combatSafe = true,  fn = function() DF:ToggleGUI() end },
+    UNLOCK_FRAMES     = { label = "Unlock Frames",                combatSafe = false, fn = function(mode)
+        if mode == "raid" then DF:UnlockRaidFrames() else DF:UnlockFrames() end
+    end },
+    TOGGLE_TEST       = { label = "Toggle Test Mode",             combatSafe = false, fn = function() if DF.ToggleTestMode then DF:ToggleTestMode() end end },
+    SWITCH_PROFILE    = { label = "Quick Switch Profile",         combatSafe = false, fn = function(mode, handle) DF:ShowPermanentMoverProfilePopup(handle) end },
+    SWITCH_CC_PROFILE = { label = "Quick Switch CC Profile",      combatSafe = false, fn = function(mode, handle) DF:ShowPermanentMoverCCProfilePopup(handle) end },
+    CYCLE_PROFILE     = { label = "Cycle Next Profile",           combatSafe = false, fn = function() DF:CycleNextProfile() end },
+    CYCLE_CC_PROFILE  = { label = "Cycle Next CC Profile",        combatSafe = false, fn = function() DF:CycleNextCCProfile() end },
+    TOGGLE_SOLO       = { label = "Toggle Solo Mode",             combatSafe = false, fn = function()
+        local db = DF:GetDB()
+        db.soloMode = not db.soloMode
+        DF:UpdateAllFrames()
+        if DF.UpdateDefaultPlayerFrame then DF:UpdateDefaultPlayerFrame() end
+        print("|cff00ff00DandersFrames:|r Solo mode " .. (db.soloMode and "enabled" or "disabled"))
+    end },
+    RELOAD_UI         = { label = "Reload UI",                    combatSafe = true,  fn = function() ReloadUI() end },
+    RESET_POSITION    = { label = "Reset Position",               combatSafe = false, fn = function() DF:ResetPosition() end },
+    READY_CHECK       = { label = "Ready Check",                  combatSafe = true,  fn = function() DoReadyCheck() end },
+    PULL_TIMER        = { label = "Pull Timer",                   combatSafe = true,  fn = function()
+        local db = DF:GetDB()
+        C_PartyInfo.DoCountdown(db.permanentMoverPullTimerDuration or 10)
+    end },
+}
+DF.PERM_MOVER_ACTIONS = PERM_MOVER_ACTIONS
+
+-- Cycle through profiles
+function DF:CycleNextProfile()
+    local profiles = DF:GetProfiles()
+    if not profiles or #profiles < 2 then return end
+    local current = DF:GetCurrentProfile()
+    for i, name in ipairs(profiles) do
+        if name == current then
+            DF:SetProfile(profiles[(i % #profiles) + 1])
+            return
+        end
+    end
+end
+
+function DF:CycleNextCCProfile()
+    local CC = DF.ClickCast
+    if not CC then return end
+    local profiles = CC:GetProfileList()
+    if not profiles or #profiles < 2 then return end
+    local current = CC:GetActiveProfileName()
+    for i, name in ipairs(profiles) do
+        if name == current then
+            local nextName = profiles[(i % #profiles) + 1]
+            CC:SetActiveProfile(nextName)
+            CC:ApplyBindings()
+            print("|cff00ff00DandersFrames:|r Click-cast profile: " .. nextName)
+            return
+        end
+    end
+end
+
+-- Shared popup menu for profile switching
+function DF:CreatePermanentMoverPopup()
+    if DF.permanentMoverPopup then return DF.permanentMoverPopup end
+
+    local C_BG    = {r = 0.08, g = 0.08, b = 0.08, a = 0.95}
+    local C_ELEM  = {r = 0.18, g = 0.18, b = 0.18, a = 1}
+    local C_HOVER = {r = 0.22, g = 0.22, b = 0.22, a = 1}
+    local C_BORDER = {r = 0.25, g = 0.25, b = 0.25, a = 1}
+
+    local popup = CreateFrame("Frame", "DandersFramesPermanentMoverPopup", UIParent, "BackdropTemplate")
+    popup:SetFrameStrata("FULLSCREEN_DIALOG")
+    popup:SetFrameLevel(200)
+    popup:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    popup:SetBackdropColor(C_BG.r, C_BG.g, C_BG.b, C_BG.a)
+    popup:SetBackdropBorderColor(0, 0, 0, 1)
+    popup:EnableMouse(true)
+    popup:Hide()
+
+    popup.title = popup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    popup.title:SetPoint("TOPLEFT", 10, -8)
+
+    popup.buttons = {}
+
+    -- Close when clicking outside
+    popup.closer = CreateFrame("Button", nil, UIParent)
+    popup.closer:SetAllPoints(UIParent)
+    popup.closer:SetFrameStrata("FULLSCREEN")
+    popup.closer:SetFrameLevel(199)
+    popup.closer:Hide()
+    popup.closer:SetScript("OnClick", function() popup:Hide() end)
+
+    popup:SetScript("OnShow", function() popup.closer:Show() end)
+    popup:SetScript("OnHide", function() popup.closer:Hide() end)
+
+    -- Apply GUI scale
+    popup:SetScript("OnShow", function(self)
+        local guiScale = DF.db and DF.db.party and DF.db.party.guiScale or 1.0
+        self:SetScale(guiScale)
+        self.closer:Show()
+    end)
+
+    function popup:Populate(titleText, items, currentItem, onSelect, accentR, accentG, accentB)
+        self.title:SetText(titleText)
+        self.title:SetTextColor(accentR or 0.45, accentG or 0.45, accentB or 0.95)
+
+        -- Hide all existing buttons
+        for _, btn in ipairs(self.buttons) do btn:Hide() end
+
+        local btnHeight = 22
+        local btnWidth = 180
+        local yOff = -28
+
+        for idx, name in ipairs(items) do
+            local btn = self.buttons[idx]
+            if not btn then
+                btn = CreateFrame("Button", nil, self, "BackdropTemplate")
+                btn:SetSize(btnWidth, btnHeight)
+                btn:SetBackdrop({
+                    bgFile = "Interface\\Buttons\\WHITE8x8",
+                    edgeFile = "Interface\\Buttons\\WHITE8x8",
+                    edgeSize = 1,
+                })
+                btn.text = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                btn.text:SetPoint("LEFT", 8, 0)
+                btn.check = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+                btn.check:SetPoint("RIGHT", -8, 0)
+                btn.check:SetText(">")
+                self.buttons[idx] = btn
+            end
+
+            btn:SetPoint("TOPLEFT", 5, yOff)
+            btn.text:SetText(name)
+            btn:Show()
+
+            local isCurrent = (name == currentItem)
+            if isCurrent then
+                btn:SetBackdropColor(accentR or 0.45, accentG or 0.45, accentB or 0.95, 0.3)
+                btn:SetBackdropBorderColor(accentR or 0.45, accentG or 0.45, accentB or 0.95, 0.5)
+                btn.text:SetTextColor(1, 1, 1)
+                btn.check:SetTextColor(accentR or 0.45, accentG or 0.45, accentB or 0.95)
+                btn.check:Show()
+            else
+                btn:SetBackdropColor(C_ELEM.r, C_ELEM.g, C_ELEM.b, C_ELEM.a)
+                btn:SetBackdropBorderColor(C_BORDER.r, C_BORDER.g, C_BORDER.b, 0.3)
+                btn.text:SetTextColor(0.8, 0.8, 0.8)
+                btn.check:Hide()
+            end
+
+            btn:SetScript("OnEnter", function(b)
+                if not isCurrent then
+                    b:SetBackdropColor(C_HOVER.r, C_HOVER.g, C_HOVER.b, 1)
+                end
+            end)
+            btn:SetScript("OnLeave", function(b)
+                if isCurrent then
+                    b:SetBackdropColor(accentR or 0.45, accentG or 0.45, accentB or 0.95, 0.3)
+                else
+                    b:SetBackdropColor(C_ELEM.r, C_ELEM.g, C_ELEM.b, C_ELEM.a)
+                end
+            end)
+            btn:SetScript("OnClick", function()
+                onSelect(name)
+                self:Hide()
+            end)
+
+            yOff = yOff - btnHeight - 2
+        end
+
+        self:SetSize(btnWidth + 10, -yOff + 5)
+    end
+
+    DF.permanentMoverPopup = popup
+    return popup
+end
+
+function DF:ShowPermanentMoverProfilePopup(anchorFrame)
+    local popup = DF:CreatePermanentMoverPopup()
+    local profiles = DF:GetProfiles()
+    if not profiles or #profiles == 0 then return end
+    local current = DF:GetCurrentProfile()
+    local isRaid = anchorFrame and anchorFrame.isRaid
+    local ar, ag, ab = 0.45, 0.45, 0.95
+    if isRaid then ar, ag, ab = 1.0, 0.5, 0.2 end
+
+    popup:Populate("Profiles", profiles, current, function(name)
+        DF:SetProfile(name)
+    end, ar, ag, ab)
+
+    popup:ClearAllPoints()
+    popup:SetPoint("BOTTOMLEFT", anchorFrame, "TOPLEFT", 0, 4)
+    popup:Show()
+end
+
+function DF:ShowPermanentMoverCCProfilePopup(anchorFrame)
+    local CC = DF.ClickCast
+    if not CC then return end
+    local popup = DF:CreatePermanentMoverPopup()
+    local profiles = CC:GetProfileList()
+    if not profiles or #profiles == 0 then return end
+    local current = CC:GetActiveProfileName()
+    local isRaid = anchorFrame and anchorFrame.isRaid
+    local ar, ag, ab = 0.45, 0.45, 0.95
+    if isRaid then ar, ag, ab = 1.0, 0.5, 0.2 end
+
+    popup:Populate("Click-Cast Profiles", profiles, current, function(name)
+        CC:SetActiveProfile(name)
+        CC:ApplyBindings()
+        print("|cff00ff00DandersFrames:|r Click-cast profile: " .. name)
+    end, ar, ag, ab)
+
+    popup:ClearAllPoints()
+    popup:SetPoint("BOTTOMLEFT", anchorFrame, "TOPLEFT", 0, 4)
+    popup:Show()
+end
+
+function DF:CreatePermanentMover(container, mode)
+    if not container then return end
+
+    local isRaid = (mode == "raid")
+    local handleName = isRaid and "DandersFramesRaidPermanentMover" or "DandersFramesPartyPermanentMover"
+
+    -- Don't recreate
+    if isRaid and DF.permanentRaidMover then return end
+    if not isRaid and DF.permanentPartyMover then return end
+
+    local db = isRaid and DF:GetRaidDB() or DF:GetDB()
+
+    local handle = CreateFrame("Button", handleName, UIParent, "BackdropTemplate")
+    handle:SetSize(db.permanentMoverWidth or 20, db.permanentMoverHeight or 20)
+    handle:SetFrameStrata("HIGH")
+    handle:SetFrameLevel(100)
+    handle:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+
+    -- Store colors on handle from DB
+    local color = db.permanentMoverColor or {r = 0.45, g = 0.45, b = 0.95}
+    handle.accentR, handle.accentG, handle.accentB = color.r, color.g, color.b
+    handle.isRaid = isRaid
+    handle.mode = mode
+
+    local function GetHandleColors()
+        if InCombatLockdown() then
+            local cDb = isRaid and DF:GetRaidDB() or DF:GetDB()
+            local cc = cDb.permanentMoverCombatColor or {r = 0.8, g = 0.15, b = 0.15}
+            return cc.r, cc.g, cc.b
+        end
+        return handle.accentR, handle.accentG, handle.accentB
+    end
+
+    local function ApplyHandleColors(hover)
+        local r, g, b = GetHandleColors()
+        local inCombat = InCombatLockdown()
+        -- Use stronger alpha in combat so the red is clearly visible
+        local bgAlpha = (hover or inCombat) and 0.7 or 0.4
+        local borderAlpha = (hover or inCombat) and 1.0 or 0.7
+        handle:SetBackdropColor(r, g, b, bgAlpha)
+        handle:SetBackdropBorderColor(r, g, b, borderAlpha)
+        -- Update dot colors to match
+        local dotR, dotG, dotB = 1, 1, 1
+        if inCombat then dotR, dotG, dotB = 1, 0.6, 0.6 end
+        if handle.dots then
+            for _, dot in ipairs(handle.dots) do
+                dot:SetColorTexture(dotR, dotG, dotB, 0.6)
+            end
+        end
+    end
+
+    ApplyHandleColors(false)
+    handle.ApplyHandleColors = ApplyHandleColors
+
+    -- Grip dots — tiled to fill handle
+    handle.dots = {}
+    DF:UpdatePermanentMoverDots(handle)
+
+    handle:EnableMouse(true)
+    handle:SetMovable(true)
+    handle:RegisterForDrag("LeftButton")
+    handle:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    handle:Hide()
+
+    -- Fade animations
+    handle.fadeIn = handle:CreateAnimationGroup()
+    local alphaIn = handle.fadeIn:CreateAnimation("Alpha")
+    alphaIn:SetFromAlpha(0)
+    alphaIn:SetToAlpha(1)
+    alphaIn:SetDuration(0.2)
+    handle.fadeIn:SetScript("OnPlay", function() handle:Show() end)
+    handle.fadeIn:SetScript("OnFinished", function() handle:SetAlpha(1) end)
+
+    handle.fadeOut = handle:CreateAnimationGroup()
+    local alphaOut = handle.fadeOut:CreateAnimation("Alpha")
+    alphaOut:SetFromAlpha(1)
+    alphaOut:SetToAlpha(0)
+    alphaOut:SetDuration(0.2)
+    handle.fadeOut:SetScript("OnFinished", function() handle:SetAlpha(0) end)
+
+    -- Hover handlers
+    handle.isDragging = false
+
+    handle:SetScript("OnEnter", function(self)
+        local hoverDb = isRaid and DF:GetRaidDB() or DF:GetDB()
+        if hoverDb.permanentMoverShowOnHover then
+            self.fadeOut:Stop()
+            self.fadeIn:Play()
+        end
+        ApplyHandleColors(true)
+    end)
+    handle:SetScript("OnLeave", function(self)
+        if self.isDragging then return end  -- Stay visible while dragging
+        local hoverDb = isRaid and DF:GetRaidDB() or DF:GetDB()
+        if hoverDb.permanentMoverShowOnHover then
+            self.fadeIn:Stop()
+            self.fadeOut:Play()
+        end
+        ApplyHandleColors(false)
+    end)
+
+    -- Drag handlers with combat protection
+    handle:SetScript("OnDragStart", function(self)
+        if InCombatLockdown() then return end
+        self.isDragging = true
+        -- Keep fully visible during drag
+        self.fadeOut:Stop()
+        self.fadeIn:Stop()
+        self:SetAlpha(1)
+        container:StartMoving()
+
+        -- Sync test containers live during drag
+        self:SetScript("OnUpdate", function()
+            local cx, cy = container:GetCenter()
+            if not cx or not cy then return end
+            local sw, sh = GetScreenWidth(), GetScreenHeight()
+            local ox, oy = cx - sw / 2, cy - sh / 2
+
+            if isRaid then
+                if DF.testRaidContainer then
+                    DF.testRaidContainer:ClearAllPoints()
+                    DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", ox, oy)
+                end
+            else
+                if DF.testPartyContainer then
+                    DF.testPartyContainer:ClearAllPoints()
+                    DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", ox, oy)
+                end
+            end
+        end)
+    end)
+
+    handle:SetScript("OnDragStop", function(self)
+        self.isDragging = false
+        if not InCombatLockdown() then
+            container:StopMovingOrSizing()
+        end
+        self:SetScript("OnUpdate", nil)
+
+        -- Re-evaluate hover state after drag ends
+        local hoverDb = isRaid and DF:GetRaidDB() or DF:GetDB()
+        if hoverDb.permanentMoverShowOnHover and not self:IsMouseOver() then
+            self.fadeOut:Play()
+        end
+        if not self:IsMouseOver() then
+            ApplyHandleColors(false)
+        end
+
+        if InCombatLockdown() then return end
+
+        local screenWidth, screenHeight = GetScreenWidth(), GetScreenHeight()
+        local centerX, centerY = container:GetCenter()
+        if not centerX or not centerY then return end
+        local x = centerX - screenWidth / 2
+        local y = centerY - screenHeight / 2
+
+        if isRaid then
+            local stopDb = DF:GetRaidDB()
+            stopDb.raidAnchorX = x
+            stopDb.raidAnchorY = y
+            DF:UpdateRaidContainerPosition()
+        else
+            local stopDb = DF:GetDB()
+            stopDb.anchorX = x
+            stopDb.anchorY = y
+            DF:UpdateContainerPosition()
+        end
+    end)
+
+    -- Click handlers for quick actions
+    handle:SetScript("OnMouseDown", function(self, button)
+        self.clickButton = button
+        self.isClick = true
+    end)
+
+    handle:SetScript("OnMouseUp", function(self, button)
+        if self.isDragging then
+            self.isClick = false
+            return  -- OnDragStop handles the drag
+        end
+        if not self.isClick then return end
+        self.isClick = false
+
+        local actionDb = isRaid and DF:GetRaidDB() or DF:GetDB()
+        local actionKey
+        local isShift = IsShiftKeyDown()
+
+        if button == "LeftButton" and isShift then
+            actionKey = actionDb.permanentMoverActionShiftLeft
+        elseif button == "LeftButton" then
+            actionKey = actionDb.permanentMoverActionLeft
+        elseif button == "RightButton" and isShift then
+            actionKey = actionDb.permanentMoverActionShiftRight
+        elseif button == "RightButton" then
+            actionKey = actionDb.permanentMoverActionRight
+        end
+
+        local action = actionKey and DF.PERM_MOVER_ACTIONS[actionKey]
+        if action and action.fn then
+            if InCombatLockdown() and not action.combatSafe then
+                print("|cff00ff00DandersFrames:|r Cannot use this action in combat.")
+                return
+            end
+            action.fn(mode, self)
+        end
+    end)
+
+    if isRaid then
+        DF.permanentRaidMover = handle
+    else
+        DF.permanentPartyMover = handle
+    end
+
+    -- Create roster/login event frame for re-anchoring (once, shared)
+    -- Combat state is handled by Core.lua's PLAYER_REGEN events
+    if not DF.permanentMoverEventFrame then
+        DF.permanentMoverEventFrame = CreateFrame("Frame")
+        DF.permanentMoverEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+        DF.permanentMoverEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+        DF.permanentMoverEventFrame:SetScript("OnEvent", function()
+            C_Timer.After(0.2, function()
+                DF:UpdatePermanentMoverAnchor("party")
+                DF:UpdatePermanentMoverAnchor("raid")
+            end)
+        end)
+    end
+
+    -- Apply anchor and visibility
+    DF:UpdatePermanentMoverAnchor(mode)
+    DF:UpdatePermanentMoverVisibility()
+end
+
+function DF:UpdatePermanentMoverDots(handle)
+    if not handle then return end
+    local w, h = handle:GetSize()
+
+    -- Hide all existing dots first
+    for _, dot in ipairs(handle.dots) do
+        dot:Hide()
+    end
+
+    -- Calculate grid: 6px spacing between dots, 4px padding from edges
+    local padding = 4
+    local spacing = 6
+    local cols = math.max(1, math.floor((w - padding * 2) / spacing) + 1)
+    local rows = math.max(1, math.floor((h - padding * 2) / spacing) + 1)
+    local totalNeeded = cols * rows
+
+    -- Create more dot textures if needed
+    while #handle.dots < totalNeeded do
+        local dot = handle:CreateTexture(nil, "OVERLAY")
+        dot:SetSize(2, 2)
+        dot:SetColorTexture(1, 1, 1, 0.6)
+        handle.dots[#handle.dots + 1] = dot
+    end
+
+    -- Position and show dots in a tiled grid, centered in the handle
+    local gridW = (cols - 1) * spacing
+    local gridH = (rows - 1) * spacing
+    local startX = -gridW / 2
+    local startY = -gridH / 2
+    local idx = 0
+    for row = 0, rows - 1 do
+        for col = 0, cols - 1 do
+            idx = idx + 1
+            local dot = handle.dots[idx]
+            dot:ClearAllPoints()
+            dot:SetPoint("CENTER", handle, "CENTER", startX + col * spacing, startY + row * spacing)
+            dot:Show()
+        end
+    end
+end
+
+function DF:UpdatePermanentMoverSize(mode)
+    local isRaid = (mode == "raid")
+    local handle = isRaid and DF.permanentRaidMover or DF.permanentPartyMover
+    if not handle then return end
+
+    local db = isRaid and DF:GetRaidDB() or DF:GetDB()
+    handle:SetSize(db.permanentMoverWidth or 20, db.permanentMoverHeight or 20)
+    DF:UpdatePermanentMoverDots(handle)
+end
+
+function DF:UpdatePermanentMoverColor(mode)
+    local isRaid = (mode == "raid")
+    local handle = isRaid and DF.permanentRaidMover or DF.permanentPartyMover
+    if not handle then return end
+
+    local db = isRaid and DF:GetRaidDB() or DF:GetDB()
+    local color = db.permanentMoverColor or {r = 0.45, g = 0.45, b = 0.95}
+    handle.accentR, handle.accentG, handle.accentB = color.r, color.g, color.b
+    handle.ApplyHandleColors(false)
+end
+
+function DF:GetPermanentMoverAttachFrame(mode)
+    local isRaid = (mode == "raid")
+    local db = isRaid and DF:GetRaidDB() or DF:GetDB()
+    local attachTo = db.permanentMoverAttachTo or "CONTAINER"
+    local inTestMode = isRaid and DF.raidTestMode or DF.testMode
+
+    if attachTo == "CONTAINER" then
+        if inTestMode then
+            return isRaid and DF.testRaidContainer or DF.testPartyContainer
+                or isRaid and DF.raidContainer or DF.container
+        end
+        return isRaid and DF.raidContainer or DF.container
+    end
+
+    -- Find first or last visible unit frame
+    local targetFrame
+    if inTestMode then
+        -- Use test mode frames
+        local frames = isRaid and DF.testRaidFrames or DF.testPartyFrames
+        if frames then
+            for i = 1, #frames do
+                local frame = frames[i]
+                if frame and frame:IsShown() then
+                    if attachTo == "FIRST" and not targetFrame then
+                        targetFrame = frame
+                    end
+                    if attachTo == "LAST" then
+                        targetFrame = frame
+                    end
+                end
+            end
+        end
+    elseif isRaid then
+        DF:IterateRaidFrames(function(frame)
+            if frame and frame:IsShown() then
+                if attachTo == "FIRST" then
+                    targetFrame = frame
+                    return true  -- break on first
+                end
+                targetFrame = frame  -- keep updating to get last
+            end
+        end)
+    else
+        -- Check player frame first
+        local playerFrame = DF:GetPlayerFrame()
+        if playerFrame and playerFrame:IsShown() then
+            targetFrame = playerFrame
+            if attachTo == "FIRST" then
+                return targetFrame
+            end
+        end
+        for i = 1, 4 do
+            local frame = DF:GetPartyFrame(i)
+            if frame and frame:IsShown() then
+                if attachTo == "FIRST" and not targetFrame then
+                    return frame
+                end
+                targetFrame = frame
+            end
+        end
+    end
+
+    -- Fallback to container
+    local fallback
+    if inTestMode then
+        fallback = isRaid and (DF.testRaidContainer or DF.raidContainer) or (DF.testPartyContainer or DF.container)
+    else
+        fallback = isRaid and DF.raidContainer or DF.container
+    end
+    return targetFrame or fallback
+end
+
+function DF:UpdatePermanentMoverAnchor(mode)
+    local isRaid = (mode == "raid")
+    local handle = isRaid and DF.permanentRaidMover or DF.permanentPartyMover
+    if not handle then return end
+
+    local db = isRaid and DF:GetRaidDB() or DF:GetDB()
+    local anchor = db.permanentMoverAnchor or "TOPLEFT"
+    local offsetX = db.permanentMoverOffsetX or 0
+    local offsetY = db.permanentMoverOffsetY or 0
+    local attachFrame = DF:GetPermanentMoverAttachFrame(mode)
+
+    handle:ClearAllPoints()
+    handle:SetPoint(anchor, attachFrame, anchor, offsetX, offsetY)
+end
+
+function DF:UpdatePermanentMoverCombatState()
+    local handles = {}
+    if DF.permanentPartyMover then handles[#handles + 1] = { handle = DF.permanentPartyMover, db = DF:GetDB() } end
+    if DF.permanentRaidMover then handles[#handles + 1] = { handle = DF.permanentRaidMover, db = DF:GetRaidDB() } end
+
+    local inCombat = InCombatLockdown()
+
+    for _, info in ipairs(handles) do
+        local h, db = info.handle, info.db
+        if not db.permanentMover then
+            -- Not enabled, skip
+        elseif db.permanentMoverHideInCombat then
+            if inCombat then
+                h.fadeIn:Stop()
+                h.fadeOut:Stop()
+                h:Hide()
+            else
+                h:Show()
+                if db.permanentMoverShowOnHover then
+                    h:SetAlpha(0)
+                else
+                    h:SetAlpha(1)
+                end
+                h.ApplyHandleColors(false)
+            end
+        else
+            -- Visible in combat — hide, update colors, re-show to force redraw
+            local wasShown = h:IsShown()
+            if wasShown then h:Hide() end
+
+            if inCombat and db.permanentMoverShowOnHover then
+                h.fadeOut:Stop()
+                h.fadeIn:Stop()
+            end
+
+            if inCombat then
+                local cc = db.permanentMoverCombatColor or {r = 0.8, g = 0.15, b = 0.15}
+                h:SetBackdropColor(cc.r, cc.g, cc.b, 0.7)
+                h:SetBackdropBorderColor(cc.r, cc.g, cc.b, 1.0)
+                if h.dots then
+                    for _, dot in ipairs(h.dots) do
+                        dot:SetColorTexture(1, 0.6, 0.6, 0.6)
+                    end
+                end
+            else
+                local r, g, b = h.accentR or 0.45, h.accentG or 0.45, h.accentB or 0.95
+                local isHover = h:IsMouseOver()
+                h:SetBackdropColor(r, g, b, isHover and 0.7 or 0.4)
+                h:SetBackdropBorderColor(r, g, b, isHover and 1.0 or 0.7)
+                if h.dots then
+                    for _, dot in ipairs(h.dots) do
+                        dot:SetColorTexture(1, 1, 1, 0.6)
+                    end
+                end
+            end
+
+            if wasShown then
+                h:Show()
+                if inCombat or not db.permanentMoverShowOnHover then
+                    h:SetAlpha(1)
+                elseif not h:IsMouseOver() then
+                    h:SetAlpha(0)
+                end
+            end
+        end
+    end
+end
+
+function DF:UpdatePermanentMoverVisibility()
+    local inCombat = InCombatLockdown()
+
+    -- Party
+    if DF.permanentPartyMover then
+        local db = DF:GetDB()
+        -- Show if enabled and locked, but hide if raid test mode is active
+        local show = db.permanentMover and db.locked and not DF.raidTestMode
+        if show then
+            if inCombat and db.permanentMoverHideInCombat then
+                DF.permanentPartyMover:Hide()
+            else
+                DF.permanentPartyMover:Show()
+                if db.permanentMoverShowOnHover and not DF.permanentPartyMover:IsMouseOver() then
+                    DF.permanentPartyMover:SetAlpha(0)
+                else
+                    DF.permanentPartyMover:SetAlpha(1)
+                end
+                DF.permanentPartyMover.ApplyHandleColors(false)
+            end
+            DF.container:SetMovable(true)
+        else
+            DF.permanentPartyMover:Hide()
+            if db.locked and not db.permanentMover then
+                DF.container:SetMovable(false)
+            end
+        end
+    end
+
+    -- Raid
+    if DF.permanentRaidMover and DF.raidContainer then
+        local db = DF:GetRaidDB()
+        local raidEnabled = db.permanentMover
+        -- In raid test mode, also show if party mover is enabled
+        if DF.raidTestMode and not raidEnabled then
+            raidEnabled = DF:GetDB().permanentMover
+        end
+        -- Only show if in raid test mode or actually in a raid group
+        local inRaid = IsInRaid() or DF.raidTestMode
+        local show = raidEnabled and db.raidLocked and inRaid
+        -- Hide if party test mode is active
+        if DF.testMode then show = false end
+        if show then
+            if inCombat and db.permanentMoverHideInCombat then
+                DF.permanentRaidMover:Hide()
+            else
+                DF.permanentRaidMover:Show()
+                if db.permanentMoverShowOnHover and not DF.permanentRaidMover:IsMouseOver() then
+                    DF.permanentRaidMover:SetAlpha(0)
+                else
+                    DF.permanentRaidMover:SetAlpha(1)
+                end
+                DF.permanentRaidMover.ApplyHandleColors(false)
+            end
+            DF.raidContainer:SetMovable(true)
+        else
+            DF.permanentRaidMover:Hide()
+            if db.raidLocked and not db.permanentMover then
+                DF.raidContainer:SetMovable(false)
+            end
+        end
+    end
+end
+
+-- ============================================================
 -- GRID OVERLAY
 -- ============================================================
 
@@ -430,7 +1172,7 @@ function DF:CreatePositionPanel()
     
     -- Main panel - matches main GUI style
     local panel = CreateFrame("Frame", "DandersFramesPositionPanel", UIParent, "BackdropTemplate")
-    panel:SetSize(300, 268)
+    panel:SetSize(300, 294)
     panel:SetPoint("TOP", UIParent, "TOP", 0, -50)
     panel:SetFrameStrata("FULLSCREEN_DIALOG")
     panel:SetFrameLevel(100)  -- High level to ensure it's on top
@@ -781,16 +1523,50 @@ function DF:CreatePositionPanel()
         end
     end)
     panel.snapCheck = snapCheck
-    
+
+    -- Hide Overlay checkbox
+    local hideOverlayContainer = CreateFrame("Frame", nil, panel)
+    hideOverlayContainer:SetSize(150, 24)
+    hideOverlayContainer:SetPoint("TOPLEFT", 15, -134)
+
+    local hideOverlayCheck = CreateFrame("CheckButton", nil, hideOverlayContainer, "BackdropTemplate")
+    hideOverlayCheck:SetSize(18, 18)
+    hideOverlayCheck:SetPoint("LEFT", 0, 0)
+    CreateElementBackdrop(hideOverlayCheck)
+
+    local hideOverlayCheckMark = hideOverlayCheck:CreateTexture(nil, "OVERLAY")
+    hideOverlayCheckMark:SetTexture("Interface\\Buttons\\WHITE8x8")
+    hideOverlayCheckMark:SetVertexColor(c.r, c.g, c.b)
+    hideOverlayCheckMark:SetPoint("CENTER")
+    hideOverlayCheckMark:SetSize(10, 10)
+    hideOverlayCheck:SetCheckedTexture(hideOverlayCheckMark)
+    hideOverlayCheck.checkMark = hideOverlayCheckMark
+    hideOverlayCheck.UpdateThemeColor = function(self, col) self.checkMark:SetVertexColor(col.r, col.g, col.b) end
+    table.insert(panel.themedElements, hideOverlayCheck)
+
+    local hideOverlayLabel = hideOverlayContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    hideOverlayLabel:SetPoint("LEFT", hideOverlayCheck, "RIGHT", 8, 0)
+    hideOverlayLabel:SetText("Hide Drag Overlay")
+    hideOverlayLabel:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+
+    hideOverlayCheck:SetScript("OnClick", function(self)
+        DF.hideDragOverlay = self:GetChecked()
+        local mover = DF.positionPanelMode == "raid" and DF.raidMoverFrame or DF.moverFrame
+        if mover then
+            mover:SetAlpha(DF.hideDragOverlay and 0 or 1)
+        end
+    end)
+    panel.hideOverlayCheck = hideOverlayCheck
+
     -- Grid Size slider (matches main GUI slider style)
     local gridLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    gridLabel:SetPoint("TOPLEFT", 15, -138)
+    gridLabel:SetPoint("TOPLEFT", 15, -164)
     gridLabel:SetText("Grid Size")
     gridLabel:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
     
     -- Track background
     local track = CreateFrame("Frame", nil, panel, "BackdropTemplate")
-    track:SetPoint("TOPLEFT", 15, -156)
+    track:SetPoint("TOPLEFT", 15, -182)
     track:SetSize(200, 8)
     CreateElementBackdrop(track)
     
@@ -802,7 +1578,7 @@ function DF:CreatePositionPanel()
     
     -- Slider
     local slider = CreateFrame("Slider", nil, panel)
-    slider:SetPoint("TOPLEFT", 15, -156)
+    slider:SetPoint("TOPLEFT", 15, -182)
     slider:SetSize(200, 8)
     slider:SetOrientation("HORIZONTAL")
     slider:SetMinMaxValues(10, 100)
@@ -939,7 +1715,10 @@ function DF:UpdatePositionPanel()
     DF.positionPanel.snapCheck:SetChecked(db.snapToGrid)
     DF.positionPanel.gridSlider:SetValue(db.gridSize or 20)
     DF.positionPanel.gridInput:SetText(tostring(db.gridSize or 20))
-    
+    if DF.positionPanel.hideOverlayCheck then
+        DF.positionPanel.hideOverlayCheck:SetChecked(DF.hideDragOverlay or false)
+    end
+
     -- Update position override indicator if editing profile
     if DF.positionPanel.UpdatePositionOverride then
         DF.positionPanel.UpdatePositionOverride()
@@ -1080,12 +1859,12 @@ function DF:UpdateContainerPosition()
     DF.container:ClearAllPoints()
     DF.container:SetPoint("CENTER", UIParent, "CENTER", x, y)
     
-    -- Also update mover if visible
+    -- Also update mover if visible (use SetAllPoints to preserve size)
     if DF.moverFrame and DF.moverFrame:IsShown() then
         DF.moverFrame:ClearAllPoints()
-        DF.moverFrame:SetPoint("CENTER", UIParent, "CENTER", x, y)
+        DF.moverFrame:SetAllPoints(DF.container)
     end
-    
+
     -- Also update test container if visible
     if DF.testPartyContainer then
         DF.testPartyContainer:ClearAllPoints()
@@ -1146,6 +1925,7 @@ function DF:UnlockFrames()
     
     db.locked = false
     DF.positionPanelMode = "party"  -- Set mode for position panel
+    DF.hideDragOverlay = false  -- Reset overlay toggle on unlock
     
     -- Always use CENTER anchor for positioning
     db.anchorPoint = "CENTER"
@@ -1180,9 +1960,10 @@ function DF:UnlockFrames()
     DF.moverFrame:SetAllPoints(DF.container)
     DF.moverFrame:SetFrameStrata("TOOLTIP")  -- Very high strata to be above secure frames
     DF.moverFrame:SetFrameLevel(100)
+    DF.moverFrame:SetAlpha(1)
     DF.moverFrame:Show()
     DF.moverFrame:Raise()
-    
+
     -- Sync testPartyContainer to current position and size
     if DF.testPartyContainer then
         DF.testPartyContainer:ClearAllPoints()
@@ -1240,6 +2021,9 @@ function DF:UnlockFrames()
         if DF.GUI.UpdateTestButtonState then DF.GUI.UpdateTestButtonState() end
     end
     
+    -- Hide permanent mover while full overlay is active
+    if DF.permanentPartyMover then DF.permanentPartyMover:Hide() end
+
     print("|cff00ff00DandersFrames:|r Frames unlocked. Drag to move, right-click to lock.")
 end
 
@@ -1248,9 +2032,11 @@ function DF:LockFrames()
     db.locked = true
     DF.positionPanelMode = nil  -- Clear mode
     
-    DF.container:SetMovable(false)
     DF.moverFrame:Hide()
-    
+
+    -- Restore permanent mover visibility (keeps container movable if enabled)
+    DF:UpdatePermanentMoverVisibility()
+
     -- Hide personal targeted spells mover
     if DF.HidePersonalTargetedSpellsMover then
         DF:HidePersonalTargetedSpellsMover()
