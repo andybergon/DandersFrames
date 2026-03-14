@@ -476,7 +476,9 @@ function Indicators:Apply(frame, typeKey, config, auraData, defaults, auraName, 
         end
 
         -- Verify the aura belongs to the player (not another player's buff)
-        if unit and IsAuraFilteredOut then
+        -- Skip for selfOnly auras (e.g. Symbiotic Relationship) where the
+        -- source is another unit but the buff legitimately appears on the player
+        if unit and IsAuraFilteredOut and not auraData.selfOnly then
             if IsAuraFilteredOut(unit, auraID, "HELPFUL|PLAYER") then return end
         end
     end

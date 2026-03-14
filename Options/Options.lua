@@ -7221,6 +7221,83 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
 
         AddToSection(actionsGroup, nil, 1)
 
+        -- Settings Group: Script Runner
+        local scriptGroup = GUI:CreateSettingsGroup(self.child, 280)
+        scriptGroup:AddWidget(GUI:CreateHeader(self.child, "Script Runner"), 40)
+
+        -- Scrollable multiline EditBox for Lua input
+        local scriptScrollContainer = CreateFrame("Frame", nil, self.child, "BackdropTemplate")
+        scriptScrollContainer:SetSize(260, 120)
+        scriptScrollContainer:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        scriptScrollContainer:SetBackdropColor(0.05, 0.05, 0.05, 0.9)
+        scriptScrollContainer:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+
+        local scriptScroll = CreateFrame("ScrollFrame", nil, scriptScrollContainer, "UIPanelScrollFrameTemplate")
+        scriptScroll:SetPoint("TOPLEFT", 4, -4)
+        scriptScroll:SetPoint("BOTTOMRIGHT", -22, 4)
+
+        local scriptEditBox = CreateFrame("EditBox", nil, scriptScroll)
+        scriptEditBox:SetMultiLine(true)
+        scriptEditBox:SetFontObject(GameFontHighlightSmall)
+        scriptEditBox:SetWidth(230)
+        scriptEditBox:SetHeight(112)
+        scriptEditBox:SetAutoFocus(false)
+        scriptEditBox:SetScript("OnEscapePressed", function(s) s:ClearFocus() end)
+        scriptEditBox:SetScript("OnTextChanged", function(s, userInput)
+            if userInput and DandersFramesDB_v2 and DandersFramesDB_v2.debug then
+                DandersFramesDB_v2.debug.lastScript = s:GetText()
+            end
+        end)
+        scriptScroll:SetScrollChild(scriptEditBox)
+
+        -- Restore last script from saved variables
+        if DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.lastScript then
+            scriptEditBox:SetText(DandersFramesDB_v2.debug.lastScript)
+        end
+
+        scriptScrollContainer:EnableMouse(true)
+        scriptScrollContainer:SetScript("OnMouseDown", function() scriptEditBox:SetFocus() end)
+        scriptScroll:EnableMouse(true)
+        scriptScroll:SetScript("OnMouseDown", function() scriptEditBox:SetFocus() end)
+
+        scriptGroup:AddWidget(scriptScrollContainer, 125)
+
+        -- Status label (shows result or error)
+        local scriptStatusLabel = GUI:CreateLabel(self.child, "", 260)
+        scriptGroup:AddWidget(scriptStatusLabel, 20)
+
+        -- Run button
+        scriptGroup:AddWidget(GUI:CreateButton(self.child, "Run Script", 260, 26, function()
+            local code = scriptEditBox:GetText()
+            if not code or code == "" then
+                scriptStatusLabel:SetText("|cff666666No script to run.|r")
+                return
+            end
+            local fn, err = loadstring(code)
+            if not fn then
+                scriptStatusLabel:SetText("|cffff6666Error: " .. tostring(err) .. "|r")
+                DF:DebugError("SCRIPT", "Compile error: %s", tostring(err))
+                return
+            end
+            local ok, result = pcall(fn)
+            if ok then
+                if result ~= nil then
+                    scriptStatusLabel:SetText("|cff88ccffResult: " .. tostring(result) .. "|r")
+                else
+                    scriptStatusLabel:SetText("|cff88ff88Script executed successfully.|r")
+                end
+            else
+                scriptStatusLabel:SetText("|cffff6666Runtime: " .. tostring(result) .. "|r")
+                DF:DebugError("SCRIPT", "Runtime error: %s", tostring(result))
+            end
+        end), 32)
+
+        AddToSection(scriptGroup, nil, 1)
+
         -- ========================================
         -- COLUMN 2: LOG VIEWER
         -- ========================================

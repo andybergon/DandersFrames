@@ -68,7 +68,7 @@ DF.AuraDesigner.IconTextures = {
     SymbioticBloom      = 4554354,
     EbonMight           = 5061347,
     SourceOfMagic       = 4630412,
-    SensePower          = 1033482,
+    SensePower          = 132160,
     -- Restoration Druid
     Rejuvenation        = 136081,
     Regrowth            = 136085,
@@ -98,7 +98,7 @@ DF.AuraDesigner.IconTextures = {
     -- Restoration Shaman
     Riptide             = 252995,
     EarthShield         = 136089,
-    -- AncestralVigor      = 237574,
+    AncestralVigor      = 237574,
     EarthlivingWeapon   = 237578,
     Hydrobubble         = 1320371,
     -- Holy Paladin
@@ -122,6 +122,7 @@ DF.AuraDesigner.IconTextures = {
 -- ============================================================
 DF.AuraDesigner.TooltipSpellIDs = {
     VerdantEmbrace = 360995,
+    EbonMight = 395296,
 }
 
 -- ============================================================
@@ -163,7 +164,7 @@ DF.AuraDesigner.SpellIDs = {
     },
     RestorationShaman = {
         Riptide = 61295, EarthShield = 383648,
-        -- AncestralVigor = 207400,
+        AncestralVigor = 207400,
         EarthlivingWeapon = 382024,
         Hydrobubble = 444490,
     },
@@ -177,20 +178,50 @@ DF.AuraDesigner.SpellIDs = {
 }
 
 -- ============================================================
+-- SELF-ONLY SPELL IDS
+-- Auras that only appear on the caster (player unit) but are
+-- sourced by another unit (e.g. Symbiotic Relationship buff
+-- appears on the druid but sourceUnit is the target).
+-- These need a separate "HELPFUL" scan (without PLAYER filter)
+-- restricted to the player unit only.
+-- ============================================================
+DF.AuraDesigner.SelfOnlySpellIDs = {
+    RestorationDruid = {
+        [474754] = "SymbioticRelationship",
+    },
+    AugmentationEvoker = {
+        [395296] = "EbonMight",      -- caster self-buff (secret in combat, readable OOC)
+    },
+}
+
+-- ============================================================
 -- ALTERNATE SPELL IDS
 -- Some spells have multiple IDs (e.g. Earth Shield).
 -- These are merged into the reverse lookup so both IDs resolve
 -- to the same aura name.
 -- ============================================================
 DF.AuraDesigner.AlternateSpellIDs = {
-    RestorationDruid = {
-        [474750] = "SymbioticRelationship",  -- base talent ID (primary is 474754)
-        [474760] = "SymbioticRelationship",  -- target-side buff ID
-    },
     RestorationShaman = {
         [974] = "EarthShield",  -- alternate ID for Earth Shield (primary is 383648)
         [382021] = "EarthlivingWeapon",  -- alternate ID (primary is 382024)
         [382022] = "EarthlivingWeapon",  -- alternate ID (primary is 382024)
+    },
+}
+
+-- ============================================================
+-- LINKED AURA RULES
+-- Defines inference rules for auras where only one side (caster
+-- or target) has a readable spell ID.
+--   caster_to_target: Player has readable source buff, infer onto target
+--   target_to_caster: Party member has readable buff, infer onto player
+-- ============================================================
+DF.AuraDesigner.LinkedAuraRules = {
+    RestorationDruid = {
+        SymbioticRelationship = {
+            type = "caster_to_target",
+            sourceSpellID = 474754,             -- readable on caster (player)
+            targetSpellIDs = { 474750, 474760 }, -- secret on target in combat (dedup from buff bar)
+        },
     },
 }
 
@@ -337,7 +368,7 @@ DF.AuraDesigner.TrackableAuras = {
     RestorationShaman = {
         { name = "Riptide",           display = "Riptide",            color = {0.31, 0.76, 0.97} },
         { name = "EarthShield",       display = "Earth Shield",       color = {0.65, 0.47, 0.33} },
-        -- { name = "AncestralVigor",    display = "Ancestral Vigor",    color = {0.56, 0.93, 0.56} },
+        { name = "AncestralVigor",    display = "Ancestral Vigor",    color = {0.56, 0.93, 0.56} },
         { name = "EarthlivingWeapon", display = "Earthliving Weapon", color = {0.47, 0.87, 0.47} },
         { name = "Hydrobubble",       display = "Hydrobubble",        color = {0.31, 0.76, 0.97} },
     },

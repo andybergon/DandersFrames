@@ -212,9 +212,28 @@ local function ParsePreservationEvokerBuffs(unit, addedAuras)
     end
 end
 
+--- Augmentation Evoker: EbonMight vs SensePower disambiguation.
+-- Both share signature "0:1:0:0". EbonMight (395296) only appears
+-- on the player (caster self-buff). SensePower only appears on
+-- party members (never on the player). Simple unit check.
+local function ParseAugmentationEvokerBuffs(unit, addedAuras)
+    if not addedAuras then return end
+    if not UnitIsUnit(unit, "player") then return end
+
+    local unitAuras = state.auras[unit]
+    if not unitAuras then return end
+
+    for _, aura in ipairs(addedAuras) do
+        if unitAuras[aura.auraInstanceID] == "SensePower" then
+            unitAuras[aura.auraInstanceID] = "EbonMight"
+        end
+    end
+end
+
 -- Map spec keys to their disambiguation engine function
 local specEngines = {
     PreservationEvoker = ParsePreservationEvokerBuffs,
+    AugmentationEvoker = ParseAugmentationEvokerBuffs,
 }
 
 -- ============================================================
@@ -237,6 +256,19 @@ local function InitUnit(unit, spec)
         local matched = MatchAuraSignature(unit, auraData, spec)
         if matched then
             unitAuras[auraData.auraInstanceID] = matched
+        end
+    end
+
+    -- Run disambiguation engine on initial scan results
+    local engine = specEngines[spec]
+    if engine then
+        -- Build a fake addedAuras list from all matched auras for the engine
+        local fakeAdded = {}
+        for instanceID in pairs(unitAuras) do
+            fakeAdded[#fakeAdded + 1] = { auraInstanceID = instanceID }
+        end
+        if #fakeAdded > 0 then
+            engine(unit, fakeAdded)
         end
     end
 end

@@ -1,5 +1,5 @@
 local addonName, DF = ...
-DF.BUILD_DATE = "2026-03-13T15:34:10Z"
+DF.BUILD_DATE = "2026-03-14T00:10:25Z"
 DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog

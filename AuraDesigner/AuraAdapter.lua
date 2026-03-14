@@ -21,6 +21,7 @@ local addonName, DF = ...
 
 local pairs, ipairs, type = pairs, ipairs, type
 local GetTime = GetTime
+local UnitIsUnit = UnitIsUnit
 local issecretvalue = issecretvalue or function() return false end
 local GetUnitAuras = C_UnitAuras and C_UnitAuras.GetUnitAuras
 
@@ -153,6 +154,43 @@ function Provider:GetUnitAuras(unit, spec)
         end
     end
 
+    -- Self-only aura scan: auras that appear on the caster but have
+    -- a different sourceUnit (e.g. Symbiotic Relationship). Only scan
+    -- the player unit with "HELPFUL" (no PLAYER filter) for these.
+    if GetUnitAuras and UnitIsUnit(unit, "player") then
+        local selfOnly = DF.AuraDesigner.SelfOnlySpellIDs and DF.AuraDesigner.SelfOnlySpellIDs[spec]
+        if selfOnly then
+            local selfAuras = GetUnitAuras(unit, "HELPFUL", 100)
+            if selfAuras then
+                for _, auraData in ipairs(selfAuras) do
+                    local sid = auraData.spellId
+                    if sid and not issecretvalue(sid) then
+                        local auraName = selfOnly[sid]
+                        if auraName and not result[auraName] then
+                            matchedCount = matchedCount + 1
+                            local entry = {
+                                spellId = forwardLookup and forwardLookup[auraName] or sid,
+                                icon = auraData.icon,
+                                duration = auraData.duration,
+                                expirationTime = auraData.expirationTime,
+                                stacks = auraData.applications,
+                                caster = auraData.sourceUnit,
+                                auraInstanceID = auraData.auraInstanceID,
+                                selfOnly = true,
+                            }
+                            result[auraName] = entry
+                            -- Notify LinkedAuras of source aura for inference
+                            local LinkedAurasModule = DF.AuraDesigner.LinkedAuras
+                            if LinkedAurasModule then
+                                LinkedAurasModule:SetSourceAura(auraName, entry)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
     -- Merge disambiguation overrides from SecretAuras state cache
     -- (e.g. VerdantEmbrace → Lifebind reclassification after 0.1s timer)
     local SecretAurasModule = DF.AuraDesigner.SecretAuras
@@ -160,6 +198,21 @@ function Provider:GetUnitAuras(unit, spec)
         local secretResult = SecretAurasModule:GetUnitAuras(unit, spec)
         if secretResult then
             for auraName, auraData in pairs(secretResult) do
+                if not result[auraName] then
+                    result[auraName] = auraData
+                    matchedCount = matchedCount + 1
+                end
+            end
+        end
+    end
+
+    -- Merge linked/inferred aura overrides
+    -- (e.g. SR mirrored onto target, EM inferred onto player)
+    local LinkedAurasModule = DF.AuraDesigner.LinkedAuras
+    if LinkedAurasModule then
+        local linkedResult = LinkedAurasModule:GetUnitAuras(unit, spec)
+        if linkedResult then
+            for auraName, auraData in pairs(linkedResult) do
                 if not result[auraName] then
                     result[auraName] = auraData
                     matchedCount = matchedCount + 1

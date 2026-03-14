@@ -19,7 +19,11 @@
 * (Aura Designer) **Settings grouped in containers** — all indicator settings panels and global defaults are now organized with bordered section containers
 * (Aura Designer) **Earthliving Weapon** added as a trackable Restoration Shaman aura
 * (Aura Designer) **Sense Power** added as a trackable Augmentation Evoker secret aura
+* (Aura Designer) **Ebon Might self-buff tracking** — Augmentation Evoker's caster self-buff (395296) is now tracked on the player via fingerprint disambiguation, with correct tooltip and buff bar dedup
+* (Aura Designer) **Symbiotic Relationship linked aura system** — Restoration Druid's caster buff is detected on the player and mirrored as an indicator onto the target's frame, with OOC target resolution, tooltip-based fallback, recast detection, and buff bar dedup
+* (Aura Designer) **Ancestral Vigor** added as a trackable Restoration Shaman aura
 * (Aura Blacklist) **Expanded blacklist coverage** — added Rogue poisons, Shaman weapon imbuements, Blessing of the Bronze (all class variants), Paladin rites, Mage Icicles, Hunter Tip of the Spear, and Shaman Reincarnation
+* (Debug) **Script Runner** — multiline Lua script input in the debug console with persistent text across sessions
 
 ### Bug Fixes
 * (Position) Fixed nudge buttons causing the blue drag area to vanish

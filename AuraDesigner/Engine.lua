@@ -403,7 +403,7 @@ function Engine:UpdateFrame(frame)
         for auraName, auraCfg in pairs(auras) do
           if type(auraCfg) == "table" then
             local auraData = activeAuras[auraName]
-            if auraData and auraData.auraInstanceID then
+            if auraData and (auraData.auraInstanceID or auraData.dedupInstanceIDs) then
                 local hasIndicator = auraCfg.indicators and #auraCfg.indicators > 0
                 if not hasIndicator then
                     for _, typeDef in ipairs(FRAME_LEVEL_TYPES) do
@@ -414,7 +414,15 @@ function Engine:UpdateFrame(frame)
                     end
                 end
                 if hasIndicator then
-                    frame.dfAD_activeInstanceIDs[auraData.auraInstanceID] = true
+                    if auraData.auraInstanceID then
+                        frame.dfAD_activeInstanceIDs[auraData.auraInstanceID] = true
+                    end
+                    -- Dedup inferred aura target-side instance IDs (e.g. SR 474750/474760)
+                    if auraData.dedupInstanceIDs then
+                        for id in pairs(auraData.dedupInstanceIDs) do
+                            frame.dfAD_activeInstanceIDs[id] = true
+                        end
+                    end
                 end
             end
             -- Also mark trigger auras for dedup when multi-trigger is configured
