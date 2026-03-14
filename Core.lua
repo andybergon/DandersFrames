@@ -3666,7 +3666,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         -- Clean up Aura Designer entries for spells removed in the HARF→native transition.
         -- These spells remain secret and can no longer be tracked without HARF.
         local removedAuras = {
-            "TimeDilation", "Rewind", "VerdantEmbrace", "SensePower",
+            "TimeDilation", "Rewind", "VerdantEmbrace",
             "IronBark", "PainSuppression", "PowerInfusion", "GuardianSpirit",
             "LifeCocoon", "StrengthOfTheBlackOx",
             "BlessingOfProtection", "HolyBulwark", "SacredWeapon",

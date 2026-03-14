@@ -272,6 +272,72 @@ local function UpdatePulseState(el, isExpiring)
     end
 end
 
+-- Create or return a whole-frame alpha pulse animation (pulses entire icon/square).
+local function GetOrCreateWholeAlphaPulse(frame)
+    if not frame.dfAD_wholeAlphaPulse then
+        frame.dfAD_wholeAlphaPulse = frame:CreateAnimationGroup()
+        frame.dfAD_wholeAlphaPulse:SetLooping("REPEAT")
+        local fadeOut = frame.dfAD_wholeAlphaPulse:CreateAnimation("Alpha")
+        fadeOut:SetFromAlpha(1)
+        fadeOut:SetToAlpha(0.3)
+        fadeOut:SetDuration(0.5)
+        fadeOut:SetOrder(1)
+        fadeOut:SetSmoothing("IN_OUT")
+        local fadeIn = frame.dfAD_wholeAlphaPulse:CreateAnimation("Alpha")
+        fadeIn:SetFromAlpha(0.3)
+        fadeIn:SetToAlpha(1)
+        fadeIn:SetDuration(0.5)
+        fadeIn:SetOrder(2)
+        fadeIn:SetSmoothing("IN_OUT")
+    end
+    return frame.dfAD_wholeAlphaPulse
+end
+
+-- Create or return a bounce (translation) animation.
+-- For squares, a wrapper frame is used to avoid CooldownFrameTemplate rendering glitches
+-- when Translation is applied directly to a frame with a Cooldown child.
+-- The wrapper is created and managed in the square expiring setup section.
+local function GetOrCreateBounceAnim(frame)
+    if not frame.dfAD_bounceAnim then
+        frame.dfAD_bounceAnim = frame:CreateAnimationGroup()
+        frame.dfAD_bounceAnim:SetLooping("REPEAT")
+        local up = frame.dfAD_bounceAnim:CreateAnimation("Translation")
+        up:SetOffset(0, 4)
+        up:SetDuration(0.25)
+        up:SetOrder(1)
+        up:SetSmoothing("OUT")
+        local down = frame.dfAD_bounceAnim:CreateAnimation("Translation")
+        down:SetOffset(0, -4)
+        down:SetDuration(0.25)
+        down:SetOrder(2)
+        down:SetSmoothing("IN")
+    end
+    return frame.dfAD_bounceAnim
+end
+
+-- Play or stop whole-alpha pulse based on expiring state.
+local function UpdateWholeAlphaPulseState(el, isExpiring)
+    if el.dfAD_expiringWholeAlphaPulse and el.dfAD_wholeAlphaPulse then
+        if isExpiring and not el.dfAD_wholeAlphaPulse:IsPlaying() then
+            el.dfAD_wholeAlphaPulse:Play()
+        elseif not isExpiring and el.dfAD_wholeAlphaPulse:IsPlaying() then
+            el.dfAD_wholeAlphaPulse:Stop()
+            el:SetAlpha(1)
+        end
+    end
+end
+
+-- Play or stop bounce animation based on expiring state.
+local function UpdateBounceState(el, isExpiring)
+    if el.dfAD_expiringBounce and el.dfAD_bounceAnim then
+        if isExpiring and not el.dfAD_bounceAnim:IsPlaying() then
+            el.dfAD_bounceAnim:Play()
+        elseif not isExpiring and el.dfAD_bounceAnim:IsPlaying() then
+            el.dfAD_bounceAnim:Stop()
+        end
+    end
+end
+
 local function BuildDurationHideCurve(threshold)
     if not C_CurveUtil or not C_CurveUtil.CreateColorCurve then return nil end
     DF.durationHideCurves = DF.durationHideCurves or {}
@@ -1527,30 +1593,53 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
         end
     end
 
-    if expiringEnabled then
+    -- Whole-alpha pulse: animates the entire icon frame's alpha
+    local expiringWholeAlphaPulse = config.expiringWholeAlphaPulse or false
+    if expiringWholeAlphaPulse then GetOrCreateWholeAlphaPulse(icon) end
+    icon.dfAD_expiringWholeAlphaPulse = expiringWholeAlphaPulse
+    if not expiringWholeAlphaPulse and icon.dfAD_wholeAlphaPulse and icon.dfAD_wholeAlphaPulse:IsPlaying() then
+        icon.dfAD_wholeAlphaPulse:Stop()
+        icon:SetAlpha(1)
+    end
+
+    -- Bounce: animates the icon frame position up and down
+    local expiringBounce = config.expiringBounce or false
+    if expiringBounce then GetOrCreateBounceAnim(icon) end
+    icon.dfAD_expiringBounce = expiringBounce
+    if not expiringBounce and icon.dfAD_bounceAnim and icon.dfAD_bounceAnim:IsPlaying() then
+        icon.dfAD_bounceAnim:Stop()
+    end
+
+    -- Register if ANY expiring feature is active (color, pulsate, alpha pulse, bounce)
+    local anyExpiringFeature = expiringEnabled or expiringPulsate or expiringWholeAlphaPulse or expiringBounce
+    if anyExpiringFeature then
         local ec = config.expiringColor or {r = 1, g = 0.2, b = 0.2}
         local oc = {r = 0, g = 0, b = 0}  -- icon border default = black
+        local applyColor = expiringEnabled
         RegisterExpiring(icon, {
             unit = frame.unit,
             auraInstanceID = auraData and auraData.auraInstanceID,
             threshold = config.expiringThreshold or 30,
             duration = auraData and auraData.duration,
             expirationTime = auraData and auraData.expirationTime,
-            colorCurve = BuildExpiringColorCurve(config.expiringThreshold or 30, ec, oc, config.expiringThresholdMode),
+            colorCurve = applyColor and BuildExpiringColorCurve(config.expiringThreshold or 30, ec, oc, config.expiringThresholdMode) or nil,
             thresholdMode = config.expiringThresholdMode,
             color = ec, originalColor = oc,
             applyResult = function(el, result, entry)
+                -- applyResult only fires when colorCurve is set (i.e. applyColor = true)
                 if el.border then
                     el.border:SetColorTexture(result.r, result.g, result.b, result.a or 1)
                 end
+                local oc2 = entry.originalColor
+                local isExp = (math.abs(result.r - oc2.r) > 0.01 or math.abs(result.g - oc2.g) > 0.01 or math.abs(result.b - oc2.b) > 0.01)
                 if el.adBorderPulseFrame then
-                    local oc2 = entry.originalColor
-                    local isExp = (math.abs(result.r - oc2.r) > 0.01 or math.abs(result.g - oc2.g) > 0.01 or math.abs(result.b - oc2.b) > 0.01)
                     UpdatePulseState(el.adBorderPulseFrame, isExp)
                 end
+                UpdateWholeAlphaPulseState(el, isExp)
+                UpdateBounceState(el, isExp)
             end,
             applyManual = function(el, isExp, entry)
-                if el.border then
+                if applyColor and el.border then
                     if isExp then
                         local c = entry.color
                         el.border:SetColorTexture(c.r or 1, c.g or 0.2, c.b or 0.2, 1)
@@ -1561,6 +1650,8 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
                 if el.adBorderPulseFrame then
                     UpdatePulseState(el.adBorderPulseFrame, isExp)
                 end
+                UpdateWholeAlphaPulseState(el, isExp)
+                UpdateBounceState(el, isExp)
             end,
         })
     else
@@ -1568,6 +1659,13 @@ function Indicators:ApplyIcon(frame, config, auraData, defaults, auraName, prior
         if icon.adBorderPulseFrame and icon.adBorderPulseFrame.dfAD_pulse and icon.adBorderPulseFrame.dfAD_pulse:IsPlaying() then
             icon.adBorderPulseFrame.dfAD_pulse:Stop()
             icon.adBorderPulseFrame:SetAlpha(1)
+        end
+        if icon.dfAD_wholeAlphaPulse and icon.dfAD_wholeAlphaPulse:IsPlaying() then
+            icon.dfAD_wholeAlphaPulse:Stop()
+            icon:SetAlpha(1)
+        end
+        if icon.dfAD_bounceAnim and icon.dfAD_bounceAnim:IsPlaying() then
+            icon.dfAD_bounceAnim:Stop()
         end
     end
 
@@ -2013,30 +2111,53 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
         end
     end
 
-    if expiringEnabled then
+    -- Whole-alpha pulse: animates the entire square frame's alpha
+    local expiringWholeAlphaPulse = config.expiringWholeAlphaPulse or false
+    if expiringWholeAlphaPulse then GetOrCreateWholeAlphaPulse(sq) end
+    sq.dfAD_expiringWholeAlphaPulse = expiringWholeAlphaPulse
+    if not expiringWholeAlphaPulse and sq.dfAD_wholeAlphaPulse and sq.dfAD_wholeAlphaPulse:IsPlaying() then
+        sq.dfAD_wholeAlphaPulse:Stop()
+        sq:SetAlpha(1)
+    end
+
+    -- Bounce: Translation animation directly on the square.
+    local expiringBounce = config.expiringBounce or false
+    if expiringBounce then GetOrCreateBounceAnim(sq) end
+    sq.dfAD_expiringBounce = expiringBounce
+    if not expiringBounce and sq.dfAD_bounceAnim and sq.dfAD_bounceAnim:IsPlaying() then
+        sq.dfAD_bounceAnim:Stop()
+    end
+
+    -- Register if ANY expiring feature is active (color, pulsate, alpha pulse, bounce)
+    local anyExpiringFeature = expiringEnabled or expiringPulsate or expiringWholeAlphaPulse or expiringBounce
+    if anyExpiringFeature then
         local ec = config.expiringColor or {r = 1, g = 0.2, b = 0.2}
         local oc = {r = color and (color[1] or color.r) or 1, g = color and (color[2] or color.g) or 1, b = color and (color[3] or color.b) or 1}
+        local applyColor = expiringEnabled
         RegisterExpiring(sq, {
             unit = frame.unit,
             auraInstanceID = auraData and auraData.auraInstanceID,
             threshold = config.expiringThreshold or 30,
             duration = auraData and auraData.duration,
             expirationTime = auraData and auraData.expirationTime,
-            colorCurve = BuildExpiringColorCurve(config.expiringThreshold or 30, ec, oc, config.expiringThresholdMode),
+            colorCurve = applyColor and BuildExpiringColorCurve(config.expiringThreshold or 30, ec, oc, config.expiringThresholdMode) or nil,
             thresholdMode = config.expiringThresholdMode,
             color = ec, originalColor = oc,
             applyResult = function(el, result, entry)
+                -- applyResult only fires when colorCurve is set (i.e. applyColor = true)
                 if el.texture then
                     el.texture:SetColorTexture(result.r, result.g, result.b, result.a or 1)
                 end
+                local oc2 = entry.originalColor
+                local isExp = (math.abs(result.r - oc2.r) > 0.01 or math.abs(result.g - oc2.g) > 0.01 or math.abs(result.b - oc2.b) > 0.01)
                 if el.adFillPulseFrame then
-                    local oc2 = entry.originalColor
-                    local isExp = (math.abs(result.r - oc2.r) > 0.01 or math.abs(result.g - oc2.g) > 0.01 or math.abs(result.b - oc2.b) > 0.01)
                     UpdatePulseState(el.adFillPulseFrame, isExp)
                 end
+                UpdateWholeAlphaPulseState(el, isExp)
+                UpdateBounceState(el, isExp)
             end,
             applyManual = function(el, isExp, entry)
-                if el.texture then
+                if applyColor and el.texture then
                     if isExp then
                         local c = entry.color
                         el.texture:SetColorTexture(c.r or 1, c.g or 0.2, c.b or 0.2, 1)
@@ -2048,6 +2169,8 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
                 if el.adFillPulseFrame then
                     UpdatePulseState(el.adFillPulseFrame, isExp)
                 end
+                UpdateWholeAlphaPulseState(el, isExp)
+                UpdateBounceState(el, isExp)
             end,
         })
     else
@@ -2055,6 +2178,13 @@ function Indicators:ApplySquare(frame, config, auraData, defaults, auraName, pri
         if sq.adFillPulseFrame and sq.adFillPulseFrame.dfAD_pulse and sq.adFillPulseFrame.dfAD_pulse:IsPlaying() then
             sq.adFillPulseFrame.dfAD_pulse:Stop()
             sq.adFillPulseFrame:SetAlpha(1)
+        end
+        if sq.dfAD_wholeAlphaPulse and sq.dfAD_wholeAlphaPulse:IsPlaying() then
+            sq.dfAD_wholeAlphaPulse:Stop()
+            sq:SetAlpha(1)
+        end
+        if sq.dfAD_bounceAnim and sq.dfAD_bounceAnim:IsPlaying() then
+            sq.dfAD_bounceAnim:Stop()
         end
     end
 

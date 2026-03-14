@@ -1,9 +1,11 @@
 # DandersFrames Changelog
 
-## [4.0.17] - 2026-03-13
+## [4.0.17] - 2026-03-14
 
 ### New Features
 * (Aura Designer) **Expiring pulsate for icon, square, and health bar indicators** — borders and fills can now pulse when an aura is about to expire
+* (Aura Designer) **Expiring whole alpha pulse** — entire icon/square pulses its alpha when expiring
+* (Aura Designer) **Expiring bounce animation** — icon/square bounces up and down when expiring
 * (Aura Designer) **Hide duration text above threshold** — duration text can be hidden when the remaining time is above a configurable seconds threshold (icon, square, and bar types)
 * (Aura Designer) **Expiring threshold in seconds** — expiring indicators can now trigger based on remaining seconds as well as remaining percentage
 * (Aura Designer) **Trigger operator (ANY / ALL)** — indicators with multiple trigger spells can now require all triggers to be active (AND mode) or just one (OR mode, default)
@@ -11,7 +13,13 @@
 * (Aura Designer) **Custom border mode** — border indicators can now use an independent overlay per aura, so multiple border indicators can be visible at the same time
 * (Aura Designer) **Settings grouped in containers** — all indicator settings panels and global defaults are now organized with bordered section containers
 * (Aura Designer) **Earthliving Weapon** added as a trackable Restoration Shaman aura
+* (Aura Designer) **Sense Power** added as a trackable Augmentation Evoker secret aura
 * (Aura Blacklist) **Expanded blacklist coverage** — added Rogue poisons, Shaman weapon imbuements, Blessing of the Bronze (all class variants), Paladin rites, Mage Icicles, Hunter Tip of the Spear, and Shaman Reincarnation
+* (Dispel Overlay) **Color Name Text** — optional checkbox to color the unit's name text with the dispel type color when a dispellable debuff is present
+
+### Bug Fixes
+* (Permanent Mover) **Fixed attach frame not updating correctly with custom sorting** — now uses actual screen positions instead of data order to determine first/last frame
+* (Auras) **Fixed taint errors from secret value comparisons** — duration hide, expiring indicators, and color curves now correctly pipe secret values through secret-aware APIs only
 
 ## [4.0.16] - 2026-03-11
 

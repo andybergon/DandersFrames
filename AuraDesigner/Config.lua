@@ -68,6 +68,7 @@ DF.AuraDesigner.IconTextures = {
     SymbioticBloom      = 4554354,
     EbonMight           = 5061347,
     SourceOfMagic       = 4630412,
+    SensePower          = 1033482,
     -- Restoration Druid
     Rejuvenation        = 136081,
     Regrowth            = 136085,
@@ -138,6 +139,7 @@ DF.AuraDesigner.SpellIDs = {
         Prescience = 410089, ShiftingSands = 413984, BlisteringScales = 360827,
         InfernosBlessing = 410263, SymbioticBloom = 410686, EbonMight = 395152,
         SourceOfMagic = 369459,
+        SensePower = 361022,
     },
     RestorationDruid = {
         Rejuvenation = 774, Regrowth = 8936, Lifebloom = 33763,
@@ -263,6 +265,12 @@ DF.AuraDesigner.SecretAuraInfo = {
             [200025] = { "BeaconOfVirtue" },
         },
     },
+    AugmentationEvoker = {
+        auras = {
+            SensePower = { signature = "0:1:0:0" },
+        },
+        casts = {},
+    },
 }
 
 -- ============================================================
@@ -292,6 +300,7 @@ DF.AuraDesigner.TrackableAuras = {
         { name = "SymbioticBloom",   display = "Symbiotic Bloom",   color = {0.51, 0.78, 0.52} },
         { name = "EbonMight",        display = "Ebon Might",        color = {0.62, 0.47, 0.85} },
         { name = "SourceOfMagic",    display = "Source of Magic",   color = {0.31, 0.76, 0.97} },
+        { name = "SensePower",       display = "Sense Power",      color = {0.94, 0.82, 0.31}, secret = true },
     },
     RestorationDruid = {
         { name = "Rejuvenation",           display = "Rejuvenation",           color = {0.51, 0.78, 0.52} },

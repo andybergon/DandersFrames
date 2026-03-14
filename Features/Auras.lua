@@ -141,13 +141,15 @@ auraTimerGroup:SetScript("OnLoop", function()
                 local auraInstanceID = icon.auraData.auraInstanceID
                 
                 if unit and auraInstanceID then
-                    -- Get hasExpiration
+                    -- Get hasExpiration as a secret boolean — ONLY for use with
+                    -- secret-aware APIs (SetAlphaFromBoolean, SetShownFromBoolean).
+                    -- Secret values CANNOT be tested with if/else/~=nil in Lua.
                     local hasExpiration = nil
                     if C_UnitAuras and C_UnitAuras.DoesAuraHaveExpirationTime then
                         hasExpiration = C_UnitAuras.DoesAuraHaveExpirationTime(unit, auraInstanceID)
                     end
-                    
-                    if hasExpiration ~= nil then
+
+                    do
                         -- Find native cooldown text if needed (safety net — rendering function usually discovers first)
                         if not icon.nativeCooldownText and icon.cooldown then
                             local regions = {icon.cooldown:GetRegions()}
@@ -190,8 +192,8 @@ auraTimerGroup:SetScript("OnLoop", function()
                             
                             local useNewAPI = durationObj and durationObj.EvaluateRemainingDuration
                             
-                            -- Duration color
-                            local durR, durG, durB, durA = nil, nil, nil, 1
+                            -- Duration color — pipe curve result directly to SetTextColor
+                            -- No intermediate locals to avoid secret value comparisons
                             if needsDurationColor and icon.nativeCooldownText and useNewAPI then
                                 if C_CurveUtil and C_CurveUtil.CreateColorCurve then
                                     if not DF.durationColorCurve then
@@ -205,18 +207,17 @@ auraTimerGroup:SetScript("OnLoop", function()
                                     end
 
                                     local result = durationObj:EvaluateRemainingPercent(DF.durationColorCurve)
-                                    if result then
-                                        if result.GetRGB then
-                                            durR, durG, durB = result:GetRGB()
-                                        elseif result.r then
-                                            durR, durG, durB = result.r, result.g, result.b
-                                        end
+                                    if result and result.GetRGBA then
+                                        icon.nativeCooldownText:SetTextColor(result:GetRGBA())
                                     end
                                 end
                             end
 
-                            -- Duration hide above threshold
-                            if needsDurationHide and icon.nativeCooldownText and useNewAPI then
+                            -- Duration hide above threshold — use SetAlphaFromBoolean on wrapper
+                            -- The wrapper frame controls visibility of the native cooldown text
+                            -- Curve alpha is secret, so pass through SetAlphaFromBoolean with
+                            -- hasExpiration as the gate (permanent buffs hidden by cooldown already)
+                            if needsDurationHide and icon.nativeCooldownText and useNewAPI and icon.durationHideWrapper then
                                 local threshold = icon.durationHideAboveThreshold or 10
                                 if C_CurveUtil and C_CurveUtil.CreateColorCurve then
                                     DF.durationHideCurves = DF.durationHideCurves or {}
@@ -229,28 +230,14 @@ auraTimerGroup:SetScript("OnLoop", function()
                                         DF.durationHideCurves[threshold] = curve
                                     end
 
-                                    if hasExpiration and durationObj.EvaluateRemainingDuration then
+                                    if durationObj.EvaluateRemainingDuration then
                                         local hideResult = durationObj:EvaluateRemainingDuration(DF.durationHideCurves[threshold])
-                                        if hideResult then
-                                            if hideResult.GetAlpha then
-                                                durA = hideResult:GetAlpha()
-                                            elseif hideResult.a ~= nil then
-                                                durA = hideResult.a
-                                            end
+                                        -- hideResult is a ColorMixin (has GetRGBA, not GetAlpha)
+                                        -- Extract alpha via select(4, GetRGBA()) and pipe to SetAlphaFromBoolean
+                                        if hideResult and hideResult.GetRGBA and icon.durationHideWrapper.SetAlphaFromBoolean then
+                                            icon.durationHideWrapper:SetAlphaFromBoolean(hasExpiration, select(4, hideResult:GetRGBA()), 0)
                                         end
                                     end
-                                end
-                            end
-
-                            -- Apply duration color (via SetTextColor) and hide alpha (via wrapper SetAlpha)
-                            -- Blizzard's CooldownFrame resets both SetTextColor alpha and SetAlpha
-                            -- on its FontString every frame, so we use a parent wrapper frame
-                            if icon.nativeCooldownText then
-                                if durR then
-                                    icon.nativeCooldownText:SetTextColor(durR, durG, durB, 1)
-                                end
-                                if (durA ~= 1 or needsDurationHide) and icon.durationHideWrapper then
-                                    icon.durationHideWrapper:SetAlpha(durA)
                                 end
                             end
                             
@@ -280,23 +267,15 @@ auraTimerGroup:SetScript("OnLoop", function()
 
                                     local expireResult
                                     if useSeconds and durationObj.EvaluateRemainingDuration then
-                                        -- Only evaluate seconds mode when the aura actually has an expiration
-                                        -- (prevents false trigger on permanent buffs or freshly-applied auras
-                                        -- where remaining duration briefly reports 0)
-                                        if hasExpiration then
-                                            expireResult = durationObj:EvaluateRemainingDuration(DF.expiringCurves[cacheKey])
-                                        end
+                                        -- EvaluateRemainingDuration handles non-expiring auras safely
+                                        -- (their cooldown is hidden via SetShownFromBoolean)
+                                        expireResult = durationObj:EvaluateRemainingDuration(DF.expiringCurves[cacheKey])
                                     else
                                         expireResult = durationObj:EvaluateRemainingPercent(DF.expiringCurves[cacheKey])
                                     end
                                     
-                                    if expireResult then
-                                        local expiringAlpha = 0
-                                        if expireResult.GetAlpha then
-                                            expiringAlpha = expireResult:GetAlpha()
-                                        elseif expireResult.a ~= nil then
-                                            expiringAlpha = expireResult.a
-                                        end
+                                    if expireResult and expireResult.GetRGBA then
+                                        local expiringAlpha = select(4, expireResult:GetRGBA())
                                         
                                         -- Tint
                                         if icon.expiringTint and icon.expiringTintEnabled then
@@ -332,19 +311,11 @@ auraTimerGroup:SetScript("OnLoop", function()
                                                 end
                                                 
                                                 local colorResult = durationObj:EvaluateRemainingPercent(DF.expiringBorderColorCurve)
-                                                if colorResult and icon.expiringBorderTop then
-                                                    if colorResult.GetRGBA then
-                                                        local r, g, b, a = colorResult:GetRGBA()
-                                                        icon.expiringBorderTop:SetColorTexture(r, g, b, a)
-                                                        icon.expiringBorderBottom:SetColorTexture(r, g, b, a)
-                                                        icon.expiringBorderLeft:SetColorTexture(r, g, b, a)
-                                                        icon.expiringBorderRight:SetColorTexture(r, g, b, a)
-                                                    elseif colorResult.r then
-                                                        icon.expiringBorderTop:SetColorTexture(colorResult.r, colorResult.g, colorResult.b, colorResult.a or 1)
-                                                        icon.expiringBorderBottom:SetColorTexture(colorResult.r, colorResult.g, colorResult.b, colorResult.a or 1)
-                                                        icon.expiringBorderLeft:SetColorTexture(colorResult.r, colorResult.g, colorResult.b, colorResult.a or 1)
-                                                        icon.expiringBorderRight:SetColorTexture(colorResult.r, colorResult.g, colorResult.b, colorResult.a or 1)
-                                                    end
+                                                if colorResult and colorResult.GetRGBA and icon.expiringBorderTop then
+                                                    icon.expiringBorderTop:SetColorTexture(colorResult:GetRGBA())
+                                                    icon.expiringBorderBottom:SetColorTexture(colorResult:GetRGBA())
+                                                    icon.expiringBorderLeft:SetColorTexture(colorResult:GetRGBA())
+                                                    icon.expiringBorderRight:SetColorTexture(colorResult:GetRGBA())
                                                 end
                                             else
                                                 if icon.expiringBorderAlphaContainer.SetAlphaFromBoolean then

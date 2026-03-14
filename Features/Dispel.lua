@@ -52,12 +52,14 @@ local ALL_DISPEL_ENUMS = {0, 1, 2, 3, 4, 9, 11}
 
 local borderCurve = nil
 local gradientCurve = nil
+local nameTextCurve = nil
 local iconCurves = {}  -- Per-type curves for icons
 
 -- Invalidate all curves when settings change
 function DF:InvalidateDispelColorCurve()
     borderCurve = nil
     gradientCurve = nil
+    nameTextCurve = nil
     iconCurves = {}
     -- Also invalidate debuff border curve
     DF.debuffBorderCurve = nil
@@ -142,6 +144,19 @@ local function GetGradientCurve(db)
     local effectiveAlpha = math.min(alpha * intensity, 1.0)
     gradientCurve = BuildElementCurve(effectiveAlpha, db)
     return gradientCurve
+end
+
+-- ============================================================
+-- GET NAME TEXT CURVE
+-- Full alpha (1.0) — just used to resolve dispel type to color
+-- ============================================================
+
+local function GetNameTextCurve(db)
+    if nameTextCurve then
+        return nameTextCurve
+    end
+    nameTextCurve = BuildElementCurve(1.0, db)
+    return nameTextCurve
 end
 
 -- ============================================================
@@ -756,6 +771,39 @@ local GRADIENT_TEXTURES = {
     FULL = "Interface\\Buttons\\WHITE8x8",                          -- Solid fill
 }
 
+-- ============================================================
+-- DISPEL NAME TEXT COLORING
+-- Colors the unit name text with dispel type color
+-- ============================================================
+
+local function ApplyDispelNameText(frame, r, g, b)
+    local nameText = frame.nameText
+    if not nameText then return end
+    if not frame.dfDispelNameTextOrigColor then
+        local cr, cg, cb, ca = nameText:GetTextColor()
+        frame.dfDispelNameTextOrigColor = { r = cr, g = cg, b = cb, a = ca }
+    end
+    nameText:SetTextColor(r, g, b, 1)
+    frame.dfDispelNameTextActive = true
+end
+
+local function RevertDispelNameText(frame)
+    if not frame or not frame.dfDispelNameTextActive then return end
+    local nameText = frame.nameText
+    if not nameText then return end
+    -- If AD nametext is active, restore to AD's color
+    local adState = frame.dfAD
+    if adState and adState.nametext and adState.savedNameColor then
+        local c = adState.savedNameColor
+        nameText:SetTextColor(c.r, c.g, c.b, c.a or 1)
+    elseif frame.dfDispelNameTextOrigColor then
+        local c = frame.dfDispelNameTextOrigColor
+        nameText:SetTextColor(c.r, c.g, c.b, c.a or 1)
+    end
+    frame.dfDispelNameTextOrigColor = nil
+    frame.dfDispelNameTextActive = false
+end
+
 local function ShowOverlayWithSecretColor(overlay, db, unit, auraInstanceID, frame)
     if not overlay or not unit or not auraInstanceID then return end
     
@@ -1031,6 +1079,18 @@ local function ShowOverlayWithSecretColor(overlay, db, unit, auraInstanceID, fra
     if overlay.gradientTracksHealth then
         DF:UpdateDispelGradientHealth(frame)
     end
+
+    -- Name text coloring — resolve dispel type to color via curve
+    if db.dispelNameText and frame then
+        local ntCurve = GetNameTextCurve(db)
+        if ntCurve then
+            local ntColor = C_UnitAuras.GetAuraDispelTypeColor(unit, auraInstanceID, ntCurve)
+            if ntColor then
+                local cr, cg, cb = ntColor:GetRGB()
+                ApplyDispelNameText(frame, cr, cg, cb)
+            end
+        end
+    end
 end
 
 -- ============================================================
@@ -1214,6 +1274,11 @@ local function ShowOverlayWithRGB(overlay, r, g, b, db, dispelType, oorAlphaMult
         overlay.gradient:SetMinMaxValues(0, 1)
         overlay.gradient:SetValue(testHealth)
     end
+
+    -- Name text coloring — uses the explicit RGB passed to this function
+    if db.dispelNameText and frame then
+        ApplyDispelNameText(frame, r, g, b)
+    end
 end
 
 -- ============================================================
@@ -1272,6 +1337,7 @@ function DF:UpdateDispelOverlay(frame)
     -- PERF TEST: Skip if disabled
     if DF.PerfTest and not DF.PerfTest.enableDispel then
         if frame.dfDispelOverlay then HideOverlay(frame.dfDispelOverlay) end
+        RevertDispelNameText(frame)
         return
     end
     
@@ -1288,6 +1354,7 @@ function DF:UpdateDispelOverlay(frame)
             if frame.dfDispelOverlay then
                 HideOverlay(frame.dfDispelOverlay)
             end
+            RevertDispelNameText(frame)
             return
         end
     else
@@ -1295,6 +1362,7 @@ function DF:UpdateDispelOverlay(frame)
             if frame.dfDispelOverlay then
                 HideOverlay(frame.dfDispelOverlay)
             end
+            RevertDispelNameText(frame)
             return
         end
     end
@@ -1332,6 +1400,7 @@ function DF:UpdateDispelOverlay(frame)
             if frame.dfDispelOverlay then
                 HideOverlay(frame.dfDispelOverlay)
             end
+            RevertDispelNameText(frame)
         end
         return
     end
@@ -1341,9 +1410,10 @@ function DF:UpdateDispelOverlay(frame)
         if frame.dfDispelOverlay then
             HideOverlay(frame.dfDispelOverlay)
         end
+        RevertDispelNameText(frame)
         return
     end
-    
+
     -- Real unit detection
     if not unit or not UnitExists(unit) then
         if DF.debugDispel then
@@ -1352,9 +1422,10 @@ function DF:UpdateDispelOverlay(frame)
         if frame.dfDispelOverlay then
             HideOverlay(frame.dfDispelOverlay)
         end
+        RevertDispelNameText(frame)
         return
     end
-    
+
     -- Check API availability
     if not C_UnitAuras or not C_UnitAuras.GetAuraDataByIndex or not C_UnitAuras.GetAuraDispelTypeColor then
         if DF.debugDispel then
@@ -1363,6 +1434,7 @@ function DF:UpdateDispelOverlay(frame)
         if frame.dfDispelOverlay then
             HideOverlay(frame.dfDispelOverlay)
         end
+        RevertDispelNameText(frame)
         return
     end
     
@@ -1435,6 +1507,7 @@ function DF:UpdateDispelOverlay(frame)
         if frame.dfDispelOverlay then
             HideOverlay(frame.dfDispelOverlay)
         end
+        RevertDispelNameText(frame)
         if debugMode then
             print("|cffff0000DF Dispel:|r No dispellable debuffs found")
         end
@@ -1456,11 +1529,14 @@ end
 -- Force clear all dispel overlays
 function DF:ClearAllDispelOverlays()
     local function ClearFrame(frame)
-        if frame and frame.dfDispelOverlay then
-            HideOverlay(frame.dfDispelOverlay)
+        if frame then
+            if frame.dfDispelOverlay then
+                HideOverlay(frame.dfDispelOverlay)
+            end
+            RevertDispelNameText(frame)
         end
     end
-    
+
     DF:IterateAllFrames(function(frame)
         ClearFrame(frame)
     end)

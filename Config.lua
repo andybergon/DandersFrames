@@ -1083,6 +1083,7 @@ DF.PartyDefaults = {
     dispelShowIcon = true,
     dispelShowMagic = true,
     dispelShowPoison = true,
+    dispelNameText = false,
     dispellableHighlight = true,
 
     -- External Defensive
@@ -2287,6 +2288,7 @@ DF.RaidDefaults = {
     dispelShowIcon = true,
     dispelShowMagic = true,
     dispelShowPoison = true,
+    dispelNameText = false,
     dispellableHighlight = true,
 
     -- External Defensive

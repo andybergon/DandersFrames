@@ -410,6 +410,7 @@ local function EnsureTypeConfig(auraName, typeKey)
                 -- Expiring
                 expiringEnabled = false, expiringThreshold = 30, expiringThresholdMode = "PERCENT",
                 expiringColor = {r = 1, g = 0.2, b = 0.2, a = 1},
+                expiringWholeAlphaPulse = false, expiringBounce = false,
             }
         elseif typeKey == "square" then
             auraCfg[typeKey] = {
@@ -438,6 +439,7 @@ local function EnsureTypeConfig(auraName, typeKey)
                 -- Expiring
                 expiringEnabled = false, expiringThreshold = 30, expiringThresholdMode = "PERCENT",
                 expiringColor = {r = 1, g = 0.2, b = 0.2, a = 1},
+                expiringWholeAlphaPulse = false, expiringBounce = false,
             }
         elseif typeKey == "bar" then
             auraCfg[typeKey] = {
@@ -527,6 +529,7 @@ local TYPE_DEFAULTS = {
         expiringEnabled = false, expiringThreshold = 30, expiringThresholdMode = "PERCENT",
         expiringColor = {r = 1, g = 0.2, b = 0.2, a = 1},
         expiringPulsate = false,
+        expiringWholeAlphaPulse = false, expiringBounce = false,
         frameLevel = 30, frameStrata = "INHERIT",
     },
     square = {
@@ -549,6 +552,7 @@ local TYPE_DEFAULTS = {
         expiringEnabled = false, expiringThreshold = 30, expiringThresholdMode = "PERCENT",
         expiringColor = {r = 1, g = 0.2, b = 0.2, a = 1},
         expiringPulsate = false,
+        expiringWholeAlphaPulse = false, expiringBounce = false,
         frameLevel = 30, frameStrata = "INHERIT",
     },
     bar = {
@@ -2366,7 +2370,9 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
             g:AddWidget(GUI:CreateCheckbox(parent, "Expiring Color Override", proxy, "expiringEnabled"), 28)
             g:AddWidget(CreateExpiringThresholdRow(parent, proxy, contentWidth - 10), 54)
             g:AddWidget(GUI:CreateColorPicker(parent, "Expiring Color", proxy, "expiringColor", true, RPL, RPL, true), 28)
-            g:AddWidget(GUI:CreateCheckbox(parent, "Pulsate", proxy, "expiringPulsate"), 28)
+            g:AddWidget(GUI:CreateCheckbox(parent, "Border Pulsate", proxy, "expiringPulsate"), 28)
+            g:AddWidget(GUI:CreateCheckbox(parent, "Whole Alpha Pulse", proxy, "expiringWholeAlphaPulse"), 28)
+            g:AddWidget(GUI:CreateCheckbox(parent, "Bounce", proxy, "expiringBounce"), 28)
         end)
 
     elseif typeKey == "square" then
@@ -2431,7 +2437,9 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
             g:AddWidget(GUI:CreateCheckbox(parent, "Expiring Color Override", proxy, "expiringEnabled"), 28)
             g:AddWidget(CreateExpiringThresholdRow(parent, proxy, contentWidth - 10), 54)
             g:AddWidget(GUI:CreateColorPicker(parent, "Expiring Color", proxy, "expiringColor", true, RPL, RPL, true), 28)
-            g:AddWidget(GUI:CreateCheckbox(parent, "Pulsate", proxy, "expiringPulsate"), 28)
+            g:AddWidget(GUI:CreateCheckbox(parent, "Fill Pulsate", proxy, "expiringPulsate"), 28)
+            g:AddWidget(GUI:CreateCheckbox(parent, "Whole Alpha Pulse", proxy, "expiringWholeAlphaPulse"), 28)
+            g:AddWidget(GUI:CreateCheckbox(parent, "Bounce", proxy, "expiringBounce"), 28)
         end)
 
     elseif typeKey == "bar" then

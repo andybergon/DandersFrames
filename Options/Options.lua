@@ -6007,6 +6007,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             if DF.UpdateAllDispelOverlays then DF:UpdateAllDispelOverlays() end
         end), 30)
         animate.hideOn = HideDispelOptions
+        local nameTextCheck = settingsGroup:AddWidget(GUI:CreateCheckbox(self.child, "Color Name Text", db, "dispelNameText", function()
+            if DF.UpdateAllDispelOverlays then DF:UpdateAllDispelOverlays() end
+        end), 30)
+        nameTextCheck.hideOn = HideDispelOptions
         Add(settingsGroup, nil, 1)
         
         -- ===== ICON GROUP (Column 2) =====

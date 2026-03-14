@@ -662,7 +662,7 @@ function DF:GetPermanentMoverAttachFrame(mode)
         return isRaid and DF.raidContainer or DF.container
     end
 
-    -- Find first or last visible unit frame
+    -- Find first or last visible unit frame, respecting sort order
     local targetFrame
     if inTestMode then
         -- Use test mode frames
@@ -680,32 +680,49 @@ function DF:GetPermanentMoverAttachFrame(mode)
                 end
             end
         end
-    elseif isRaid then
-        DF:IterateRaidFrames(function(frame)
-            if frame and frame:IsShown() then
-                if attachTo == "FIRST" then
-                    targetFrame = frame
-                    return true  -- break on first
-                end
-                targetFrame = frame  -- keep updating to get last
-            end
-        end)
     else
-        -- Check player frame first
-        local playerFrame = DF:GetPlayerFrame()
-        if playerFrame and playerFrame:IsShown() then
-            targetFrame = playerFrame
-            if attachTo == "FIRST" then
-                return targetFrame
+        -- Determine first/last by actual screen position
+        -- This works regardless of sorting system, data order, or secure handler state
+        local candidates = {}
+        local iterateFunc = function(frame)
+            if frame and frame:IsShown() and frame:GetLeft() then
+                candidates[#candidates + 1] = frame
             end
         end
-        for i = 1, 4 do
-            local frame = DF:GetPartyFrame(i)
-            if frame and frame:IsShown() then
-                if attachTo == "FIRST" and not targetFrame then
-                    return frame
+
+        if isRaid then
+            DF:IterateRaidFrames(iterateFunc)
+        else
+            local playerFrame = DF:GetPlayerFrame()
+            if playerFrame then iterateFunc(playerFrame) end
+            for i = 1, 4 do
+                local frame = DF:GetPartyFrame(i)
+                if frame then iterateFunc(frame) end
+            end
+        end
+
+        if #candidates > 0 then
+            -- Sort by visual position: primary axis depends on grow direction
+            -- Use top-left as origin: lowest top+left = first, highest = last
+            -- For horizontal layouts: sort by left, then by top (descending)
+            -- For vertical layouts: sort by top (descending = higher first), then by left
+            local horizontal = (db.growDirection == "HORIZONTAL")
+            table.sort(candidates, function(a, b)
+                local aLeft, aTop = a:GetLeft(), a:GetTop()
+                local bLeft, bTop = b:GetLeft(), b:GetTop()
+                if horizontal then
+                    if math.abs(aLeft - bLeft) > 1 then return aLeft < bLeft end
+                    return aTop > bTop  -- higher = first
+                else
+                    if math.abs(aTop - bTop) > 1 then return aTop > bTop end
+                    return aLeft < bLeft  -- further left = first
                 end
-                targetFrame = frame
+            end)
+
+            if attachTo == "FIRST" then
+                targetFrame = candidates[1]
+            else
+                targetFrame = candidates[#candidates]
             end
         end
     end
