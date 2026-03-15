@@ -504,9 +504,12 @@ local function TriggerAuraUpdateForUnit(unit)
     -- Also update pinned frames showing this unit
     -- (Pinned frames share units with main frames but are excluded from unitFrameMap)
     if DF.PinnedFrames and DF.PinnedFrames.initialized and DF.PinnedFrames.headers then
+        local pinnedDB = DF.db and DF.db[IsInRaid() and "raid" or "party"]
+        pinnedDB = pinnedDB and pinnedDB.pinnedFrames
         for setIndex = 1, 2 do
             local header = DF.PinnedFrames.headers[setIndex]
-            if header and header:IsShown() then
+            local set = pinnedDB and pinnedDB.sets and pinnedDB.sets[setIndex]
+            if header and header:IsShown() and set and set.enabled then
                 for i = 1, 40 do
                     local child = header:GetAttribute("child" .. i)
                     if child and child:IsVisible() and child.unit == unit then
