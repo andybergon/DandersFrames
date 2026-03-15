@@ -5239,8 +5239,8 @@ function DF:UpdateTestDefensiveBar(frame, testData)
         secondary = secondary or "DOWN"
 
         local scaledSize = iconSize * scale
-        local primaryX, primaryY = GetTestDefGrowthOffset(primary, scaledSize, spacing)
-        local secondaryX, secondaryY = GetTestDefGrowthOffset(secondary, scaledSize, spacing)
+        local primaryX, primaryY = GetTestDefGrowthOffset(primary, iconSize, spacing)
+        local secondaryX, secondaryY = GetTestDefGrowthOffset(secondary, iconSize, spacing)
 
         -- Render each test defensive icon
         for i = 1, numDefs do
@@ -5290,9 +5290,9 @@ function DF:UpdateTestDefensiveBar(frame, testData)
                         local col = math.floor(idx / wrap)
                         local row = idx % wrap
                         local iconsInCol = math.min(wrap, numDefs - (col * wrap))
-                        local centerOffset = (iconsInCol - 1) * (scaledSize + spacing) / 2
+                        local centerOffset = (iconsInCol - 1) * (iconSize + spacing) / 2
                         local x = baseX + (col * secX)
-                        local y = baseY - (row * (scaledSize + spacing)) + centerOffset
+                        local y = baseY - (row * (iconSize + spacing)) + centerOffset
                         icon:ClearAllPoints()
                         icon:SetPoint(anchor, frame, anchor, x, y)
                     end
@@ -5307,8 +5307,8 @@ function DF:UpdateTestDefensiveBar(frame, testData)
                         local row = math.floor(idx / wrap)
                         local col = idx % wrap
                         local iconsInRow = math.min(wrap, numDefs - (row * wrap))
-                        local centerOffset = (iconsInRow - 1) * (scaledSize + spacing) / 2
-                        local x = baseX + (col * (scaledSize + spacing)) - centerOffset
+                        local centerOffset = (iconsInRow - 1) * (iconSize + spacing) / 2
+                        local x = baseX + (col * (iconSize + spacing)) - centerOffset
                         local y = baseY + (row * secY)
                         icon:ClearAllPoints()
                         icon:SetPoint(anchor, frame, anchor, x, y)
