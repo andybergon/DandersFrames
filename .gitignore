@@ -12,6 +12,7 @@ Desktop.ini
 *~
 .vscode/
 .idea/
+.luarc.json
 
 # Zip builds
 *.zip
@@ -20,6 +21,7 @@ Desktop.ini
 CLAUDE.md
 .claude/
 .mcp.json
+docs/superpowers/
 
 # Reference material (contents ignored, folder kept via .gitkeep)
 _Reference/*
