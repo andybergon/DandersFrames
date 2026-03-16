@@ -236,27 +236,78 @@ end
 -- ============================================================
 
 -- Get the anchor point for the container based on growth settings
--- This determines which corner the header anchors to
+-- This determines which corner the header anchors to AND the container anchors to UIParent
+-- Supports START, CENTER, and END for both frameAnchor and columnAnchor
 local function GetContainerAnchorPoint(set)
     local horizontal = set.growDirection == "HORIZONTAL"
     local frameAnchor = set.frameAnchor or "START"
     local columnAnchor = set.columnAnchor or "START"
-    
+
+    -- Map each axis to its WoW anchor component
+    local xPart, yPart
     if horizontal then
-        -- Horizontal: frameAnchor controls left/right, columnAnchor controls top/bottom
-        if frameAnchor == "END" then
-            return (columnAnchor == "END") and "BOTTOMRIGHT" or "TOPRIGHT"
-        else
-            return (columnAnchor == "END") and "BOTTOMLEFT" or "TOPLEFT"
-        end
+        -- Horizontal: frameAnchor = left/center/right, columnAnchor = top/center/bottom
+        xPart = (frameAnchor == "END") and "RIGHT" or (frameAnchor == "CENTER") and "" or "LEFT"
+        yPart = (columnAnchor == "END") and "BOTTOM" or (columnAnchor == "CENTER") and "" or "TOP"
     else
-        -- Vertical: frameAnchor controls top/bottom, columnAnchor controls left/right
-        if frameAnchor == "END" then
-            return (columnAnchor == "END") and "BOTTOMRIGHT" or "BOTTOMLEFT"
-        else
-            return (columnAnchor == "END") and "TOPRIGHT" or "TOPLEFT"
-        end
+        -- Vertical: frameAnchor = top/center/bottom, columnAnchor = left/center/right
+        yPart = (frameAnchor == "END") and "BOTTOM" or (frameAnchor == "CENTER") and "" or "TOP"
+        xPart = (columnAnchor == "END") and "RIGHT" or (columnAnchor == "CENTER") and "" or "LEFT"
     end
+
+    local anchor = yPart .. xPart
+    if anchor == "" then anchor = "CENTER" end
+    return anchor
+end
+
+-- Convert a container's saved position from one anchor to another
+-- Returns new x, y offsets for the target anchor
+local function ConvertAnchorPosition(container, oldAnchor, newAnchor)
+    if oldAnchor == newAnchor then return end
+
+    -- Get the container's current screen edges
+    local left = container:GetLeft()
+    local right = container:GetRight()
+    local top = container:GetTop()
+    local bottom = container:GetBottom()
+
+    if not left or not right or not top or not bottom then return end
+
+    -- Get UIParent edges (in same coordinate space)
+    local uiLeft = UIParent:GetLeft() or 0
+    local uiRight = UIParent:GetRight() or GetScreenWidth()
+    local uiTop = UIParent:GetTop() or GetScreenHeight()
+    local uiBottom = UIParent:GetBottom() or 0
+
+    -- Calculate the position of each anchor point on the container
+    local anchorX = { LEFT = left, RIGHT = right, CENTER = (left + right) / 2 }
+    local anchorY = { TOP = top, BOTTOM = bottom, CENTER = (top + bottom) / 2 }
+
+    -- Parse anchor into x/y components
+    local function ParseAnchor(anchor)
+        if anchor == "CENTER" then return "CENTER", "CENTER" end
+        if anchor == "TOP" then return "CENTER", "TOP" end
+        if anchor == "BOTTOM" then return "CENTER", "BOTTOM" end
+        if anchor == "LEFT" then return "LEFT", "CENTER" end
+        if anchor == "RIGHT" then return "RIGHT", "CENTER" end
+        local yPart = anchor:match("^(TOP)") or anchor:match("^(BOTTOM)")
+        local xPart = anchor:match("(LEFT)$") or anchor:match("(RIGHT)$")
+        return xPart or "CENTER", yPart or "CENTER"
+    end
+
+    -- Get the screen position of the container's new anchor point
+    local newXPart, newYPart = ParseAnchor(newAnchor)
+    local containerX = anchorX[newXPart]
+    local containerY = anchorY[newYPart]
+
+    -- Get the screen position of UIParent's new anchor point
+    local uiAnchorX = { LEFT = uiLeft, RIGHT = uiRight, CENTER = (uiLeft + uiRight) / 2 }
+    local uiAnchorY = { TOP = uiTop, BOTTOM = uiBottom, CENTER = (uiTop + uiBottom) / 2 }
+    local uiX = uiAnchorX[newXPart]
+    local uiY = uiAnchorY[newYPart]
+
+    -- The offset is the difference between container anchor point and UIParent anchor point
+    return containerX - uiX, containerY - uiY
 end
 
 -- ============================================================
@@ -286,10 +337,13 @@ function PinnedFrames:CreateSetFrames(setIndex)
     container:SetFrameStrata("MEDIUM")
     container:SetClampedToScreen(true)
     
-    -- Position from saved settings
-    local pos = set.position or { point = "CENTER", x = 0, y = 200 * (setIndex == 1 and 1 or -1) }
+    -- Position from saved settings — use growth-direction anchor
+    local containerAnchor = GetContainerAnchorPoint(set)
+    local pos = set.position or { point = containerAnchor, x = 0, y = 200 * (setIndex == 1 and 1 or -1) }
+    -- If saved anchor doesn't match current growth anchor, convert on first layout pass
+    local useAnchor = pos.point or containerAnchor
     container:ClearAllPoints()
-    container:SetPoint(pos.point or "CENTER", UIParent, pos.point or "CENTER", pos.x or 0, pos.y or 0)
+    container:SetPoint(useAnchor, UIParent, useAnchor, pos.x or 0, pos.y or 0)
     
     -- Make draggable when unlocked
     container:SetMovable(true)
@@ -346,59 +400,65 @@ function PinnedFrames:CreateSetFrames(setIndex)
     
     mover:SetScript("OnDragStart", function(self)
         if set.locked then return end
-        
+
+        -- Get the current anchor for this set
+        local anchor = GetContainerAnchorPoint(set)
+
         -- Get starting mouse position in screen coordinates
         local uiScale = UIParent:GetEffectiveScale()
         startMouseX, startMouseY = GetCursorPosition()
         startMouseX = startMouseX / uiScale
         startMouseY = startMouseY / uiScale
-        
+
         -- Get current container position
         local pos = set.position or { x = 0, y = 0 }
         startPosX = pos.x or 0
         startPosY = pos.y or 0
-        
+
         self:SetScript("OnUpdate", function()
             local mx, my = GetCursorPosition()
             mx = mx / uiScale
             my = my / uiScale
-            
+
             -- Calculate delta from start
             local deltaX = mx - startMouseX
             local deltaY = my - startMouseY
-            
+
             -- Apply delta to starting position
             local newX = startPosX + deltaX
             local newY = startPosY + deltaY
-            
-            -- Move container
+
+            -- Move container using growth-direction anchor
             container:ClearAllPoints()
-            container:SetPoint("CENTER", UIParent, "CENTER", newX, newY)
+            container:SetPoint(anchor, UIParent, anchor, newX, newY)
         end)
     end)
-    
+
     mover:SetScript("OnDragStop", function(self)
         self:SetScript("OnUpdate", nil)
         if not startMouseX then return end
+
+        -- Get the current anchor for this set
+        local anchor = GetContainerAnchorPoint(set)
 
         -- Get final position from mouse delta
         local uiScale = UIParent:GetEffectiveScale()
         local mx, my = GetCursorPosition()
         mx = mx / uiScale
         my = my / uiScale
-        
+
         local deltaX = mx - startMouseX
         local deltaY = my - startMouseY
-        
+
         local finalX = startPosX + deltaX
         local finalY = startPosY + deltaY
-        
-        -- Save position
-        set.position = { point = "CENTER", x = finalX, y = finalY }
-        
+
+        -- Save position with current anchor
+        set.position = { point = anchor, x = finalX, y = finalY }
+
         -- Ensure container is at final position
         container:ClearAllPoints()
-        container:SetPoint("CENTER", UIParent, "CENTER", finalX, finalY)
+        container:SetPoint(anchor, UIParent, anchor, finalX, finalY)
     end)
     
     -- Mover shows when unlocked AND enabled
@@ -605,8 +665,9 @@ function PinnedFrames:ApplyLayoutSettings(setIndex)
     local frameAnchor = set.frameAnchor or "START"
     
     -- Frame anchor point determines where first frame is placed and growth direction
-    -- HORIZONTAL: START=LEFT (grow right), END=RIGHT (grow left)
-    -- VERTICAL: START=TOP (grow down), END=BOTTOM (grow up)
+    -- HORIZONTAL: START=LEFT (grow right), CENTER=LEFT (grow right, expand from center), END=RIGHT (grow left)
+    -- VERTICAL: START=TOP (grow down), CENTER=TOP (grow down, expand from center), END=BOTTOM (grow up)
+    -- CENTER uses same internal layout as START — the "center" effect comes from the container anchor
     local point, xOff, yOff
     if horizontal then
         if frameAnchor == "END" then
@@ -627,14 +688,13 @@ function PinnedFrames:ApplyLayoutSettings(setIndex)
         end
         xOff = 0
     end
-    
+
     header:SetAttribute("point", point)
     header:SetAttribute("xOffset", xOff)
     header:SetAttribute("yOffset", yOff)
-    
+
     -- Column anchor point determines where new columns/rows appear
-    -- HORIZONTAL: columns are vertical, START=TOP (down), END=BOTTOM (up)
-    -- VERTICAL: columns are horizontal, START=LEFT (right), END=RIGHT (left)
+    -- CENTER uses same internal layout as START — container anchor handles the centering
     local colAnchorPoint, colSpacing
     if horizontal then
         colSpacing = vSpacing
@@ -666,12 +726,23 @@ function PinnedFrames:ApplyLayoutSettings(setIndex)
     if container then
         header:ClearAllPoints()
         header:SetPoint(containerAnchorPoint, container, containerAnchorPoint, 0, 0)
-        
-        -- Restore saved position (always use CENTER anchor for container)
+
+        -- Restore saved position — convert if anchor changed
         local pos = set.position
         if pos then
+            local savedAnchor = pos.point or "CENTER"
+            if savedAnchor ~= containerAnchorPoint and container:GetLeft() then
+                -- Anchor changed (user changed growth direction) — convert coordinates
+                local newX, newY = ConvertAnchorPosition(container, savedAnchor, containerAnchorPoint)
+                if newX and newY then
+                    pos.point = containerAnchorPoint
+                    pos.x = newX
+                    pos.y = newY
+                end
+            end
             container:ClearAllPoints()
-            container:SetPoint("CENTER", UIParent, "CENTER", pos.x or 0, pos.y or 0)
+            container:SetPoint(containerAnchorPoint, UIParent, containerAnchorPoint, pos.x or 0, pos.y or 0)
+            pos.point = containerAnchorPoint
         end
     end
     

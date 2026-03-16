@@ -2245,7 +2245,39 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         settingsGroup:AddWidget(CreateRefreshableCheckbox(self.child, "Show Label", "showLabel", function()
             if DF.PinnedFrames then DF.PinnedFrames:SetShowLabel(activeHighlightTab, GetCurrentSet().showLabel) end
         end), 28)
-        
+
+        -- Reset Position button
+        local resetPosBtn = CreateFrame("Button", nil, self.child, "BackdropTemplate")
+        resetPosBtn:SetSize(130, 22)
+        resetPosBtn:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+        resetPosBtn:SetBackdropColor(0.15, 0.15, 0.15, 0.9)
+        resetPosBtn:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+        local resetPosText = resetPosBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        resetPosText:SetPoint("CENTER")
+        resetPosText:SetText("Reset Position")
+        resetPosBtn:SetScript("OnClick", function()
+            local set = GetCurrentSet()
+            if set and DF.PinnedFrames then
+                local container = DF.PinnedFrames.containers[activeHighlightTab]
+                if container then
+                    -- Reset to screen center using CENTER anchor, then let layout convert
+                    container:ClearAllPoints()
+                    container:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+                    -- Save with the current growth anchor using the converted position
+                    set.position = { point = "CENTER", x = 0, y = 0 }
+                    -- Now apply layout which will convert CENTER to the growth anchor
+                    DF.PinnedFrames:ApplyLayoutSettings(activeHighlightTab)
+                end
+            end
+        end)
+        resetPosBtn:SetScript("OnEnter", function(self)
+            self:SetBackdropColor(0.25, 0.25, 0.25, 0.9)
+        end)
+        resetPosBtn:SetScript("OnLeave", function(self)
+            self:SetBackdropColor(0.15, 0.15, 0.15, 0.9)
+        end)
+        settingsGroup:AddWidget(resetPosBtn, 28)
+
         -- Label name input
         local nameInputContainer = CreateFrame("Frame", nil, self.child)
         nameInputContainer:SetSize(250, 44)
@@ -2283,10 +2315,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local directionOptions = { HORIZONTAL = "Horizontal", VERTICAL = "Vertical" }
         layoutGroup:AddWidget(CreateRefreshableDropdown(self.child, "Direction", directionOptions, "growDirection", UpdateHighlightLayout), 55)
         
-        local frameAnchorOptions = { START = "Start (Left/Top)", END = "End (Right/Bottom)" }
+        local frameAnchorOptions = { START = "Start (Left/Top)", CENTER = "Center", END = "End (Right/Bottom)" }
         layoutGroup:AddWidget(CreateRefreshableDropdown(self.child, "Frame Growth", frameAnchorOptions, "frameAnchor", UpdateHighlightLayout), 55)
-        
-        local columnAnchorOptions = { START = "Start (Left/Top)", END = "End (Right/Bottom)" }
+
+        local columnAnchorOptions = { START = "Start (Left/Top)", CENTER = "Center", END = "End (Right/Bottom)" }
         layoutGroup:AddWidget(CreateRefreshableDropdown(self.child, "Column Growth", columnAnchorOptions, "columnAnchor", UpdateHighlightLayout), 55)
         
         layoutGroup:AddWidget(CreateRefreshableSlider(self.child, "Units Per Row", 1, 10, 1, "unitsPerRow", UpdateHighlightLayout), 55)
