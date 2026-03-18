@@ -4796,7 +4796,7 @@ end
 -- HEADER VISIBILITY MANAGEMENT
 -- ============================================================
 
-function DF:UpdateHeaderVisibility()
+function DF:UpdateHeaderVisibility(skipRaidReposition)
     if InCombatLockdown() then
         -- Can't modify secure frames during combat - defer until PLAYER_REGEN_ENABLED
         -- State driver registration requires SetAttribute which is protected in combat
@@ -4900,7 +4900,7 @@ function DF:UpdateHeaderVisibility()
     -- RAID: Use raid headers (only when in raid, NOT arena)
     -- ============================================================
     if inRaid then
-        DF:UpdateRaidHeaderVisibility()
+        DF:UpdateRaidHeaderVisibility(skipRaidReposition)
     else
         -- Hide all raid headers (includes arena case)
         -- Also disable events on child frames (performance)
@@ -4977,7 +4977,7 @@ function DF:UpdateHeaderVisibility()
     end
 end
 
-function DF:UpdateRaidHeaderVisibility()
+function DF:UpdateRaidHeaderVisibility(skipReposition)
     if InCombatLockdown() then
         DF.pendingRaidHeaderVisibility = true
         return
@@ -5071,10 +5071,15 @@ function DF:UpdateRaidHeaderVisibility()
     DF._updatingRaidHeaderVisibility = nil
 
     -- Clear suppress flag and do a single authoritative reposition
+    -- Skip when called from ProcessRosterUpdate — sorting will follow and trigger
+    -- its own reposition with correct group counts. Firing here with stale counts
+    -- causes visible frame jumping.
     if DF.raidPositionHandler then
         DF.raidPositionHandler:SetAttribute("suppressreposition", 0)
     end
-    DF:TriggerRaidPosition()
+    if not skipReposition then
+        DF:TriggerRaidPosition()
+    end
 end
 
 -- Position raid group headers relative to each other within the container
@@ -7691,7 +7696,10 @@ function DF:ProcessRosterUpdate()
     
     -- Update visibility (handles raid<->party container switching)
     -- This is always needed as it's cheap and handles party<->raid switching
-    DF:UpdateHeaderVisibility()
+    -- Skip raid reposition here — sorting below will trigger its own authoritative
+    -- reposition with correct group counts. Firing here with stale counts causes
+    -- visible frame jumping.
+    DF:UpdateHeaderVisibility(true)
     
     -- Update player group tracking for "Player's Group First" feature (raid only, not arena)
     if IsInRaid() and not inArena and raidDb.raidPlayerGroupFirst then

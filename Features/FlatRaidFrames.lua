@@ -1014,8 +1014,18 @@ function FlatRaidFrames:SetEnabled(enabled)
     end
     
     local header = self.header
-    
+
     if enabled then
+        -- EARLY-RETURN: If already enabled and visible, skip the full setup.
+        -- ProcessRosterUpdate calls UpdateHeaderVisibility (which calls SetEnabled)
+        -- AND then ApplyRaidFlatSorting (which calls UpdateNameList). Without this
+        -- guard, the full Hide/Show + UpdateNameList runs twice per roster change,
+        -- causing visible frame jumping.
+        if header:IsShown() and self.innerContainer and self.innerContainer:IsShown() then
+            DebugPrint("SetEnabled(true): already visible, skipping full setup")
+            return
+        end
+
         -- CRITICAL: Hide separated headers (group-based layout) when enabling flat mode
         -- This prevents having two sets of frames visible
         if DF.raidSeparatedHeaders then
@@ -1029,7 +1039,7 @@ function FlatRaidFrames:SetEnabled(enabled)
                 end
             end
         end
-        
+
         -- 1. Apply layout attributes (skip 4-step refresh - UpdateNameList rebuilds below)
         self:ApplyLayoutSettings(true)
         
