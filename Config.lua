@@ -520,6 +520,36 @@ function DF:GetTextureNameFromPath(texturePath)
     return nil
 end
 
+-- ============================================================
+-- SHARED MEDIA: SOUNDS
+-- ============================================================
+
+function DF:GetSoundList()
+    -- Returns a table of soundName -> soundName for dropdown compatibility
+    local list = {}
+    local LSM = GetLSM()
+    if LSM then
+        local sounds = LSM:List(LSM.MediaType.SOUND)
+        for _, name in ipairs(sounds) do
+            list[name] = name
+        end
+    end
+    return list
+end
+
+function DF:GetSoundPath(soundName)
+    if not soundName then return nil end
+    -- If it looks like a path already, return it
+    if soundName:find("\\") or soundName:find("/") then
+        return soundName
+    end
+    local LSM = GetLSM()
+    if LSM then
+        return LSM:Fetch(LSM.MediaType.SOUND, soundName)
+    end
+    return nil
+end
+
 -- Get font path by name (for SharedMedia compatibility)
 function DF:GetFont(name)
     local LSM = GetLSM()
@@ -1863,6 +1893,7 @@ DF.PartyDefaults = {
         enabled = false,
         spec = "auto",
         previewScale = 1.0,
+        soundEnabled = true,
         defaults = {
             iconSize = 24,
             iconScale = 1.0,
@@ -3069,6 +3100,7 @@ DF.RaidDefaults = {
         enabled = false,
         spec = "auto",
         previewScale = 1.0,
+        soundEnabled = true,
         defaults = {
             iconSize = 24,
             iconScale = 1.0,
