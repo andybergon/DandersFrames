@@ -31,6 +31,7 @@ DF.AuraDesigner.Engine = Engine
 
 local Adapter   -- Set during init
 local Indicators -- Set during init (AuraDesigner/Indicators.lua)
+local SoundEngine -- Set during init (AuraDesigner/SoundEngine.lua)
 
 -- ============================================================
 -- GROUP GRID LAYOUT HELPER
@@ -239,6 +240,12 @@ function Engine:UpdateFrame(frame)
     end
     if not Indicators then
         Indicators = DF.AuraDesigner.Indicators
+    end
+    if not SoundEngine then
+        SoundEngine = DF.AuraDesigner.SoundEngine
+        if SoundEngine then
+            SoundEngine:Init()
+        end
     end
     if not Adapter or not Indicators then return end
 
@@ -672,6 +679,13 @@ function Engine:ClearFrame(frame)
     end
     if Indicators then
         Indicators:HideAll(frame)
+    end
+    -- Stop sound engine when AD is disabled
+    if not SoundEngine then
+        SoundEngine = DF.AuraDesigner.SoundEngine
+    end
+    if SoundEngine then
+        SoundEngine:StopAll()
     end
     -- Clear active instance IDs so buff bar dedup doesn't stale-filter
     if frame.dfAD_activeInstanceIDs then

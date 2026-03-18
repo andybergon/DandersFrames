@@ -80,6 +80,7 @@ AuraDesigner\LinkedAuras.lua
 AuraDesigner\AuraAdapter.lua
 AuraDesigner\Engine.lua
 AuraDesigner\Indicators.lua
+AuraDesigner\SoundEngine.lua
 AuraDesigner\Options.lua
 
 # Aura Blacklist
