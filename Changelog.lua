@@ -1,10 +1,57 @@
 local addonName, DF = ...
-DF.BUILD_DATE = "2026-03-14T00:10:25Z"
+DF.BUILD_DATE = "2026-03-17T16:40:21Z"
 DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
 
-## [4.0.17] - 2026-03-14
+## [4.1.3] - 2026-03-17
+
+### New Features
+* (Aura Designer) **Show When Missing** — per-indicator toggle that inverts visibility: shows the indicator when the aura is absent, hides when present. Supports all indicator types except bars. Icons support a "Desaturate When Missing" sub-option.
+* (Aura Designer) **Show When Missing + Expiring** — when both are enabled, the indicator stays hidden while the buff is active, appears during the expiring window, then shows with normal appearance once the buff drops off
+* (Auras) **Growth Direction Control** — replaced the single growth dropdown with a three-part control (Orientation, Wrap, Direction) for clearer configuration
+
+### Bug Fixes
+* (Auto Layouts) Fixed duplicate raid frames appearing when switching between flat and grouped layouts via auto profiles
+* (Auto Layouts) Fixed hidden groups reappearing after combat when using auto layout switching
+* (Auto Layouts) Fixed raid layout not updating after combat when settings changed mid-fight
+* (Auto Layouts) Fixed flat raid container resize being silently skipped if combat started within 100ms of layout switch
+* (Aura Designer) Fixed indicators appearing on disabled pinned frames
+* (Aura Designer) Fixed Show When Missing icons being overridden by out-of-range alpha restore
+* (Aura Designer) Fixed frame alpha becoming fully transparent when using Show When Missing with expiring alpha override
+* (Aura Designer) Fixed stale duration text ("1") persisting on missing-state icons
+* (Aura Designer) Fixed pulsate animation not stopping when transitioning from expiring to missing state
+* (Aura Designer) Fixed Show When Missing indicators not appearing in test mode
+* (Sorting) Fixed secret string taint in cross-realm name caching
+
+## [4.1.2] - 2026-03-16
+
+### New Features
+* (Health Text) **Hide % Symbol** — new checkbox to remove the percent sign from health percentage text
+* (Pinned Frames) **Growth direction anchoring** — Frame Growth and Column Growth now support Start, Center, and End options, controlling which edge stays fixed as frames are added (e.g. "Start" grows rightward/downward, "End" grows leftward/upward)
+* (Pinned Frames) **Reset Position button** — resets a pinned frame set to the center of the screen if it gets lost off-screen
+
+> **Note:** Pinned frame positions may have shifted slightly due to the new anchoring system. Use the Reset Position button or reposition frames if needed.
+
+### Bug Fixes
+* (Auras) Fixed buff/debuff borders staying visible even when disabled — operator precedence bug caused the buff border check to fire regardless of aura type
+* (Aura Designer) Fixed stack count text bleeding onto adjacent icons when auras reorder in a layout group
+* (Defensive Icons) Fixed 2nd+ defensive bar icons always showing tooltip and ignoring tooltip settings, anchor position, and click-through configuration
+* (Resource Bar) Fixed resource bar being 2px too wide when "Match Width" is enabled and a frame border is active
+* (Status Icons) Fixed leader icon not hiding in combat when "Hide in Combat" is enabled
+* (Pinned Frames) Fixed error when OnDragStop fires without a matching OnDragStart on pinned frame movers
+
+## [4.1.1] - 2026-03-15
+
+### Bug Fixes
+* (Position) Lowered permanent mover frame strata from HIGH to MEDIUM so it no longer covers other UI elements
+* (Defensive Icons) Fixed double-scaled positioning offsets causing defensive icons to stack vertically instead of horizontally
+* (Defensive Icons) Reduced raid frame defensive icon defaults (size 20, scale 1.0, max 3) to fit narrower raid frames
+* (Pinned Frames) Fixed aura designer indicators (borders, defensives, dispels) leaking onto disabled pinned frame sets
+* (Aura Designer) Fixed border indicator pandemic state using the regular border alpha instead of the configured expiring alpha
+* (Aura Designer) Declassified Beacon of Virtue as non-secret — spell ID 200025 is on Blizzard's whitelist and readable via standard API
+
+## [4.1.0] - 2026-03-14
 
 ### New Features
 * (Position) **Permanent Mover handle** — a small always-visible drag handle on frames for repositioning without unlocking, with customizable position, size, offset, colors, show-on-hover with fade animation, hide-in-combat option, and red combat indicator
@@ -23,7 +70,11 @@ DF.CHANGELOG_TEXT = [===[
 * (Aura Designer) **Settings grouped in containers** — all indicator settings panels and global defaults are now organized with bordered section containers
 * (Aura Designer) **Earthliving Weapon** added as a trackable Restoration Shaman aura
 * (Aura Designer) **Sense Power** added as a trackable Augmentation Evoker secret aura
+* (Aura Designer) **Ebon Might self-buff tracking** — Augmentation Evoker's caster self-buff (395296) is now tracked on the player via fingerprint disambiguation, with correct tooltip and buff bar dedup
+* (Aura Designer) **Symbiotic Relationship linked aura system** — Restoration Druid's caster buff is detected on the player and mirrored as an indicator onto the target's frame, with OOC target resolution, tooltip-based fallback, recast detection, and buff bar dedup
+* (Aura Designer) **Ancestral Vigor** added as a trackable Restoration Shaman aura
 * (Aura Blacklist) **Expanded blacklist coverage** — added Rogue poisons, Shaman weapon imbuements, Blessing of the Bronze (all class variants), Paladin rites, Mage Icicles, Hunter Tip of the Spear, and Shaman Reincarnation
+* (Debug) **Script Runner** — multiline Lua script input in the debug console with persistent text across sessions
 
 ### Bug Fixes
 * (Position) Fixed nudge buttons causing the blue drag area to vanish

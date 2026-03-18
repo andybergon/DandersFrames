@@ -1064,9 +1064,14 @@ function FlatRaidFrames:SetEnabled(enabled)
         
         -- 7. Delayed resize to ensure proper positioning after frames become visible
         -- SecureGroupHeaderTemplate may not immediately show children after nameList update
+        -- If combat starts before the timer fires, queue for PLAYER_REGEN_ENABLED
         C_Timer.After(0.1, function()
-            if self.header and self.header:IsShown() and not InCombatLockdown() then
-                self:ResizeInnerContainer()
+            if self.header and self.header:IsShown() then
+                if not InCombatLockdown() then
+                    self:ResizeInnerContainer()
+                else
+                    self.pendingResize = true
+                end
             end
         end)
     else
@@ -1076,6 +1081,18 @@ function FlatRaidFrames:SetEnabled(enabled)
         end
         if DF.SetHeaderChildrenEventsEnabled then
             DF:SetHeaderChildrenEventsEnabled(header, false)
+        end
+
+        -- When flat frames are disabled and grouped mode is active, ensure
+        -- separated headers are visible. This handles the deferred-from-combat
+        -- case where the original "show separated" call ran while flat was
+        -- still visible. Guard on raidUseGroups to prevent infinite loop
+        -- (when raidUseGroups=false, UpdateRaidHeaderVisibility would call
+        -- SetEnabled(true), but we only call it when raidUseGroups=true).
+        local db = GetRaidDB()
+        if db and db.raidUseGroups and DF.UpdateRaidHeaderVisibility
+                and IsInRaid() and not InCombatLockdown() then
+            DF:UpdateRaidHeaderVisibility()
         end
     end
 end
@@ -1225,6 +1242,13 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         if FlatRaidFrames.pendingVisibility ~= nil then
             FlatRaidFrames:SetEnabled(FlatRaidFrames.pendingVisibility)
             FlatRaidFrames.pendingVisibility = nil
+        end
+
+        if FlatRaidFrames.pendingResize then
+            FlatRaidFrames.pendingResize = false
+            if FlatRaidFrames.header and FlatRaidFrames.header:IsShown() then
+                FlatRaidFrames:ResizeInnerContainer()
+            end
         end
         return
     end

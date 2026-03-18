@@ -4944,7 +4944,10 @@ function DF:UpdateHeaderVisibility()
 end
 
 function DF:UpdateRaidHeaderVisibility()
-    if InCombatLockdown() then return end
+    if InCombatLockdown() then
+        DF.pendingRaidHeaderVisibility = true
+        return
+    end
     
     -- Don't show live frames while in test mode
     if DF.testMode or DF.raidTestMode then
@@ -5363,6 +5366,8 @@ headerCombatFrame:SetScript("OnEvent", function()
     
     if DF.pendingVisibilityUpdate then
         DF.pendingVisibilityUpdate = nil
+        DF.pendingRaidHeaderVisibility = nil  -- Subsumed by full visibility update
+        DF.pendingRaidVisibilityUpdate = nil  -- Subsumed by full visibility update
         -- Register deferred state drivers if needed (was blocked during combat)
         if DF.pendingStateDrivers then
             DF.pendingStateDrivers = nil
@@ -5372,7 +5377,25 @@ headerCombatFrame:SetScript("OnEvent", function()
         end
         DF:UpdateHeaderVisibility()
     end
-    
+
+    -- Process deferred raid header visibility (flat ↔ grouped switch)
+    -- Only fires if pendingVisibilityUpdate didn't already handle it above
+    if DF.pendingRaidHeaderVisibility then
+        DF.pendingRaidHeaderVisibility = nil
+        DF:UpdateRaidHeaderVisibility()
+    end
+
+    -- Process orphan pendingRaidVisibilityUpdate (set by UpdateLiveRaidFrames
+    -- in Init.lua when called during combat — previously never consumed)
+    if DF.pendingRaidVisibilityUpdate then
+        DF.pendingRaidVisibilityUpdate = nil
+        -- Replay what UpdateLiveRaidFrames does: show raidContainer + sync headers
+        if IsInRaid() and DF.raidContainer then
+            DF.raidContainer:Show()
+        end
+        DF:UpdateRaidHeaderVisibility()
+    end
+
     local raidDb = DF:GetRaidDB()
     local isFlatRaid = IsInRaid() and not raidDb.raidUseGroups
     

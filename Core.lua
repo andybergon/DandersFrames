@@ -4596,6 +4596,16 @@ function DF:UpdateAll()
         if DF.UpdateRaidLayout then
             DF:UpdateRaidLayout()
         end
+    elseif IsInRaid() and not (DF.IsInArena and DF:IsInArena()) then
+        -- In a live raid: update raid layout AND header visibility
+        -- (UpdateHeaderVisibility may also fire from Headers.lua's REGEN handler
+        -- via pendingVisibilityUpdate — that's harmless, the call is idempotent)
+        if DF.UpdateRaidLayout then
+            DF:UpdateRaidLayout()
+        end
+        if DF.UpdateHeaderVisibility then
+            DF:UpdateHeaderVisibility()
+        end
     else
         -- Default: update party frames
         if DF.UpdateAllFrames then
@@ -4752,7 +4762,10 @@ function DF:FullProfileRefresh()
     -- === REFRESH FLATRAIDFRAMES IF ACTIVE ===
     if DF.FlatRaidFrames then
         if DF.FlatRaidFrames.initialized then
-            DF.FlatRaidFrames:ApplyLayoutSettings()
+            local raidDb = DF:GetRaidDB()
+            if not raidDb.raidUseGroups then
+                DF.FlatRaidFrames:ApplyLayoutSettings()
+            end
         end
     end
     
@@ -4767,9 +4780,13 @@ function DF:FullProfileRefresh()
         end
     end
     
-    -- Update live raid frames if we're in a raid (but NOT arena - arena uses partyContainer)
-    if IsInRaid() and not DF:IsInArena() and DF.UpdateLiveRaidFrames then
-        DF:UpdateLiveRaidFrames()
+    -- === SYNC HEADER VISIBILITY ===
+    -- Replaces the previous UpdateLiveRaidFrames call. Auto profiles may change
+    -- raidUseGroups, which requires toggling between flat and grouped headers.
+    -- UpdateHeaderVisibility handles the full party/raid/arena visibility matrix
+    -- and calls UpdateRaidHeaderVisibility internally.
+    if DF.UpdateHeaderVisibility then
+        DF:UpdateHeaderVisibility()
     end
     
     -- === UPDATE TEST FRAMES IF ACTIVE ===
