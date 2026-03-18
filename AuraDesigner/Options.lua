@@ -2715,8 +2715,8 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
         -- Trigger Settings
         AddGroup("Trigger", function(g)
             local triggerModeOptions = {
-                ANY_MISSING = "Any Unit Missing",
-                ALL_MISSING = "All Units Missing",
+                ANY_MISSING = "Alert if anyone is missing the buff",
+                ALL_MISSING = "Alert only if nobody has the buff",
             }
             g:AddWidget(GUI:CreateDropdown(parent, "Trigger Mode", triggerModeOptions, proxy, "triggerMode"), 54)
 
