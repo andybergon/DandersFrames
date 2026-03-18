@@ -800,9 +800,10 @@ function DF:UpdateUnitFrame(frame, source)
                 local deficit = UnitHealthMissing(unit, true)
                 if deficit then
                     if C_StringUtil and C_StringUtil.TruncateWhenZero and C_StringUtil.WrapString then
-                        local truncated = C_StringUtil.TruncateWhenZero(deficit)
-                        local result = C_StringUtil.WrapString(truncated, "-")
-                        frame.healthText:SetText(result)
+                        frame.healthText:SetText(C_StringUtil.WrapString(C_StringUtil.TruncateWhenZero(deficit), "-"))
+                        if db.healthTextAbbreviate and AbbreviateNumbers and frame.healthText:GetText() then
+                            frame.healthText:SetFormattedText("-%s", AbbreviateNumbers(deficit))
+                        end
                     elseif db.healthTextAbbreviate and AbbreviateNumbers then
                         frame.healthText:SetFormattedText("-%s", AbbreviateNumbers(deficit))
                     else
@@ -1063,9 +1064,10 @@ function DF:UpdateHealthFast(frame)
                 local deficit = UnitHealthMissing(unit, true)
                 if deficit then
                     if C_StringUtil and C_StringUtil.TruncateWhenZero and C_StringUtil.WrapString then
-                        local truncated = C_StringUtil.TruncateWhenZero(deficit)
-                        local result = C_StringUtil.WrapString(truncated, "-")
-                        frame.healthText:SetText(result)
+                        frame.healthText:SetText(C_StringUtil.WrapString(C_StringUtil.TruncateWhenZero(deficit), "-"))
+                        if db.healthTextAbbreviate and AbbreviateNumbers and frame.healthText:GetText() then
+                            frame.healthText:SetFormattedText("-%s", AbbreviateNumbers(deficit))
+                        end
                     elseif db.healthTextAbbreviate and AbbreviateNumbers then
                         frame.healthText:SetFormattedText("-%s", AbbreviateNumbers(deficit))
                     else
@@ -1281,14 +1283,17 @@ function DF:UpdateHealth(frame)
         elseif format == "DEFICIT" then
             local miss = UnitHealthMissing(unit, true)
             
-            if C_StringUtil and C_StringUtil.TruncateWhenZero and C_StringUtil.WrapString then
-                local truncated = C_StringUtil.TruncateWhenZero(miss)
-                local result = C_StringUtil.WrapString(truncated, "-")
-                frame.healthText:SetText(result)
-            elseif db.healthTextAbbreviate then
-                frame.healthText:SetFormattedText("-%s", FormatValue(miss))
-            else
-                frame.healthText:SetFormattedText("-%s", miss)
+            if miss then
+                if C_StringUtil and C_StringUtil.TruncateWhenZero and C_StringUtil.WrapString then
+                    frame.healthText:SetText(C_StringUtil.WrapString(C_StringUtil.TruncateWhenZero(miss), "-"))
+                    if db.healthTextAbbreviate and frame.healthText:GetText() then
+                        frame.healthText:SetFormattedText("-%s", FormatValue(miss))
+                    end
+                elseif db.healthTextAbbreviate then
+                    frame.healthText:SetFormattedText("-%s", FormatValue(miss))
+                else
+                    frame.healthText:SetFormattedText("-%s", miss)
+                end
             end
         elseif format == "CURRENT" then
             local curr = UnitHealth(unit, true)
