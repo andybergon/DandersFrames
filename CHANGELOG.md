@@ -6,6 +6,7 @@
 * (Aura Designer) **Show When Missing** — per-indicator toggle that inverts visibility: shows the indicator when the aura is absent, hides when present. Supports all indicator types except bars. Icons support a "Desaturate When Missing" sub-option.
 * (Aura Designer) **Show When Missing + Expiring** — when both are enabled, the indicator stays hidden while the buff is active, appears during the expiring window, then shows with normal appearance once the buff drops off
 * (Auras) **Growth Direction Control** — replaced the single growth dropdown with a three-part control (Orientation, Wrap, Direction) for clearer configuration
+* (Aura Designer) **Sound Alerts** — per-indicator sound alerts that play when an aura appears, expires, or is missing. Supports all LibSharedMedia sounds, adjustable volume, loop/one-shot modes, and a global "Mute All Sound Alerts" toggle in the Aura Designer banner. Includes a searchable sound dropdown picker.
 
 ### Bug Fixes
 * (Auto Layouts) Fixed duplicate raid frames appearing when switching between flat and grouped layouts via auto profiles
@@ -20,6 +21,8 @@
 * (Aura Designer) Fixed pulsate animation not stopping when transitioning from expiring to missing state
 * (Aura Designer) Fixed Show When Missing indicators not appearing in test mode
 * (Sorting) Fixed secret string taint in cross-realm name caching
+* (Raid Frames) Fixed stack overflow when UpdateRaidHeaderVisibility and FlatRaidFrames.SetEnabled called each other in an infinite loop during profile switches
+* (Aura Designer) Fixed secret value taint error when expiring color interpolation returned restricted values — arithmetic on tainted `.r`/`.g`/`.b` fields now safely detected via `issecretvalue`
 
 ## [4.1.2] - 2026-03-16
 
