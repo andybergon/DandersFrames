@@ -2774,6 +2774,216 @@ function GUI:CreateFontDropdown(parent, label, dbTable, dbKey, callback)
 end
 
 -- ============================================================
+-- SOUND DROPDOWN (Searchable, scrollable — mirrors font dropdown)
+-- ============================================================
+
+function GUI:CreateSoundDropdown(parent, label, dbTable, dbKey, callback)
+    local container = CreateFrame("Frame", nil, parent)
+    container:SetSize(260, 50)
+
+    -- Label
+    local lbl = container:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    lbl:SetPoint("TOPLEFT", 0, 0)
+    lbl:SetText(label)
+    lbl:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+
+    -- Button
+    local btn = CreateFrame("Button", nil, container, "BackdropTemplate")
+    btn:SetPoint("TOPLEFT", 0, -16)
+    btn:SetPoint("TOPRIGHT", 0, -16)
+    btn:SetHeight(24)
+    CreateElementBackdrop(btn)
+
+    btn.Text = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    btn.Text:SetPoint("LEFT", 8, 0)
+    btn.Text:SetPoint("RIGHT", -20, 0)
+    btn.Text:SetJustifyH("LEFT")
+    btn.Text:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+
+    -- Arrow indicator
+    local arrow = btn:CreateTexture(nil, "OVERLAY")
+    arrow:SetPoint("RIGHT", -8, 0)
+    arrow:SetSize(12, 12)
+    arrow:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\expand_more")
+    arrow:SetVertexColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
+
+    local function UpdateText()
+        if dbTable and dbKey then
+            local val = dbTable[dbKey]
+            btn.Text:SetText(val or "Select...")
+        end
+    end
+
+    -- Menu frame with scroll
+    local menuFrame = CreateFrame("Frame", nil, btn, "BackdropTemplate")
+    menuFrame:SetPoint("TOPLEFT", btn, "BOTTOMLEFT", 0, -2)
+    menuFrame:SetFrameStrata("FULLSCREEN_DIALOG")
+    menuFrame:SetClampedToScreen(true)
+    CreateElementBackdrop(menuFrame)
+    menuFrame:SetBackdropColor(C_PANEL.r, C_PANEL.g, C_PANEL.b, 0.98)
+    menuFrame:Hide()
+
+    -- Search box at top of menu
+    local SEARCH_HEIGHT = 26
+    local searchBox = CreateFrame("EditBox", nil, menuFrame, "BackdropTemplate")
+    searchBox:SetPoint("TOPLEFT", 4, -4)
+    searchBox:SetPoint("TOPRIGHT", -4, -4)
+    searchBox:SetHeight(22)
+    searchBox:SetAutoFocus(false)
+    searchBox:SetFontObject(GameFontHighlightSmall)
+    searchBox:SetTextInsets(24, 8, 0, 0)
+    CreateElementBackdrop(searchBox)
+    searchBox:SetBackdropColor(0.1, 0.1, 0.1, 1)
+
+    -- Search icon
+    local searchIcon = searchBox:CreateTexture(nil, "OVERLAY")
+    searchIcon:SetPoint("LEFT", 6, 0)
+    searchIcon:SetSize(12, 12)
+    searchIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\search")
+    searchIcon:SetVertexColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
+
+    -- Placeholder text
+    local searchPlaceholder = searchBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    searchPlaceholder:SetPoint("LEFT", 24, 0)
+    searchPlaceholder:SetText("Search sounds...")
+    searchPlaceholder:SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b, 0.6)
+
+    searchBox:SetScript("OnEditFocusGained", function() searchPlaceholder:Hide() end)
+    searchBox:SetScript("OnEditFocusLost", function()
+        if searchBox:GetText() == "" then searchPlaceholder:Show() end
+    end)
+
+    menuFrame:SetScript("OnHide", function()
+        if currentOpenDropdown == menuFrame then
+            currentOpenDropdown = nil
+        end
+        searchBox:SetText("")
+        searchBox:ClearFocus()
+        searchPlaceholder:Show()
+    end)
+
+    -- Scroll frame
+    local scrollFrame = CreateFrame("ScrollFrame", nil, menuFrame, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", 2, -(SEARCH_HEIGHT + 4))
+    scrollFrame:SetPoint("BOTTOMRIGHT", -20, 2)
+
+    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+    scrollChild:SetWidth(234)
+    scrollFrame:SetScrollChild(scrollChild)
+
+    local scrollBar = scrollFrame.ScrollBar
+    if scrollBar then
+        scrollBar:SetPoint("TOPLEFT", scrollFrame, "TOPRIGHT", -16, -16)
+        scrollBar:SetPoint("BOTTOMLEFT", scrollFrame, "BOTTOMRIGHT", -16, 16)
+    end
+
+    local menuButtons = {}
+    local ITEM_HEIGHT = 22
+    local MAX_VISIBLE = 10
+
+    local function RebuildMenu(filterText)
+        for _, menuBtn in ipairs(menuButtons) do
+            menuBtn:Hide()
+            menuBtn:SetParent(nil)
+        end
+        wipe(menuButtons)
+
+        local options = DF:GetSoundList()
+        local sortedOptions = {}
+
+        filterText = filterText and filterText:lower() or ""
+
+        for k, v in pairs(options) do
+            if filterText == "" or v:lower():find(filterText, 1, true) then
+                table.insert(sortedOptions, {key = k, value = v})
+            end
+        end
+        table.sort(sortedOptions, function(a, b) return a.value < b.value end)
+
+        local menuHeight = math.min(#sortedOptions, MAX_VISIBLE) * ITEM_HEIGHT + SEARCH_HEIGHT + 8
+        menuFrame:SetPoint("TOPRIGHT", btn, "BOTTOMRIGHT", 0, -2)
+        menuFrame:SetHeight(menuHeight)
+        scrollChild:SetHeight(#sortedOptions * ITEM_HEIGHT)
+
+        if scrollBar then
+            if #sortedOptions <= MAX_VISIBLE then
+                scrollBar:Hide()
+            else
+                scrollBar:Show()
+            end
+        end
+
+        for i, opt in ipairs(sortedOptions) do
+            local menuBtn = CreateFrame("Button", nil, scrollChild)
+            menuBtn:SetSize(234, ITEM_HEIGHT)
+            menuBtn:SetPoint("TOPLEFT", 0, -(i - 1) * ITEM_HEIGHT)
+
+            menuBtn.Text = menuBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            menuBtn.Text:SetPoint("LEFT", 8, 0)
+            menuBtn.Text:SetPoint("RIGHT", -8, 0)
+            menuBtn.Text:SetJustifyH("LEFT")
+            menuBtn.Text:SetText(opt.value)
+
+            -- Highlight selected item
+            local currentValue = dbTable[dbKey]
+            if currentValue == opt.key then
+                menuBtn.Text:SetTextColor(GetThemeColor().r, GetThemeColor().g, GetThemeColor().b)
+            else
+                menuBtn.Text:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+            end
+
+            menuBtn.Highlight = menuBtn:CreateTexture(nil, "HIGHLIGHT")
+            menuBtn.Highlight:SetAllPoints()
+            local c = GetThemeColor()
+            menuBtn.Highlight:SetColorTexture(c.r, c.g, c.b, 0.3)
+
+            menuBtn:SetScript("OnClick", function()
+                dbTable[dbKey] = opt.key
+                UpdateText()
+                menuFrame:Hide()
+                DF:UpdateAll()
+                if callback then callback() end
+            end)
+
+            table.insert(menuButtons, menuBtn)
+        end
+    end
+
+    searchBox:SetScript("OnTextChanged", function(self)
+        RebuildMenu(self:GetText())
+    end)
+
+    searchBox:SetScript("OnEscapePressed", function()
+        menuFrame:Hide()
+    end)
+
+    btn:SetScript("OnEnter", function(self)
+        self:SetBackdropColor(C_HOVER.r, C_HOVER.g, C_HOVER.b, 1)
+    end)
+    btn:SetScript("OnLeave", function(self)
+        self:SetBackdropColor(C_ELEMENT.r, C_ELEMENT.g, C_ELEMENT.b, 1)
+    end)
+
+    btn:SetScript("OnClick", function(self)
+        if menuFrame:IsShown() then
+            menuFrame:Hide()
+            currentOpenDropdown = nil
+        else
+            CloseOpenDropdown()
+            RebuildMenu()
+            menuFrame:Show()
+            currentOpenDropdown = menuFrame
+            searchBox:SetFocus()
+        end
+    end)
+
+    btn:SetScript("OnShow", UpdateText)
+    UpdateText()
+
+    return container
+end
+
+-- ============================================================
 -- ROLE ORDER LIST (Drag-Drop)
 -- ============================================================
 

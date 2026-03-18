@@ -2686,9 +2686,8 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
                 end
             end), 28)
 
-            -- Sound picker (LSM dropdown) — uses hash table { name = name } format
-            local soundOptions = DF:GetSoundList()
-            g:AddWidget(GUI:CreateDropdown(parent, "Sound", soundOptions, proxy, "soundLSMKey", function()
+            -- Sound picker (searchable scrollable dropdown)
+            g:AddWidget(GUI:CreateSoundDropdown(parent, "Sound", proxy, "soundLSMKey", function()
                 -- Update soundFile path when LSM key changes
                 local path = DF:GetSoundPath(proxy.soundLSMKey)
                 if path then
