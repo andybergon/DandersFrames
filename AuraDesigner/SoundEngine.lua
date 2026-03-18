@@ -259,11 +259,20 @@ function SoundEngine:RunEvaluation()
     end
 
     -- Iterate visible frames for the active mode
-    local header = (mode == "raid") and DF.raidHeader or DF.partyHeader
-    if not header then return end
+    local frames
+    if mode == "raid" then
+        frames = DF:GetAllRaidFrames()
+    else
+        frames = {}
+        if DF.partyHeader then
+            local children = { DF.partyHeader:GetChildren() }
+            for _, child in ipairs(children) do
+                frames[#frames + 1] = child
+            end
+        end
+    end
 
-    local children = { header:GetChildren() }
-    for _, frame in ipairs(children) do
+    for _, frame in ipairs(frames) do
         if frame:IsVisible() and frame.unit and UnitExists(frame.unit) then
             -- Skip dead/disconnected units
             if UnitIsConnected(frame.unit) and not UnitIsDeadOrGhost(frame.unit) then

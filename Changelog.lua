@@ -1,5 +1,5 @@
 local addonName, DF = ...
-DF.BUILD_DATE = "2026-03-18T10:21:47Z"
+DF.BUILD_DATE = "2026-03-18T12:37:23Z"
 DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
@@ -13,6 +13,11 @@ DF.CHANGELOG_TEXT = [===[
 * (Aura Designer) **Sound Alerts** — per-indicator sound alerts that play when an aura appears, expires, or is missing. Supports all LibSharedMedia sounds, adjustable volume, loop/one-shot modes, and a global "Mute All Sound Alerts" toggle in the Aura Designer banner. Includes a searchable sound dropdown picker.
 
 ### Bug Fixes
+* (Flat Raid Frames) Fixed frames jumping on roster changes — FlatRaidFrames handled GROUP_ROSTER_UPDATE directly AND via the throttled ProcessRosterUpdate, causing a double Hide/Show cycle on every join/leave
+* (Raid Frames) Fixed redundant double-reposition in grouped raid mode when roster changes — ApplyRaidGroupSorting already triggers positioning internally
+* (Flat Raid Frames) Fixed flat raid frames flickering between party and raid settings — child frames now have their `isRaidFrame` flag synced when the flat layout enables or refreshes
+* (Position) Fixed permanent mover handles for both party and raid staying visible after switching group type — mover visibility now re-evaluates during party/raid transitions
+* (Sound Alerts) Fixed sound engine failing to find raid frames when using flat layout — now uses GetAllRaidFrames() instead of non-existent raidHeader
 * (Auto Layouts) Fixed duplicate raid frames appearing when switching between flat and grouped layouts via auto profiles
 * (Auto Layouts) Fixed hidden groups reappearing after combat when using auto layout switching
 * (Auto Layouts) Fixed raid layout not updating after combat when settings changed mid-fight

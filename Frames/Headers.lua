@@ -4968,6 +4968,12 @@ function DF:UpdateHeaderVisibility()
     if DF.RefreshClassPower then
         DF:RefreshClassPower()
     end
+
+    -- Sync permanent mover visibility with the active frame set
+    -- Without this, both party and raid movers stay visible after a party<->raid transition
+    if DF.UpdatePermanentMoverVisibility then
+        DF:UpdatePermanentMoverVisibility()
+    end
 end
 
 function DF:UpdateRaidHeaderVisibility()
@@ -7736,11 +7742,10 @@ function DF:ProcessRosterUpdate()
             DF:ApplyRaidFlatSorting()
         end
         
-        -- Update position handler for group layout changes
-        if DF.raidPositionHandler and DF.raidSeparatedHeaders then
-            DF:TriggerRaidPosition()
-        end
-        
+        -- NOTE: TriggerRaidPosition is NOT called here because ApplyRaidGroupSorting()
+        -- already triggers it via UpdateRaidPositionAttributes(). Calling it again caused
+        -- a double-reposition that made frames visually jump on roster changes.
+
         -- Update group labels (quick operation, safe anytime)
         if DF.UpdateRaidGroupLabels then
             C_Timer.After(0.1, function()

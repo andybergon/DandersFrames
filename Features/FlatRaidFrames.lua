@@ -682,11 +682,13 @@ function FlatRaidFrames:ApplyLayoutSettings(skipRefresh)
         header:SetAttribute("groupBy", nil)
         header:SetAttribute("nameList", "")
         
-        -- Step 2: Clear all child positions
+        -- Step 2: Clear all child positions and sync isRaidFrame flag
+        local isRaid = IsInRaid()
         for i = 1, 40 do
             local child = header:GetAttribute("child" .. i)
             if child then
                 child:ClearAllPoints()
+                child.isRaidFrame = isRaid
             end
         end
         
@@ -1031,14 +1033,16 @@ function FlatRaidFrames:SetEnabled(enabled)
         -- 1. Apply layout attributes (skip 4-step refresh - UpdateNameList rebuilds below)
         self:ApplyLayoutSettings(true)
         
-        -- 2. Ensure child frame sizes are correct BEFORE refresh
+        -- 2. Ensure child frame sizes and isRaidFrame flag are correct BEFORE refresh
         local db = GetRaidDB()
         local frameWidth = db and db.frameWidth or 80
         local frameHeight = db and db.frameHeight or 40
+        local isRaid = IsInRaid()
         for i = 1, 40 do
             local child = header:GetAttribute("child" .. i)
             if child then
                 child:SetSize(frameWidth, frameHeight)
+                child.isRaidFrame = isRaid
             end
         end
         
@@ -1165,10 +1169,12 @@ end
 
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
-eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-eventFrame:RegisterEvent("ROLE_CHANGED_INFORM")
-eventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+-- NOTE: GROUP_ROSTER_UPDATE, ROLE_CHANGED_INFORM, and PLAYER_SPECIALIZATION_CHANGED
+-- are NOT registered here. Roster changes are handled by ProcessRosterUpdate() in Headers.lua
+-- which calls ApplyRaidFlatSorting() -> UpdateNameList(). Handling them here too caused
+-- a double-update: once immediately from this handler, and once on the next frame from
+-- the throttled ProcessRosterUpdate, making frames visibly jump on every roster change.
 
 eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     -- ============================================================
@@ -1253,15 +1259,6 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         return
     end
     
-    -- ============================================================
-    -- GROUP_ROSTER_UPDATE, ROLE_CHANGED_INFORM, PLAYER_SPECIALIZATION_CHANGED
-    -- ============================================================
-    if not DF.db or not FlatRaidFrames.initialized then
-        return
-    end
-    if not ShouldBeActive() then return end
-    
-    FlatRaidFrames:UpdateNameList()
 end)
 
 -- ============================================================
