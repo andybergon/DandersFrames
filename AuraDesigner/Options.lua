@@ -2675,6 +2675,65 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
             if dpRow then g:AddWidget(dpRow, dpH) end end
             g:AddWidget(GUI:CreateSlider(parent, "Expiring Alpha", 0, 1, 0.05, proxy, "expiringAlpha"), 54)
         end)
+
+    elseif typeKey == "sound" then
+        -- Enable checkbox
+        AddGroup("Sound Alert", function(g)
+            g:AddWidget(GUI:CreateCheckbox(parent, "Enable Sound Alert", proxy, "enabled", function()
+                -- Stop sound immediately when disabled
+                if not proxy.enabled and DF.AuraDesigner.SoundEngine then
+                    DF.AuraDesigner.SoundEngine:StopAura(auraName)
+                end
+            end), 28)
+
+            -- Sound picker (LSM dropdown) — uses hash table { name = name } format
+            local soundOptions = DF:GetSoundList()
+            g:AddWidget(GUI:CreateDropdown(parent, "Sound", soundOptions, proxy, "soundLSMKey", function()
+                -- Update soundFile path when LSM key changes
+                local path = DF:GetSoundPath(proxy.soundLSMKey)
+                if path then
+                    proxy.soundFile = path
+                end
+            end), 54)
+
+            -- Custom file path (overrides LSM selection)
+            g:AddWidget(GUI:CreateTextInput(parent, "Custom Sound Path", proxy, "soundFile", nil, 280), 36)
+
+            -- Preview button
+            local previewBtn = GUI:CreateButton(parent, "Preview Sound", function()
+                local soundFile = DF:GetSoundPath(proxy.soundLSMKey) or proxy.soundFile
+                local volume = proxy.volume or 0.8
+                if soundFile and DF.AuraDesigner.SoundEngine then
+                    DF.AuraDesigner.SoundEngine:PlayWithVolume(soundFile, volume)
+                end
+            end)
+            g:AddWidget(previewBtn, 28)
+
+            -- Volume slider
+            g:AddWidget(GUI:CreateSlider(parent, "Volume", 0, 1, 0.05, proxy, "volume"), 54)
+        end)
+
+        -- Trigger Settings
+        AddGroup("Trigger", function(g)
+            local triggerModeOptions = {
+                ANY_MISSING = "Any Unit Missing",
+                ALL_MISSING = "All Units Missing",
+            }
+            g:AddWidget(GUI:CreateDropdown(parent, "Trigger Mode", triggerModeOptions, proxy, "triggerMode"), 54)
+
+            local combatModeOptions = {
+                ALWAYS         = "Always",
+                IN_COMBAT      = "In Combat Only",
+                OUT_OF_COMBAT  = "Out of Combat Only",
+            }
+            g:AddWidget(GUI:CreateDropdown(parent, "Combat Mode", combatModeOptions, proxy, "combatMode"), 54)
+        end)
+
+        -- Timing
+        AddGroup("Timing", function(g)
+            g:AddWidget(GUI:CreateSlider(parent, "Start Delay (sec)", 0, 10, 0.5, proxy, "startDelay"), 54)
+            g:AddWidget(GUI:CreateSlider(parent, "Loop Interval (sec)", 1, 30, 0.5, proxy, "loopInterval"), 54)
+        end)
     end
 
     totalHeight = totalHeight + 8  -- bottom padding
