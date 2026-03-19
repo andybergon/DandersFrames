@@ -18,8 +18,24 @@ DandersFrames = DF
 -- ============================================================
 local rosterThrottleFrame = CreateFrame("Frame")
 rosterThrottleFrame:Hide()
+
+-- Roster settling: when loading into an instance (LFR, BG), GROUP_ROSTER_UPDATE
+-- fires across many frames as 10-40 players appear one by one. Without settling,
+-- each frame triggers a full sort + reposition cycle = visible frame jumping.
+-- The settling timer resets on every new GRU, so we only fire ProcessRosterUpdate
+-- once the burst stops (no new GRU for ROSTER_SETTLE_SECONDS).
+local ROSTER_SETTLE_SECONDS = 0.3
+local rosterSettleTimer = nil
+local rosterSettling = false
+
 rosterThrottleFrame:SetScript("OnUpdate", function(self)
     self:Hide()
+
+    -- During settling, don't process yet — the settle timer will handle it
+    if rosterSettling then
+        return
+    end
+
     if not InCombatLockdown() then
         DF:ProcessRosterUpdate()
     else
@@ -43,6 +59,38 @@ rosterThrottleFrame:SetScript("OnUpdate", function(self)
 end)
 
 local function QueueRosterUpdate()
+    -- If we recently entered a world (PEW set this flag), use settling mode
+    -- to batch the rapid GRU burst into a single ProcessRosterUpdate call.
+    if DF._rosterSettleMode then
+        rosterSettling = true
+        -- Cancel previous settle timer (resets the window)
+        if rosterSettleTimer then
+            rosterSettleTimer:Cancel()
+        end
+        rosterSettleTimer = C_Timer.NewTimer(ROSTER_SETTLE_SECONDS, function()
+            rosterSettling = false
+            rosterSettleTimer = nil
+            DF._rosterSettleMode = nil
+            DF:Debug("ROSTER", "Settle timer fired — processing roster update")
+            if not InCombatLockdown() then
+                DF:ProcessRosterUpdate()
+            else
+                local contentType = DF.GetContentType and DF:GetContentType()
+                if contentType == "arena" then
+                    DF.pendingSortingUpdate = true
+                else
+                    local raidDb = DF:GetRaidDB()
+                    if IsInRaid() and not raidDb.raidUseGroups then
+                        DF.pendingFlatLayoutRefresh = true
+                    else
+                        DF.pendingHeaderSettingsApply = true
+                    end
+                end
+            end
+        end)
+        return
+    end
+
     rosterThrottleFrame:Show()  -- Showing already-shown frame = no-op
 end
 
@@ -7523,7 +7571,18 @@ headerEventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
         -- visible because ApplyHeaderSettings doesn't call UpdateHeaderVisibility.
         -- The addon relied on GROUP_ROSTER_UPDATE (queued to next frame) to fix this,
         -- but that creates a race with combat start at arena gates.
-        DF:UpdateHeaderVisibility()
+        --
+        -- LFR/BG FIX: When entering an instance, the roster is still populating.
+        -- Skip the immediate reposition — let the settling GRU handler fire the
+        -- authoritative reposition once the roster stabilises. Without this, PEW
+        -- repositions with 3-of-25 members, then GRU repositions again, causing
+        -- visible frame jumping on every instance load.
+        local isInstanceEntry = IsInRaid() or (IsInGroup() and IsInInstance())
+        if isInstanceEntry then
+            DF._rosterSettleMode = true
+            DF:Debug("ROSTER", "PEW: enabling roster settle mode for instance entry")
+        end
+        DF:UpdateHeaderVisibility(isInstanceEntry)  -- skip reposition when entering instances
         
         -- ARENA DEBUG: Log what UpdateHeaderVisibility decided
         
@@ -7709,13 +7768,25 @@ function DF:ProcessRosterUpdate()
             -- (e.g., after PLAYER_ENTERING_WORLD wiped it and OnAttributeChanged
             -- didn't fire because unit assignments are the same). Rebuild it.
             DF:RebuildUnitFrameMap()
+            -- Clear suppressreposition that was set by UpdateHeaderVisibility(true) above.
+            -- Without this, suppress leaks and blocks all future grouped-mode repositioning
+            -- if the user later switches from flat to grouped layout.
+            if DF.raidPositionHandler then
+                DF.raidPositionHandler:SetAttribute("suppressreposition", 0)
+            end
             return
         end
-        
+
         -- Always call flat raid sorting - it handles sortEnabled=false internally
         -- This ensures stale nameList/groupBy attributes are cleared when sorting is disabled
         DF:Debug("ROSTER", "  Flat raid: roster changed, applying sorting")
         DF:ApplyRaidFlatSorting()
+        -- Clear suppressreposition after flat sorting completes.
+        -- Flat raids don't use the position handler, but suppress was set by
+        -- UpdateHeaderVisibility(true) and must be cleared to avoid leaking.
+        if DF.raidPositionHandler then
+            DF.raidPositionHandler:SetAttribute("suppressreposition", 0)
+        end
         
         -- TEST 4: UpdateRestedIndicator - OK (group labels not needed for flat layout)
         if DF.UpdateRestedIndicator then
