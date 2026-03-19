@@ -33,6 +33,9 @@
 * (Aura Designer) Fixed grouped layout preview breaking after growth direction overhaul — `RefreshPreviewLightweight` still used old 4-direction code that didn't handle compound directions like `RIGHT_DOWN`, causing all grouped indicators to stack at position (0,0)
 * (Aura Designer) Fixed `iconsPerRow` default mismatch between preview (1) and engine (8) — legacy groups with nil `iconsPerRow` now render consistently
 * (Aura Designer) Added `sound` type to Engine.lua's `INDICATOR_TYPES` so sound-only auras participate in instance ID tracking for dedup
+* (Raid Frames) Fixed raid frame jumping when loading into LFR/BG — PEW was firing an immediate reposition with incomplete roster data (3 of 25 members), then each subsequent GROUP_ROSTER_UPDATE triggered another full sort+reposition as members trickled in
+* (Raid Frames) Added roster settling debounce for instance entry — rapid GROUP_ROSTER_UPDATE bursts are now coalesced into a single ProcessRosterUpdate after 0.3s of silence
+* (Flat Raid Frames) Fixed suppressreposition leak in flat raid ProcessRosterUpdate path — suppress was set by UpdateHeaderVisibility but never cleared after flat sorting, potentially blocking grouped-mode repositioning if the user later switched layouts
 * (Aura Designer) Fixed indicators appearing on disabled pinned frames
 * (Aura Designer) Fixed Show When Missing icons being overridden by out-of-range alpha restore
 * (Aura Designer) Fixed frame alpha becoming fully transparent when using Show When Missing with expiring alpha override
