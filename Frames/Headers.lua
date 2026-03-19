@@ -3898,7 +3898,7 @@ local function ClearRaidRosterCache()
 end
 
 -- Apply sorting within each raid group, handling player position in their group
-function DF:ApplyRaidGroupSorting()
+function DF:ApplyRaidGroupSorting(skipReposition)
     if InCombatLockdown() then return end
     if not DF.raidSeparatedHeaders then return end
 
@@ -3910,7 +3910,7 @@ function DF:ApplyRaidGroupSorting()
     -- trigger SecureGroupHeader child re-anchoring → OnShow → position snippet.
     -- Without this, UpdateRaidHeaderLayoutAttributes (called by UpdateRaidPositionAttributes
     -- below) fires unsuppressed repositions via ClearAllPoints/SetAttribute on headers.
-    DF:Debug("ROSTER", "ApplyRaidGroupSorting: suppressing reposition, configuring 8 groups")
+    DF:Debug("ROSTER", "ApplyRaidGroupSorting: suppressing reposition, configuring 8 groups (skipRepos=%s)", tostring(skipReposition))
     if DF.raidPositionHandler then
         DF.raidPositionHandler:SetAttribute("suppressreposition", 1)
     end
@@ -4074,12 +4074,18 @@ function DF:ApplyRaidGroupSorting()
     -- are no-ops, and we fire ONE authoritative reposition after unsuppressing.
     DF:UpdateRaidPositionAttributes()
 
-    -- NOW unsuppress and fire the single authoritative reposition
-    DF:Debug("ROSTER", "ApplyRaidGroupSorting: unsuppressing, triggering authoritative reposition")
-    if DF.raidPositionHandler then
-        DF.raidPositionHandler:SetAttribute("suppressreposition", 0)
+    -- Unsuppress and fire reposition — unless caller asked to defer (e.g. PEW with
+    -- partial roster). The settle timer's ProcessRosterUpdate will call us again
+    -- without skipReposition once the full roster is available.
+    if not skipReposition then
+        DF:Debug("ROSTER", "ApplyRaidGroupSorting: unsuppressing, triggering authoritative reposition")
+        if DF.raidPositionHandler then
+            DF.raidPositionHandler:SetAttribute("suppressreposition", 0)
+        end
+        DF:TriggerRaidPosition()
+    else
+        DF:Debug("ROSTER", "ApplyRaidGroupSorting: leaving suppress ON (settle timer will reposition)")
     end
-    DF:TriggerRaidPosition()
     
     -- Clear the roster cache (no longer needed until next update)
     ClearRaidRosterCache()
@@ -5058,7 +5064,10 @@ function DF:UpdateRaidHeaderVisibility(skipReposition)
     DF:Debug("VISIBILITY", "UpdateRaidHeaderVisibility: skipReposition=%s", tostring(skipReposition))
 
     -- Don't show live frames while in test mode
+    -- IMPORTANT: Clear the recursion guard before returning, otherwise all future
+    -- calls to UpdateRaidHeaderVisibility are permanently blocked until ReloadUI.
     if DF.testMode or DF.raidTestMode then
+        DF._updatingRaidHeaderVisibility = nil
         return
     end
 
@@ -6813,7 +6822,7 @@ end
 -- Reads settings and applies them to headers
 -- ============================================================
 
-function DF:ApplyHeaderSettings()
+function DF:ApplyHeaderSettings(skipReposition)
     -- Debug: Track what's calling ApplyHeaderSettings with FULL stack
     if DF.debugFlatLayout then
         print("|cFFFF00FF[DF Flat Debug]|r ========== ApplyHeaderSettings ==========")
@@ -6908,7 +6917,7 @@ function DF:ApplyHeaderSettings()
     -- Apply sorting based on layout mode
     if raidDb.raidUseGroups then
         -- Group-based layout: apply sorting to separated headers
-        DF:ApplyRaidGroupSorting()
+        DF:ApplyRaidGroupSorting(skipReposition)
     else
         -- Flat layout: apply sorting to combined header
         if DF.debugFlatLayout then
@@ -7583,9 +7592,7 @@ headerEventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
             DF:Debug("ROSTER", "PEW: enabling roster settle mode for instance entry")
         end
         DF:UpdateHeaderVisibility(isInstanceEntry)  -- skip reposition when entering instances
-        
-        -- ARENA DEBUG: Log what UpdateHeaderVisibility decided
-        
+
         -- ARENA FIX: Reset stale sorting attributes on arena header.
         -- ApplyHeaderSettings calls ApplyPartyGroupSorting (party only), never ApplyArenaHeaderSorting.
         -- So the arena header retains the stale nameList from the PREVIOUS arena match.
@@ -7606,8 +7613,12 @@ headerEventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
             DF.arenaHeader:SetAttribute("strictFiltering", nil)
             DF.arenaHeader:SetAttribute("sortMethod", "INDEX")
         end
-        
-        DF:ApplyHeaderSettings()
+
+        -- Pass isInstanceEntry as skipReposition — during instance entry the roster is
+        -- still populating, so sorting attributes are set but the position handler stays
+        -- suppressed. The settle timer's ProcessRosterUpdate will fire the authoritative
+        -- reposition once the full roster is available.
+        DF:ApplyHeaderSettings(isInstanceEntry)
         
         -- FIX: Rebuild unitFrameMap immediately after ApplyHeaderSettings.
         -- If sorting attributes haven't changed, OnAttributeChanged("unit") won't fire
@@ -7650,9 +7661,32 @@ headerEventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
         -- may take >0.1s to show all children. The OnShow hook registers each
         -- child in unitFrameMap as it appears, but a second full rebuild +
         -- refresh ensures every frame has correct health data.
+        -- Also acts as a fallback unsuppress — if no GRU fires after PEW (e.g.
+        -- solo instance entry), the suppress from ApplyHeaderSettings(true) would
+        -- be stuck forever. This guarantees it's cleared within 2s.
         if IsInRaid() then
-            C_Timer.After(1.0, function()
+            C_Timer.After(2.0, function()
                 if InCombatLockdown() then return end
+                -- Safety: clear settle mode and suppress if still lingering
+                if DF._rosterSettleMode then
+                    DF:Debug("ROSTER", "PEW safety net: settle mode still active after 2s, forcing ProcessRosterUpdate")
+                    DF._rosterSettleMode = nil
+                    if rosterSettleTimer then
+                        rosterSettleTimer:Cancel()
+                        rosterSettleTimer = nil
+                    end
+                    DF:ProcessRosterUpdate()
+                else
+                    -- Settle already completed, just ensure suppress is cleared
+                    if DF.raidPositionHandler then
+                        local suppress = DF.raidPositionHandler:GetAttribute("suppressreposition")
+                        if suppress and suppress == 1 then
+                            DF:Debug("ROSTER", "PEW safety net: clearing stale suppressreposition")
+                            DF.raidPositionHandler:SetAttribute("suppressreposition", 0)
+                            DF:TriggerRaidPosition()
+                        end
+                    end
+                end
                 DF:RebuildUnitFrameMap()
                 if DF.RefreshLiveFrames then
                     DF:RefreshLiveFrames()
