@@ -483,6 +483,7 @@ function FlatRaidFrames:CreateFrames()
         if child then
             childCount = childCount + 1
             child:SetSize(frameWidth, frameHeight)
+            child.isRaidFrame = true
         end
     end
     DebugPrint("Created", childCount, "child frames, sized to", frameWidth, "x", frameHeight)
@@ -733,11 +734,12 @@ function FlatRaidFrames:RefreshLayout()
     
     DebugPrint("RefreshLayout - resizing children and toggling startingIndex")
     
-    -- FIRST: Resize all child frames (needed for proper positioning)
+    -- FIRST: Resize all child frames and sync isRaidFrame flag (needed for proper positioning)
     for i = 1, 40 do
         local child = header:GetAttribute("child" .. i)
         if child then
             child:SetSize(frameWidth, frameHeight)
+            child.isRaidFrame = true
         end
     end
     
