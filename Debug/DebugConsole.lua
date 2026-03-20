@@ -30,7 +30,7 @@ local SEVERITY_ORDER = { "INFO", "WARN", "ERROR" }
 local DEFAULTS = {
     enabled = false,
     logLevel = "INFO",
-    maxLines = 500,
+    maxLines = 2000,
     chatEcho = false,
     filters = {},  -- absent category = visible; explicit false = hidden
 }
