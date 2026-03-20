@@ -3277,14 +3277,32 @@ end
 
 -- Update raid header layout attributes based on growDirection
 -- Call this when growDirection changes
+-- Cache last-applied layout state so we only ClearAllPoints when something actually changed.
+-- ClearAllPoints momentarily unanchors every child frame; if it runs on every GRU the
+-- frames visually "jump" as SecureGroupHeaderTemplate re-anchors them.
+local lastLayoutHorizontal = nil
+local lastLayoutSpacing = nil
+
 function DF:UpdateRaidHeaderLayoutAttributes()
     if InCombatLockdown() then return end
     if not DF.raidSeparatedHeaders then return end
-    
+
     local db = DF:GetRaidDB()
     local horizontal = (db.growDirection == "HORIZONTAL")  -- Groups as columns
     local spacing = db.frameSpacing or 2
-    
+
+    -- Skip entirely if nothing changed — avoids the destructive ClearAllPoints
+    if horizontal == lastLayoutHorizontal and spacing == lastLayoutSpacing then
+        DF:Debug("ROSTER", "UpdateRaidHeaderLayoutAttributes: no change, skipping")
+        return
+    end
+
+    DF:Debug("ROSTER", "UpdateRaidHeaderLayoutAttributes: layout changed (horizontal=%s->%s, spacing=%s->%s)",
+        tostring(lastLayoutHorizontal), tostring(horizontal),
+        tostring(lastLayoutSpacing), tostring(spacing))
+    lastLayoutHorizontal = horizontal
+    lastLayoutSpacing = spacing
+
     for group = 1, 8 do
         local header = DF.raidSeparatedHeaders[group]
         if header then
@@ -3296,7 +3314,7 @@ function DF:UpdateRaidHeaderLayoutAttributes()
                     child:ClearAllPoints()
                 end
             end
-            
+
             -- Note: point=TOP/LEFT keeps player order consistent (first at top/left)
             -- The secure snippet handles where the GROUP is positioned (START/END)
             if horizontal then
@@ -3314,7 +3332,7 @@ function DF:UpdateRaidHeaderLayoutAttributes()
             end
         end
     end
-    
+
     if DF.debugHeaders then
         print("|cFF00FF00[DF Headers]|r Updated header layout attributes: horizontal=" .. tostring(horizontal))
     end
@@ -4016,13 +4034,35 @@ function DF:ApplyRaidGroupSorting()
             -- by hiding and re-showing. Only re-show if the group should be visible
             -- per user settings — this prevents hidden groups from reappearing on
             -- roster changes (the root cause of the positioning/visibility desync).
+            --
+            -- OPTIMISATION: Skip the Hide/Show cycle for empty groups that are already
+            -- shown with 0 children. The cycle generates ~45 nil->nil OnAttributeChanged
+            -- events per empty group as SecureGroupHeaderTemplate re-evaluates all 5
+            -- pre-allocated child slots. For a typical raid with 3 empty groups that's
+            -- ~135 useless events per GRU, and the ClearAllPoints inside the template
+            -- causes visible frame jumping.
             local childCountBefore = 0
             for ci = 1, 5 do
                 local ch = header:GetAttribute("child" .. ci)
                 if ch and ch:IsShown() then childCountBefore = childCountBefore + 1 end
             end
-            header:Hide()
-            if showGroup then
+
+            if not showGroup then
+                -- Group is hidden per user settings — keep it hidden
+                if header:IsShown() then header:Hide() end
+                -- Set count to 0 so positioning handler skips this group (no gap)
+                if DF.raidPositionHandler then
+                    DF.raidPositionHandler:SetAttribute("group" .. i .. "count", 0)
+                end
+                DF:SetHeaderChildrenEventsEnabled(header, false)
+                DF:Debug("ROSTER", "  Group %d: hidden (user setting), had %d children", i, childCountBefore)
+            elseif childCountBefore == 0 and header:IsShown() then
+                -- Empty group already shown — skip Hide/Show cycle to avoid
+                -- nil->nil OnAttributeChanged flood and frame jumping
+                DF:Debug("ROSTER", "  Group %d: empty + already shown, skipping Hide/Show", i)
+            else
+                -- Group has members or needs to be shown — do the full cycle
+                header:Hide()
                 header:Show()
                 DF:SetHeaderChildrenEventsEnabled(header, true)
                 local childCountAfter = 0
@@ -4031,14 +4071,6 @@ function DF:ApplyRaidGroupSorting()
                     if ch and ch:IsShown() then childCountAfter = childCountAfter + 1 end
                 end
                 DF:Debug("ROSTER", "  Group %d: Hide/Show cycle, children %d -> %d", i, childCountBefore, childCountAfter)
-            else
-                -- Group is hidden per user settings — keep it hidden
-                -- Set count to 0 so positioning handler skips this group (no gap)
-                if DF.raidPositionHandler then
-                    DF.raidPositionHandler:SetAttribute("group" .. i .. "count", 0)
-                end
-                DF:SetHeaderChildrenEventsEnabled(header, false)
-                DF:Debug("ROSTER", "  Group %d: hidden (user setting), had %d children", i, childCountBefore)
             end
         end
     end
