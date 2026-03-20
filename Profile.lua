@@ -369,6 +369,10 @@ function DF:ExportProfile(categories, frameTypes, profileName)
         if DF.db.raidAutoProfiles then
             exportData.raidAutoProfiles = DF:DeepCopy(DF.db.raidAutoProfiles)
         end
+        -- Include aura blacklist
+        if DF.db.auraBlacklist then
+            exportData.auraBlacklist = DF:DeepCopy(DF.db.auraBlacklist)
+        end
         exportData.categories = nil
     else
         -- Selective category export
@@ -384,6 +388,10 @@ function DF:ExportProfile(categories, frameTypes, profileName)
         for _, cat in ipairs(categories) do categorySet[cat] = true end
         if categorySet.autoLayout and DF.db.raidAutoProfiles then
             exportData.raidAutoProfiles = DF:DeepCopy(DF.db.raidAutoProfiles)
+        end
+        -- Aura blacklist: top-level key, include with auras category
+        if categorySet.auras and DF.db.auraBlacklist then
+            exportData.auraBlacklist = DF:DeepCopy(DF.db.auraBlacklist)
         end
     end
 
@@ -581,6 +589,7 @@ function DF:ApplyImportedProfile(importData, selectedCategories, selectedFrameTy
             raidAutoProfiles = DF:DeepCopy(DF.db.raidAutoProfiles or DF.RaidAutoProfilesDefaults),
             classColors = DF:DeepCopy(DF.db.classColors or {}),
             powerColors = DF:DeepCopy(DF.db.powerColors or {}),
+            auraBlacklist = DF:DeepCopy(DF.db.auraBlacklist or { buffs = {}, debuffs = {} }),
             linkedSections = {},
         }
 
@@ -616,6 +625,10 @@ function DF:ApplyImportedProfile(importData, selectedCategories, selectedFrameTy
         if importData.raidAutoProfiles then
             DF.db.raidAutoProfiles = importData.raidAutoProfiles
         end
+        -- Import aura blacklist if present
+        if importData.auraBlacklist then
+            DF.db.auraBlacklist = importData.auraBlacklist
+        end
     else
         -- Selective import: merge only selected categories
         local categoriesToImport = selectedCategories or importInfo.detectedCategories
@@ -631,6 +644,10 @@ function DF:ApplyImportedProfile(importData, selectedCategories, selectedFrameTy
         for _, cat in ipairs(categoriesToImport) do importCategorySet[cat] = true end
         if importCategorySet.autoLayout and importData.raidAutoProfiles then
             DF.db.raidAutoProfiles = importData.raidAutoProfiles
+        end
+        -- Aura blacklist: top-level key, import with auras category
+        if importCategorySet.auras and importData.auraBlacklist then
+            DF.db.auraBlacklist = importData.auraBlacklist
         end
     end
     
