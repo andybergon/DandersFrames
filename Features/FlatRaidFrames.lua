@@ -799,11 +799,16 @@ function FlatRaidFrames:ResizeInnerContainer()
     self.innerContainer:SetSize(width, height)
     DF:Debug("FLATRAID", "ResizeInnerContainer: %dx%d (%d visible, %d rows, %d cols)", width, height, visibleCount, rows, cols)
     
-    -- Also update raidContainer and mover to max possible size
-    self:UpdateContainerSize()
-    
-    -- Sync mover frame to match the active container size
-    DF:SyncRaidMoverToContainer()
+    -- Only resize the shared raidContainer if flat mode is actually active
+    -- In grouped mode, the position handler manages container sizing — FlatRaid
+    -- must NOT touch it or grouped headers will jump to wrong positions
+    local rdb = GetRaidDB()
+    if rdb and not rdb.raidUseGroups then
+        self:UpdateContainerSize()
+        DF:SyncRaidMoverToContainer()
+    else
+        DF:Debug("FLATRAID", "ResizeInnerContainer: SKIPPING container resize (grouped mode active)")
+    end
 end
 
 -- Update container size based on layout settings
@@ -831,7 +836,12 @@ function FlatRaidFrames:UpdateContainerSize()
         containerHeight = unitsPerRow * frameHeight + (unitsPerRow - 1) * vSpacing
     end
     
+    local oldW, oldH = DF.raidContainer:GetSize()
     DF.raidContainer:SetSize(containerWidth, containerHeight)
+    DF:Debug("FLATRAID", "UpdateContainerSize: %dx%d -> %dx%d (raidUseGroups=%s)",
+        math.floor(oldW + 0.5), math.floor(oldH + 0.5),
+        math.floor(containerWidth + 0.5), math.floor(containerHeight + 0.5),
+        tostring(db.raidUseGroups))
     DebugPrint("Container size:", containerWidth, "x", containerHeight)
 end
 
@@ -844,6 +854,13 @@ function FlatRaidFrames:UpdateSorting()
     local header = self.header
     if not header then
         DebugPrint("UpdateSorting: no header")
+        return
+    end
+
+    -- Safety: bail out if grouped mode is active — FlatRaid should not be sorting
+    local rdb = GetRaidDB()
+    if rdb and rdb.raidUseGroups then
+        DF:Debug("FLATRAID", "UpdateSorting: BLOCKED (grouped mode active, raidUseGroups=true)")
         return
     end
 
