@@ -589,6 +589,14 @@ function DF:InitializeHeaderChild(frame)
             local newGuid = (rawNewGuid and not issecretvalue(rawNewGuid)) and rawNewGuid or nil
             local oldGuid = oldUnit and unitGuidCache[oldUnit] or nil
 
+            -- LEVEL 0: Both nil — nothing to do
+            -- Hide/Show cycles on SecureGroupHeaderTemplate fire OnAttributeChanged("unit", nil)
+            -- on every pre-allocated child slot. For empty groups this generates dozens of
+            -- nil->nil transitions per GRU that are pure noise.
+            if not oldUnit and not actualUnit then
+                return
+            end
+
             -- LEVEL 1: Skip if unit string AND GUID are both the same
             -- (Must check GUID because same unit string can have different player after roster change)
             if oldUnit == actualUnit then
@@ -3952,6 +3960,11 @@ function DF:ApplyRaidGroupSorting()
     end
     local roleOrderString = table.concat(groupingOrder, ",")
     
+    -- Track last-applied sorting key per group so we only Hide/Show when something changed.
+    -- Hide/Show forces SecureGroupHeaderTemplate to ClearAllPoints+SetPoint every child,
+    -- which causes visible frame jumping even though positions ultimately resolve correctly.
+    DF._lastGroupSortKey = DF._lastGroupSortKey or {}
+
     -- Configure each group header (SORTING ONLY - positioning handled by secure handler)
     for i = 1, 8 do
         local header = DF.raidSeparatedHeaders[i]
@@ -3968,9 +3981,16 @@ function DF:ApplyRaidGroupSorting()
             -- NOTE: Positioning attributes (point, yOffset, sortDir, ClearAllPoints/SetPoint)
             -- are now handled by the secure position handler via UpdateRaidPositionAttributes
 
+            -- Build the sorting key BEFORE applying attributes.
+            -- This lets us detect whether anything actually changed and skip the
+            -- destructive Hide/Show cycle when the sorting is identical.
+            local sortKey
+
             -- CHECK sortEnabled FIRST (like party sorting does)
             -- This ensures ALL headers get sorting disabled, not just those that don't need nameList
             if not sortEnabled then
+                sortKey = "INDEX:" .. i
+
                 -- Sorting disabled - clear ALL sorting attributes with nil
                 -- CRITICAL: Must use nil, not empty string, for SecureGroupHeaderTemplate
                 header:SetAttribute("nameList", nil)
@@ -3998,6 +4018,7 @@ function DF:ApplyRaidGroupSorting()
                     -- For other groups: use "SORTED" (player position doesn't matter)
                     local groupSelfPosition = isPlayerGroup and selfPosition or "SORTED"
                     local nameList = DF:BuildRaidGroupNameList(i, groupSelfPosition)
+                    sortKey = "NL:" .. (nameList or "")
 
                     -- Clear native sorting attributes - use direct SetAttribute to bypass cache
                     -- This ensures attributes are always set fresh when switching modes
@@ -4016,6 +4037,8 @@ function DF:ApplyRaidGroupSorting()
                         print("|cFF00FF00[DF Headers]|r   Group", i, tag, ": nameList mode -", nameList)
                     end
                 else
+                    sortKey = "ROLE:" .. i .. ":" .. roleOrderString
+
                     -- Use native sorting with groupFilter (simple role sorting only)
                     -- Use direct SetAttribute to bypass cache
                     header:SetAttribute("nameList", nil)
@@ -4030,22 +4053,12 @@ function DF:ApplyRaidGroupSorting()
                 end
             end
 
-            -- Force SecureGroupHeaderTemplate to re-evaluate sorting attributes
-            -- by hiding and re-showing. Only re-show if the group should be visible
-            -- per user settings — this prevents hidden groups from reappearing on
-            -- roster changes (the root cause of the positioning/visibility desync).
-            --
-            -- OPTIMISATION: Skip the Hide/Show cycle for empty groups that are already
-            -- shown with 0 children. The cycle generates ~45 nil->nil OnAttributeChanged
-            -- events per empty group as SecureGroupHeaderTemplate re-evaluates all 5
-            -- pre-allocated child slots. For a typical raid with 3 empty groups that's
-            -- ~135 useless events per GRU, and the ClearAllPoints inside the template
-            -- causes visible frame jumping.
-            local childCountBefore = 0
-            for ci = 1, 5 do
-                local ch = header:GetAttribute("child" .. ci)
-                if ch and ch:IsShown() then childCountBefore = childCountBefore + 1 end
-            end
+            -- Determine if we need the destructive Hide/Show cycle.
+            -- SecureGroupHeaderTemplate re-evaluates children on Show(), calling
+            -- ClearAllPoints+SetPoint on every child. This causes visible frame
+            -- jumping. Only do it when sorting actually changed.
+            local sortChanged = (sortKey ~= DF._lastGroupSortKey[i])
+            DF._lastGroupSortKey[i] = sortKey
 
             if not showGroup then
                 -- Group is hidden per user settings — keep it hidden
@@ -4055,13 +4068,12 @@ function DF:ApplyRaidGroupSorting()
                     DF.raidPositionHandler:SetAttribute("group" .. i .. "count", 0)
                 end
                 DF:SetHeaderChildrenEventsEnabled(header, false)
-                DF:Debug("ROSTER", "  Group %d: hidden (user setting), had %d children", i, childCountBefore)
-            elseif childCountBefore == 0 and header:IsShown() then
-                -- Empty group already shown — skip Hide/Show cycle to avoid
-                -- nil->nil OnAttributeChanged flood and frame jumping
-                DF:Debug("ROSTER", "  Group %d: empty + already shown, skipping Hide/Show", i)
+                DF:Debug("ROSTER", "  Group %d: hidden (user setting)", i)
+            elseif not sortChanged and header:IsShown() then
+                -- Sorting unchanged and header already shown — skip Hide/Show
+                DF:Debug("ROSTER", "  Group %d: sort unchanged, skipping Hide/Show", i)
             else
-                -- Group has members or needs to be shown — do the full cycle
+                -- Sorting changed or header needs to be shown — do the full cycle
                 header:Hide()
                 header:Show()
                 DF:SetHeaderChildrenEventsEnabled(header, true)
@@ -4070,7 +4082,7 @@ function DF:ApplyRaidGroupSorting()
                     local ch = header:GetAttribute("child" .. ci)
                     if ch and ch:IsShown() then childCountAfter = childCountAfter + 1 end
                 end
-                DF:Debug("ROSTER", "  Group %d: Hide/Show cycle, children %d -> %d", i, childCountBefore, childCountAfter)
+                DF:Debug("ROSTER", "  Group %d: Hide/Show (sortChanged=%s), children -> %d", i, tostring(sortChanged), childCountAfter)
             end
         end
     end
@@ -7596,6 +7608,14 @@ headerEventFrame:SetScript("OnEvent", function(self, event, arg1, arg2)
         -- incorrectly returning false when entering LFR with similar roster composition
         wipe(rosterMembershipCache)
         lastRosterCount = 0
+
+        -- Clear sorting key cache so the next ApplyRaidGroupSorting does a full
+        -- Hide/Show cycle. Zone transitions may change the roster composition
+        -- even though the nameList string looks the same.
+        if DF._lastGroupSortKey then wipe(DF._lastGroupSortKey) end
+        -- Clear layout cache so UpdateRaidHeaderLayoutAttributes runs fully
+        lastLayoutHorizontal = nil
+        lastLayoutSpacing = nil
         
         -- NOTE: Do NOT wipe(unitFrameMap) here. Keeping existing entries ensures
         -- UNIT_HEALTH events keep dispatching to frames while headers rebuild.
