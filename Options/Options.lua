@@ -2534,7 +2534,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
 
         -- FrameSort integration toggle (only visible when FrameSort addon is installed)
         if FrameSortApi then
-            sortOptionsGroup:AddWidget(GUI:CreateLabel(self.child, "FrameSort addon detected. Enable to let FrameSort control frame ordering.", 250), 35)
+            sortOptionsGroup:AddWidget(GUI:CreateLabel(self.child, "FrameSort addon detected. Enable to let FrameSort control frame ordering.\n|cFFFF8800Experimental:|r This feature is new and may not work perfectly in all scenarios. Please report any issues.", 250), 55)
             sortOptionsGroup:AddWidget(GUI:CreateCheckbox(self.child, "Use FrameSort Addon", db, "useFrameSort", function()
                 -- Set both modes simultaneously
                 local partyDB = DF:GetDB("party")
