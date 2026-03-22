@@ -12,6 +12,9 @@ local GetUnitName = GetUnitName
 local GetNumGroupMembers = GetNumGroupMembers
 local GetRaidRosterInfo = GetRaidRosterInfo
 local IsInRaid = IsInRaid
+local wipe = wipe
+local tconcat = table.concat
+local tsort = table.sort
 
 DF.FrameSort = DF.FrameSort or {}
 local FrameSortMod = DF.FrameSort
@@ -22,6 +25,12 @@ local FrameSortMod = DF.FrameSort
 
 local fs = nil          -- FrameSortApi.v3.Sorting reference
 local registered = false
+
+-- Reusable tables to avoid per-call allocations
+local namesBuf = {}
+local unitOrderBuf = {}
+local groupUnitsBuf = {}
+local groupNamesBuf = {}
 
 -- ============================================================
 -- HELPERS
@@ -44,14 +53,14 @@ end
 
 -- Convert an array of unit tokens to a comma-separated nameList string
 local function UnitsToNameList(units)
-    local names = {}
+    wipe(namesBuf)
     for i = 1, #units do
         local name = GetUnitName(units[i], true)
         if name then
-            names[#names + 1] = name
+            namesBuf[#namesBuf + 1] = name
         end
     end
-    return table.concat(names, ",")
+    return tconcat(namesBuf, ",")
 end
 
 -- ============================================================
@@ -106,10 +115,11 @@ local function SortGroupedRaidFrames(units)
     if not DF.raidSeparatedHeaders then return false end
 
     -- Build a lookup: unitToken -> position in FrameSort's order
-    local unitOrder = {}
+    wipe(unitOrderBuf)
     for i = 1, #units do
-        unitOrder[units[i]] = i
+        unitOrderBuf[units[i]] = i
     end
+    local unitOrder = unitOrderBuf
 
     -- For each group, find members and sort by FrameSort's order
     local sorted = false
@@ -117,12 +127,12 @@ local function SortGroupedRaidFrames(units)
         local header = DF.raidSeparatedHeaders[groupIndex]
         if header and header:IsVisible() then
             -- Collect units in this group with their FrameSort position
-            local groupUnits = {}
+            wipe(groupUnitsBuf)
             for raidIndex = 1, GetNumGroupMembers() do
                 local name, _, subgroup = GetRaidRosterInfo(raidIndex)
                 if name and subgroup == groupIndex then
                     local unitToken = "raid" .. raidIndex
-                    groupUnits[#groupUnits + 1] = {
+                    groupUnitsBuf[#groupUnitsBuf + 1] = {
                         name = name,
                         order = unitOrder[unitToken] or 999,
                     }
@@ -130,16 +140,16 @@ local function SortGroupedRaidFrames(units)
             end
 
             -- Sort by FrameSort's order
-            table.sort(groupUnits, function(a, b)
+            tsort(groupUnitsBuf, function(a, b)
                 return a.order < b.order
             end)
 
             -- Build nameList
-            local names = {}
-            for i = 1, #groupUnits do
-                names[#names + 1] = groupUnits[i].name
+            wipe(groupNamesBuf)
+            for i = 1, #groupUnitsBuf do
+                groupNamesBuf[#groupNamesBuf + 1] = groupUnitsBuf[i].name
             end
-            local nameList = table.concat(names, ",")
+            local nameList = tconcat(groupNamesBuf, ",")
 
             if nameList ~= "" then
                 DF:Debug("FRAMESORT", "Sorting raid group", groupIndex, ":", nameList)
