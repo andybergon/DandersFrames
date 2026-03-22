@@ -1091,6 +1091,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         sizeGroup:AddWidget(GUI:CreateSlider(self.child, "Frame Width", 60, 300, 1, db, "frameWidth", UpdateFrames, function() DF:LightweightUpdateFrameSize() end, true), 55)
         sizeGroup:AddWidget(GUI:CreateSlider(self.child, "Frame Height", 20, 300, 1, db, "frameHeight", UpdateFrames, function() DF:LightweightUpdateFrameSize() end, true), 55)
         sizeGroup:AddWidget(GUI:CreateSlider(self.child, "Frame Padding", 0, 10, 1, db, "framePadding", UpdateFrames, function() DF:LightweightUpdateFrameSize() end, true), 55)
+        sizeGroup:AddWidget(GUI:CreateSlider(self.child, "Frame Scale", 0.5, 2.0, 0.05, db, "frameScale", UpdateFrames, function() DF:LightweightUpdateFrameScale() end, true), 55)
         local frameSpacingSlider = sizeGroup:AddWidget(GUI:CreateSlider(self.child, "Frame Spacing", -5, 50, 1, db, "frameSpacing", UpdateFrames, function() DF:LightweightUpdateFrameSpacing() end, true), 55)
         frameSpacingSlider.hideOn = function() return GUI.SelectedMode == "raid" and not db.raidUseGroups end
         Add(sizeGroup, nil, 1)

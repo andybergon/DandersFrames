@@ -31,7 +31,8 @@ DF.ExportCategories = {
         "frameHeight",
         "framePadding",
         "frameSpacing",
-        
+        "frameScale",
+
         -- Growth & arrangement
         "growDirection",
         "growthAnchor",

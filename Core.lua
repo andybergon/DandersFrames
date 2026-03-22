@@ -280,6 +280,42 @@ function DF:LightweightUpdateRaidLayout()
     DF:LightweightUpdateFrameSize()
 end
 
+function DF:LightweightUpdateFrameScale()
+    -- Frame-skip throttle
+    local now = GetTime()
+    if now - lastSizeUpdate < SIZE_UPDATE_INTERVAL then
+        return
+    end
+    lastSizeUpdate = now
+
+    local mode = DF.GUI and DF.GUI.SelectedMode or "party"
+
+    if mode == "raid" then
+        DF:UpdateRaidContainerPosition()
+        if DF.raidTestMode then
+            if DF.RefreshTestFramesWithLayout then
+                DF:RefreshTestFramesWithLayout()
+            end
+        elseif DF.UpdateRaidLayout then
+            DF:UpdateRaidLayout()
+        end
+    else
+        DF:UpdateContainerPosition()
+        if DF.testMode and DF.LightweightPositionPartyTestFrames then
+            local db = DF:GetDB()
+            local testFrameCount = db and db.testFrameCount or 5
+            DF:LightweightPositionPartyTestFrames(testFrameCount)
+        end
+        if DF.UpdateAllPetFrames then
+            DF:UpdateAllPetFrames(true)
+        end
+    end
+
+    -- Update permanent mover anchors (they reference scaled containers)
+    DF:UpdatePermanentMoverAnchor("party")
+    DF:UpdatePermanentMoverAnchor("raid")
+end
+
 -- Update only frame alpha/opacity
 function DF:LightweightUpdateAlpha()
     local mode = DF.GUI and DF.GUI.SelectedMode or "party"
