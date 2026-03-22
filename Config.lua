@@ -1645,6 +1645,7 @@ DF.PartyDefaults = {
     sortRoleOrder = {"TANK", "HEALER", "MELEE", "RANGED"},
     sortSelfPosition = "SORTED",
     sortSeparateMeleeRanged = false,
+    useFrameSort = false,
 
     -- Status Icon & Text
     statusIconFont = "DF Roboto SemiBold",
@@ -2852,6 +2853,7 @@ DF.RaidDefaults = {
     sortRoleOrder = {"TANK", "HEALER", "MELEE", "RANGED"},
     sortSelfPosition = "SORTED",
     sortSeparateMeleeRanged = false,
+    useFrameSort = false,
 
     -- Status Icon & Text
     statusIconFont = "DF Roboto SemiBold",
