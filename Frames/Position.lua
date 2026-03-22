@@ -45,34 +45,42 @@ function DF:CreateMoverFrame()
     
     mover:SetScript("OnDragStart", function(self)
         DF.isDragging = true
-        -- Manual cursor tracking instead of StartMoving() — WoW's StartMoving
-        -- doesn't handle scaled frames correctly and causes a position jump
-        local uiScale = UIParent:GetEffectiveScale()
-        local startMouseX, startMouseY = GetCursorPosition()
-        startMouseX = startMouseX / uiScale
-        startMouseY = startMouseY / uiScale
-        local startCX, startCY = DF.container:GetCenter()
+        -- Manual cursor tracking — work in raw pixel space to avoid
+        -- GetCenter() ambiguity on scaled frames (Grid2/Ellesmere approach)
+        local startCursorX, startCursorY = GetCursorPosition()
+        local effScale = DF.container:GetEffectiveScale()
+        -- GetLeft/GetRight/GetTop/GetBottom return visual bounds in UIParent coords
+        -- Multiply by UIParent effective scale to get raw pixels
+        local parentScale = UIParent:GetEffectiveScale()
+        local frameCX = ((DF.container:GetLeft() + DF.container:GetRight()) / 2) * parentScale
+        local frameCY = ((DF.container:GetTop() + DF.container:GetBottom()) / 2) * parentScale
+        -- Cursor offset from frame center in raw pixels
+        local dragOffX = frameCX - startCursorX
+        local dragOffY = frameCY - startCursorY
 
         -- Start OnUpdate to track cursor and sync positions during drag
         self:SetScript("OnUpdate", function()
-            local mouseX, mouseY = GetCursorPosition()
-            mouseX = mouseX / uiScale
-            mouseY = mouseY / uiScale
-            local dx = mouseX - startMouseX
-            local dy = mouseY - startMouseY
-
+            local cursorX, cursorY = GetCursorPosition()
+            -- New frame center in raw pixels
+            local newCX = cursorX + dragOffX
+            local newCY = cursorY + dragOffY
+            -- Convert to UIParent coords
+            local pScale = UIParent:GetEffectiveScale()
+            local uiCX = newCX / pScale
+            local uiCY = newCY / pScale
+            -- Offset from screen center in UIParent coords
             local screenWidth, screenHeight = GetScreenWidth(), GetScreenHeight()
-            local offsetX = (startCX + dx) - screenWidth / 2
-            local offsetY = (startCY + dy) - screenHeight / 2
-
-            local scale = DF.container:GetScale() or 1
+            local offsetX = uiCX - screenWidth / 2
+            local offsetY = uiCY - screenHeight / 2
+            -- Apply with frame scale compensation
+            local frameScale = DF.container:GetScale() or 1
             DF.container:ClearAllPoints()
-            DF.container:SetPoint("CENTER", UIParent, "CENTER", offsetX / scale, offsetY / scale)
+            DF.container:SetPoint("CENTER", UIParent, "CENTER", offsetX / frameScale, offsetY / frameScale)
 
             -- Sync testPartyContainer to container position (for live preview)
             if DF.testPartyContainer then
                 DF.testPartyContainer:ClearAllPoints()
-                DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", offsetX / scale, offsetY / scale)
+                DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", offsetX / frameScale, offsetY / frameScale)
             end
 
             -- Snap preview if enabled
@@ -92,11 +100,15 @@ function DF:CreateMoverFrame()
         -- Hide snap preview lines
         DF:HideSnapPreview()
 
-        -- Get current position relative to screen center
+        -- Get current position — use GetLeft/GetRight for consistency with drag math
+        local parentScale = UIParent:GetEffectiveScale()
+        local rawCX = ((DF.container:GetLeft() + DF.container:GetRight()) / 2) * parentScale
+        local rawCY = ((DF.container:GetTop() + DF.container:GetBottom()) / 2) * parentScale
+        local uiCX = rawCX / parentScale
+        local uiCY = rawCY / parentScale
         local screenWidth, screenHeight = GetScreenWidth(), GetScreenHeight()
-        local centerX, centerY = DF.container:GetCenter()
-        local x = centerX - screenWidth / 2
-        local y = centerY - screenHeight / 2
+        local x = uiCX - screenWidth / 2
+        local y = uiCY - screenHeight / 2
 
         -- Snap to grid if enabled - re-read db to ensure current state
         local db = DF:GetDB()
@@ -105,14 +117,14 @@ function DF:CreateMoverFrame()
         end
 
         -- Apply snapped position
-        local scale = DF.container:GetScale() or 1
+        local frameScale = DF.container:GetScale() or 1
         DF.container:ClearAllPoints()
-        DF.container:SetPoint("CENTER", UIParent, "CENTER", x / scale, y / scale)
+        DF.container:SetPoint("CENTER", UIParent, "CENTER", x / frameScale, y / frameScale)
 
         -- Sync testPartyContainer to final position
         if DF.testPartyContainer then
             DF.testPartyContainer:ClearAllPoints()
-            DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", x / scale, y / scale)
+            DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", x / frameScale, y / frameScale)
         end
 
         -- Save position
@@ -480,23 +492,25 @@ function DF:CreatePermanentMover(container, mode)
         self.fadeIn:Stop()
         self:SetAlpha(1)
 
-        local uiScale = UIParent:GetEffectiveScale()
-        local startMouseX, startMouseY = GetCursorPosition()
-        startMouseX = startMouseX / uiScale
-        startMouseY = startMouseY / uiScale
-        local startCX, startCY = container:GetCenter()
+        local startCursorX, startCursorY = GetCursorPosition()
+        local parentScale = UIParent:GetEffectiveScale()
+        local frameCX = ((container:GetLeft() + container:GetRight()) / 2) * parentScale
+        local frameCY = ((container:GetTop() + container:GetBottom()) / 2) * parentScale
+        local dragOffX = frameCX - startCursorX
+        local dragOffY = frameCY - startCursorY
 
         -- Sync container and test containers live during drag
         self:SetScript("OnUpdate", function()
-            local mouseX, mouseY = GetCursorPosition()
-            mouseX = mouseX / uiScale
-            mouseY = mouseY / uiScale
-            local dx = mouseX - startMouseX
-            local dy = mouseY - startMouseY
+            local cursorX, cursorY = GetCursorPosition()
+            local newCX = cursorX + dragOffX
+            local newCY = cursorY + dragOffY
+            local pScale = UIParent:GetEffectiveScale()
+            local uiCX = newCX / pScale
+            local uiCY = newCY / pScale
 
             local sw, sh = GetScreenWidth(), GetScreenHeight()
-            local ox = (startCX + dx) - sw / 2
-            local oy = (startCY + dy) - sh / 2
+            local ox = uiCX - sw / 2
+            local oy = uiCY - sh / 2
 
             local s = container:GetScale() or 1
             container:ClearAllPoints()

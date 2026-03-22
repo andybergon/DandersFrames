@@ -708,25 +708,26 @@ function DF:CreateRaidMoverFrame()
     DF.raidMoverFrame = mover
     
     mover:SetScript("OnDragStart", function(self)
-        -- Manual cursor tracking instead of StartMoving() — WoW's StartMoving
-        -- doesn't handle scaled frames correctly and causes a position jump
-        local uiScale = UIParent:GetEffectiveScale()
-        local startMouseX, startMouseY = GetCursorPosition()
-        startMouseX = startMouseX / uiScale
-        startMouseY = startMouseY / uiScale
-        local startCX, startCY = self:GetCenter()
+        -- Manual cursor tracking — work in raw pixel space to avoid
+        -- GetCenter() ambiguity on scaled frames (Grid2/Ellesmere approach)
+        local startCursorX, startCursorY = GetCursorPosition()
+        local parentScale = UIParent:GetEffectiveScale()
+        local frameCX = ((self:GetLeft() + self:GetRight()) / 2) * parentScale
+        local frameCY = ((self:GetTop() + self:GetBottom()) / 2) * parentScale
+        local dragOffX = frameCX - startCursorX
+        local dragOffY = frameCY - startCursorY
 
         -- Start OnUpdate to track cursor and sync positions during drag
         self:SetScript("OnUpdate", function()
-            local mouseX, mouseY = GetCursorPosition()
-            mouseX = mouseX / uiScale
-            mouseY = mouseY / uiScale
-            local dx = mouseX - startMouseX
-            local dy = mouseY - startMouseY
-
+            local cursorX, cursorY = GetCursorPosition()
+            local newCX = cursorX + dragOffX
+            local newCY = cursorY + dragOffY
+            local pScale = UIParent:GetEffectiveScale()
+            local uiCX = newCX / pScale
+            local uiCY = newCY / pScale
             local screenWidth, screenHeight = GetScreenWidth(), GetScreenHeight()
-            local offsetX = (startCX + dx) - screenWidth / 2
-            local offsetY = (startCY + dy) - screenHeight / 2
+            local offsetX = uiCX - screenWidth / 2
+            local offsetY = uiCY - screenHeight / 2
 
             local scale = self:GetScale() or 1
 
@@ -759,11 +760,15 @@ function DF:CreateRaidMoverFrame()
         -- Hide snap preview lines
         DF:HideSnapPreview()
 
-        -- Get current position relative to screen center
+        -- Get current position — use GetLeft/GetRight for consistency with drag math
+        local parentScale = UIParent:GetEffectiveScale()
+        local rawCX = ((self:GetLeft() + self:GetRight()) / 2) * parentScale
+        local rawCY = ((self:GetTop() + self:GetBottom()) / 2) * parentScale
+        local uiCX = rawCX / parentScale
+        local uiCY = rawCY / parentScale
         local screenWidth, screenHeight = GetScreenWidth(), GetScreenHeight()
-        local centerX, centerY = self:GetCenter()
-        local x = centerX - screenWidth / 2
-        local y = centerY - screenHeight / 2
+        local x = uiCX - screenWidth / 2
+        local y = uiCY - screenHeight / 2
 
         -- Snap to grid if enabled
         local db = DF:GetRaidDB()
