@@ -954,7 +954,9 @@ function DF:CreateContainers()
         if DF.container then
             DF.partyContainer:SetAllPoints(DF.container)
         else
-            DF.partyContainer:SetPoint("CENTER", UIParent, "CENTER", db.anchorX or 0, db.anchorY or 0)
+            local partyScale = db.frameScale or 1.0
+            DF.partyContainer:SetScale(partyScale)
+            DF.partyContainer:SetPoint("CENTER", UIParent, "CENTER", (db.anchorX or 0) / partyScale, (db.anchorY or 0) / partyScale)
         end
         DF.partyContainer:SetSize(500, 200)
         DF.partyContainer:Show()
@@ -962,8 +964,10 @@ function DF:CreateContainers()
     
     -- Raid container (separate from party, has its own position)
     if not DF.raidContainer then
+        local raidScale = raidDb.frameScale or 1.0
         DF.raidContainer = CreateFrame("Frame", "DandersRaidContainer", UIParent, "SecureFrameTemplate")
-        DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", raidDb.raidAnchorX or 0, raidDb.raidAnchorY or 0)
+        DF.raidContainer:SetScale(raidScale)
+        DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", (raidDb.raidAnchorX or 0) / raidScale, (raidDb.raidAnchorY or 0) / raidScale)
         DF.raidContainer:SetSize(600, 400)
         DF.raidContainer:SetMovable(true)
         DF.raidContainer:Hide()

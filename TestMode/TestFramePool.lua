@@ -26,16 +26,20 @@ local function CreateTestContainers()
     
     -- Party test container (non-secure)
     if not DF.testPartyContainer then
+        local scale = db.frameScale or 1.0
         DF.testPartyContainer = CreateFrame("Frame", "DandersTestPartyContainer", UIParent)
-        DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", db.anchorX or 0, db.anchorY or 0)
+        DF.testPartyContainer:SetScale(scale)
+        DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", (db.anchorX or 0) / scale, (db.anchorY or 0) / scale)
         DF.testPartyContainer:SetSize(500, 200)
         DF.testPartyContainer:Hide()  -- Hidden by default
     end
-    
+
     -- Raid test container (non-secure)
     if not DF.testRaidContainer then
+        local raidScale = raidDb.frameScale or 1.0
         DF.testRaidContainer = CreateFrame("Frame", "DandersTestRaidContainer", UIParent)
-        DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", raidDb.raidAnchorX or 0, raidDb.raidAnchorY or 0)
+        DF.testRaidContainer:SetScale(raidScale)
+        DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", (raidDb.raidAnchorX or 0) / raidScale, (raidDb.raidAnchorY or 0) / raidScale)
         DF.testRaidContainer:SetSize(600, 400)
         DF.testRaidContainer:Hide()  -- Hidden by default
     end
@@ -141,18 +145,22 @@ end
 -- ============================================================
 function DF:PositionTestPartyContainer()
     if not DF.testPartyContainer then return end
-    
+
     local db = DF:GetDB()
+    local scale = db.frameScale or 1.0
+    DF.testPartyContainer:SetScale(scale)
     DF.testPartyContainer:ClearAllPoints()
-    DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", db.anchorX or 0, db.anchorY or 0)
+    DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", (db.anchorX or 0) / scale, (db.anchorY or 0) / scale)
 end
 
 function DF:PositionTestRaidContainer()
     if not DF.testRaidContainer then return end
-    
+
     local db = DF:GetRaidDB()
+    local raidScale = db.frameScale or 1.0
+    DF.testRaidContainer:SetScale(raidScale)
     DF.testRaidContainer:ClearAllPoints()
-    DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", db.raidAnchorX or 0, db.raidAnchorY or 0)
+    DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", (db.raidAnchorX or 0) / raidScale, (db.raidAnchorY or 0) / raidScale)
 end
 
 -- ============================================================

@@ -717,15 +717,16 @@ function DF:CreateRaidMoverFrame()
             if x and y then
                 local screenWidth, screenHeight = GetScreenWidth(), GetScreenHeight()
                 local offsetX, offsetY = x - screenWidth/2, y - screenHeight/2
-                
+                local scale = self:GetScale() or 1
+
                 -- Sync raidContainer to mover position
                 DF.raidContainer:ClearAllPoints()
-                DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", offsetX, offsetY)
-                
+                DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", offsetX / scale, offsetY / scale)
+
                 -- Sync testRaidContainer to mover position (for live preview)
                 if DF.testRaidContainer then
                     DF.testRaidContainer:ClearAllPoints()
-                    DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", offsetX, offsetY)
+                    DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", offsetX / scale, offsetY / scale)
                 end
             end
             
@@ -773,15 +774,16 @@ function DF:CreateRaidMoverFrame()
         end
         
         -- Apply final position to mover, container, and test container
+        local scale = self:GetScale() or 1
         self:ClearAllPoints()
-        self:SetPoint("CENTER", UIParent, "CENTER", x, y)
-        
+        self:SetPoint("CENTER", UIParent, "CENTER", x / scale, y / scale)
+
         DF.raidContainer:ClearAllPoints()
-        DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", x, y)
-        
+        DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", x / scale, y / scale)
+
         if DF.testRaidContainer then
             DF.testRaidContainer:ClearAllPoints()
-            DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", x, y)
+            DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", x / scale, y / scale)
         end
         
         -- Update position panel
@@ -829,10 +831,13 @@ function DF:UnlockRaidFrames()
     DF.positionPanelMode = "raid"  -- Set mode for position panel
     DF.hideDragOverlay = false  -- Reset overlay toggle on unlock
     
+    local scale = db.frameScale or 1.0
+
     -- Make container movable and visible
     DF.raidContainer:SetMovable(true)
+    DF.raidContainer:SetScale(scale)
     DF.raidContainer:ClearAllPoints()
-    DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", db.raidAnchorX or 0, db.raidAnchorY or 0)
+    DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", (db.raidAnchorX or 0) / scale, (db.raidAnchorY or 0) / scale)
     DF.raidContainer:Show()
     
     -- Ensure container has a reasonable size
@@ -875,8 +880,9 @@ function DF:UnlockRaidFrames()
         DF.raidMoverFrame:SetSize(max(cWidth, 100), max(cHeight, 100))
     end
 
+    DF.raidMoverFrame:SetScale(scale)
     DF.raidMoverFrame:ClearAllPoints()
-    DF.raidMoverFrame:SetPoint("CENTER", UIParent, "CENTER", db.raidAnchorX or 0, db.raidAnchorY or 0)
+    DF.raidMoverFrame:SetPoint("CENTER", UIParent, "CENTER", (db.raidAnchorX or 0) / scale, (db.raidAnchorY or 0) / scale)
     DF.raidMoverFrame:SetFrameStrata("TOOLTIP")  -- Very high strata
     DF.raidMoverFrame:SetFrameLevel(100)
     DF.raidMoverFrame:SetAlpha(1)
@@ -886,8 +892,9 @@ function DF:UnlockRaidFrames()
     -- Sync testRaidContainer position (and size only when not in test mode,
     -- since test mode already has the correct calculated size)
     if DF.testRaidContainer then
+        DF.testRaidContainer:SetScale(scale)
         DF.testRaidContainer:ClearAllPoints()
-        DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", db.raidAnchorX or 0, db.raidAnchorY or 0)
+        DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", (db.raidAnchorX or 0) / scale, (db.raidAnchorY or 0) / scale)
         if not DF.raidTestMode then
             DF.testRaidContainer:SetSize(DF.raidContainer:GetSize())
         end
@@ -1241,8 +1248,10 @@ function DF:UpdateLiveRaidFrames()
     DF.raidContainer:Show()
     
     -- Update raid container position
+    local raidScale = db.frameScale or 1.0
+    DF.raidContainer:SetScale(raidScale)
     DF.raidContainer:ClearAllPoints()
-    DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", db.raidAnchorX or 0, db.raidAnchorY or 0)
+    DF.raidContainer:SetPoint("CENTER", UIParent, "CENTER", (db.raidAnchorX or 0) / raidScale, (db.raidAnchorY or 0) / raidScale)
     
     -- Legacy: Update layout only if legacy frames exist
     if DF.raidFrames and DF.raidFrames[1] then
@@ -1486,8 +1495,10 @@ function DF:UpdateAllFrames()
     end
     
     -- Update container position (always use CENTER for consistency with position panel)
+    local partyScale = db.frameScale or 1.0
+    DF.container:SetScale(partyScale)
     DF.container:ClearAllPoints()
-    DF.container:SetPoint("CENTER", UIParent, "CENTER", db.anchorX or 0, db.anchorY or 0)
+    DF.container:SetPoint("CENTER", UIParent, "CENTER", (db.anchorX or 0) / partyScale, (db.anchorY or 0) / partyScale)
     DF.container:Show()  -- Ensure container is visible
     
     -- Calculate layout

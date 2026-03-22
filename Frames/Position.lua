@@ -56,8 +56,9 @@ function DF:CreateMoverFrame()
                 
                 -- Sync testPartyContainer to container position (for live preview)
                 if DF.testPartyContainer then
+                    local scale = DF.testPartyContainer:GetScale() or 1
                     DF.testPartyContainer:ClearAllPoints()
-                    DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", offsetX, offsetY)
+                    DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", offsetX / scale, offsetY / scale)
                 end
             end
             
@@ -92,13 +93,14 @@ function DF:CreateMoverFrame()
         end
         
         -- Apply snapped position
+        local scale = DF.container:GetScale() or 1
         DF.container:ClearAllPoints()
-        DF.container:SetPoint("CENTER", UIParent, "CENTER", x, y)
-        
+        DF.container:SetPoint("CENTER", UIParent, "CENTER", x / scale, y / scale)
+
         -- Sync testPartyContainer to final position
         if DF.testPartyContainer then
             DF.testPartyContainer:ClearAllPoints()
-            DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", x, y)
+            DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", x / scale, y / scale)
         end
         
         -- Save position
@@ -474,13 +476,15 @@ function DF:CreatePermanentMover(container, mode)
 
             if isRaid then
                 if DF.testRaidContainer then
+                    local s = DF.testRaidContainer:GetScale() or 1
                     DF.testRaidContainer:ClearAllPoints()
-                    DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", ox, oy)
+                    DF.testRaidContainer:SetPoint("CENTER", UIParent, "CENTER", ox / s, oy / s)
                 end
             else
                 if DF.testPartyContainer then
+                    local s = DF.testPartyContainer:GetScale() or 1
                     DF.testPartyContainer:ClearAllPoints()
-                    DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", ox, oy)
+                    DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", ox / s, oy / s)
                 end
             end
         end)
@@ -1962,10 +1966,13 @@ function DF:UnlockFrames()
     DF.positionPanelMode = "party"  -- Set mode for position panel
     DF.hideDragOverlay = false  -- Reset overlay toggle on unlock
     
+    local scale = db.frameScale or 1.0
+    DF.container:SetScale(scale)
+
     -- Always use CENTER anchor for positioning
     db.anchorPoint = "CENTER"
     DF.container:ClearAllPoints()
-    DF.container:SetPoint("CENTER", UIParent, "CENTER", db.anchorX or 0, db.anchorY or 0)
+    DF.container:SetPoint("CENTER", UIParent, "CENTER", (db.anchorX or 0) / scale, (db.anchorY or 0) / scale)
     DF.container:Show()  -- Ensure container is visible
     
     -- Ensure container has a reasonable size (might be 0 if headers haven't laid out yet)
@@ -2001,8 +2008,9 @@ function DF:UnlockFrames()
 
     -- Sync testPartyContainer to current position and size
     if DF.testPartyContainer then
+        DF.testPartyContainer:SetScale(scale)
         DF.testPartyContainer:ClearAllPoints()
-        DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", db.anchorX or 0, db.anchorY or 0)
+        DF.testPartyContainer:SetPoint("CENTER", UIParent, "CENTER", (db.anchorX or 0) / scale, (db.anchorY or 0) / scale)
         DF.testPartyContainer:SetSize(DF.container:GetSize())
     end
     
