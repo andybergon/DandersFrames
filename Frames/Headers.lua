@@ -2461,7 +2461,8 @@ function DF:CreateRaidPositionHandler()
         if group1 then
             group1:ClearAllPoints()
             local slot = pop1
-            local slotIndex = slot > 0 and (slot - 1) or 0
+            if slot > 0 then
+            local slotIndex = slot - 1
             local rcIdx = (slotIndex - slotIndex % groupsPerRow) / groupsPerRow
             local posInRC = slotIndex % groupsPerRow
             local isPartialRow = popRem > 0 and rcIdx == popRows - 1
@@ -2534,13 +2535,15 @@ function DF:CreateRaidPositionHandler()
                     end
                 end
             end
+            end -- slot > 0
         end
-        
+
         -- Position group 2
         if group2 then
             group2:ClearAllPoints()
             local slot = pop2
-            local slotIndex = slot > 0 and (slot - 1) or 1
+            if slot > 0 then
+            local slotIndex = slot - 1
             local rcIdx = (slotIndex - slotIndex % groupsPerRow) / groupsPerRow
             local posInRC = slotIndex % groupsPerRow
             local isPartialRow = popRem > 0 and rcIdx == popRows - 1
@@ -2613,13 +2616,15 @@ function DF:CreateRaidPositionHandler()
                     end
                 end
             end
+            end -- slot > 0
         end
-        
+
         -- Position group 3
         if group3 then
             group3:ClearAllPoints()
             local slot = pop3
-            local slotIndex = slot > 0 and (slot - 1) or 2
+            if slot > 0 then
+            local slotIndex = slot - 1
             local rcIdx = (slotIndex - slotIndex % groupsPerRow) / groupsPerRow
             local posInRC = slotIndex % groupsPerRow
             local isPartialRow = popRem > 0 and rcIdx == popRows - 1
@@ -2692,13 +2697,15 @@ function DF:CreateRaidPositionHandler()
                     end
                 end
             end
+            end -- slot > 0
         end
-        
+
         -- Position group 4
         if group4 then
             group4:ClearAllPoints()
             local slot = pop4
-            local slotIndex = slot > 0 and (slot - 1) or 3
+            if slot > 0 then
+            local slotIndex = slot - 1
             local rcIdx = (slotIndex - slotIndex % groupsPerRow) / groupsPerRow
             local posInRC = slotIndex % groupsPerRow
             local isPartialRow = popRem > 0 and rcIdx == popRows - 1
@@ -2771,13 +2778,15 @@ function DF:CreateRaidPositionHandler()
                     end
                 end
             end
+            end -- slot > 0
         end
-        
+
         -- Position group 5
         if group5 then
             group5:ClearAllPoints()
             local slot = pop5
-            local slotIndex = slot > 0 and (slot - 1) or 4
+            if slot > 0 then
+            local slotIndex = slot - 1
             local rcIdx = (slotIndex - slotIndex % groupsPerRow) / groupsPerRow
             local posInRC = slotIndex % groupsPerRow
             local isPartialRow = popRem > 0 and rcIdx == popRows - 1
@@ -2850,13 +2859,15 @@ function DF:CreateRaidPositionHandler()
                     end
                 end
             end
+            end -- slot > 0
         end
-        
+
         -- Position group 6
         if group6 then
             group6:ClearAllPoints()
             local slot = pop6
-            local slotIndex = slot > 0 and (slot - 1) or 5
+            if slot > 0 then
+            local slotIndex = slot - 1
             local rcIdx = (slotIndex - slotIndex % groupsPerRow) / groupsPerRow
             local posInRC = slotIndex % groupsPerRow
             local isPartialRow = popRem > 0 and rcIdx == popRows - 1
@@ -2929,13 +2940,15 @@ function DF:CreateRaidPositionHandler()
                     end
                 end
             end
+            end -- slot > 0
         end
-        
+
         -- Position group 7
         if group7 then
             group7:ClearAllPoints()
             local slot = pop7
-            local slotIndex = slot > 0 and (slot - 1) or 6
+            if slot > 0 then
+            local slotIndex = slot - 1
             local rcIdx = (slotIndex - slotIndex % groupsPerRow) / groupsPerRow
             local posInRC = slotIndex % groupsPerRow
             local isPartialRow = popRem > 0 and rcIdx == popRows - 1
@@ -3008,13 +3021,15 @@ function DF:CreateRaidPositionHandler()
                     end
                 end
             end
+            end -- slot > 0
         end
-        
+
         -- Position group 8
         if group8 then
             group8:ClearAllPoints()
             local slot = pop8
-            local slotIndex = slot > 0 and (slot - 1) or 7
+            if slot > 0 then
+            local slotIndex = slot - 1
             local rcIdx = (slotIndex - slotIndex % groupsPerRow) / groupsPerRow
             local posInRC = slotIndex % groupsPerRow
             local isPartialRow = popRem > 0 and rcIdx == popRows - 1
@@ -3087,8 +3102,9 @@ function DF:CreateRaidPositionHandler()
                     end
                 end
             end
+            end -- slot > 0
         end
-        
+
         -- Debug info
         handler:SetAttribute("debugpopulated", numPopulated)
         handler:SetAttribute("debugdirection", growDirection)
@@ -7918,6 +7934,12 @@ function DF:ProcessRosterUpdate()
         -- the next roster change that passes HasRosterMembershipChanged().
         if DF.raidPositionHandler then
             DF.raidPositionHandler:SetAttribute("suppressreposition", 0)
+        end
+        -- Always re-trigger positioning for grouped raids to ensure groups are
+        -- correctly placed even when membership hasn't changed (e.g., WoW re-sorted
+        -- children internally). TriggerRaidPosition is cheap and has a flat-mode guard.
+        if IsInRaid() and raidDb and raidDb.raidUseGroups then
+            DF:TriggerRaidPosition()
         end
         return
     end
