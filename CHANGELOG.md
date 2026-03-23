@@ -1,5 +1,17 @@
 # DandersFrames Changelog
 
+## [4.1.4] - 2026-03-23
+
+### New Features
+* **Frame Scale** — new slider in Layout settings to scale party and raid frames (0.5x–2.0x). Movers, snap-to-grid, and drag all work correctly at any scale. Scale is per-profile and applies to containers, movers, and test frames.
+* (Pinned Frames) **Auto-Update by Role** — when auto-add role filters are active (tanks, healers, DPS), players whose role no longer matches are automatically removed. Manually added players and offline players are never auto-removed.
+
+### Bug Fixes
+* (Flat Raids) Fix raid anchor moving when respeccing or dying — grouped-mode positioning was resizing the shared container when flat mode was active
+* (Flat Raids) Fix frames overlapping with grouped headers when auto layout switches from grouped to flat mode
+* (Pinned Frames) Fix frames drifting towards bottom-left when changing scale
+* (Pinned Frames) Fix drag speed mismatch at non-1.0 scale — frames now track the cursor 1:1 at any scale
+
 ## [4.1.3] - 2026-03-17
 
 ### New Features
