@@ -3995,120 +3995,138 @@ function DF:ApplyRaidGroupSorting()
     for i = 1, 8 do
         local header = DF.raidSeparatedHeaders[i]
         if header then
-            -- Check visibility setting for this group (used after sorting attributes are set)
+            -- Check visibility setting for this group
             local showGroup = db.raidGroupVisible and db.raidGroupVisible[i]
             if showGroup == nil then showGroup = true end
 
-            -- All groups get sorting attributes set (so they're ready if made visible later)
-            header:SetAttribute("showPlayer", true)
-            header:SetAttribute("showRaid", true)
-            header:SetAttribute("showParty", false)
-
-            -- NOTE: Positioning attributes (point, yOffset, sortDir, ClearAllPoints/SetPoint)
-            -- are now handled by the secure position handler via UpdateRaidPositionAttributes
-
-            -- Build the sorting key BEFORE applying attributes.
-            -- This lets us detect whether anything actually changed and skip the
-            -- destructive Hide/Show cycle when the sorting is identical.
-            local sortKey
-
-            -- CHECK sortEnabled FIRST (like party sorting does)
-            -- This ensures ALL headers get sorting disabled, not just those that don't need nameList
-            if not sortEnabled then
-                sortKey = "INDEX:" .. i
-
-                -- Sorting disabled - clear ALL sorting attributes with nil
-                -- CRITICAL: Must use nil, not empty string, for SecureGroupHeaderTemplate
-                header:SetAttribute("nameList", nil)
+            if not showGroup then
+                -- DEFENSE IN DEPTH: Don't just hide — strip all attributes so the
+                -- header can never claim or display units even if something shows it.
+                -- An empty nameList with NAMELIST sort means zero children matched.
+                header:SetAttribute("showRaid", false)
+                header:SetAttribute("showParty", false)
+                header:SetAttribute("showPlayer", false)
+                header:SetAttribute("nameList", "")
+                header:SetAttribute("sortMethod", "NAMELIST")
+                header:SetAttribute("groupFilter", nil)
                 header:SetAttribute("groupBy", nil)
                 header:SetAttribute("groupingOrder", nil)
                 header:SetAttribute("roleFilter", nil)
                 header:SetAttribute("strictFiltering", nil)
-                header:SetAttribute("groupFilter", tostring(i))  -- Keep groupFilter to show correct group
-                header:SetAttribute("sortMethod", "INDEX")
 
-                if DF.debugHeaders then
-                    print("|cFF00FF00[DF Headers]|r   Group", i, ": sorting DISABLED, using INDEX")
-                end
-            else
-                -- Sorting enabled - determine if this group uses nameList
-                -- Use nameList when:
-                -- 1. Advanced sorting enabled (all groups)
-                -- 2. OR player's group with FIRST/LAST position
-                local isPlayerGroup = (i == playerGroup)
-                local useNameList = needsAdvancedSorting or (isPlayerGroup and playerNeedsNameList)
-
-                if useNameList then
-                    -- Use nameList for custom sorting
-                    -- For player's group: use selfPosition
-                    -- For other groups: use "SORTED" (player position doesn't matter)
-                    local groupSelfPosition = isPlayerGroup and selfPosition or "SORTED"
-                    local nameList = DF:BuildRaidGroupNameList(i, groupSelfPosition)
-                    sortKey = "NL:" .. (nameList or "")
-
-                    -- Clear native sorting attributes - use direct SetAttribute to bypass cache
-                    -- This ensures attributes are always set fresh when switching modes
-                    header:SetAttribute("groupBy", nil)
-                    header:SetAttribute("groupingOrder", nil)
-                    header:SetAttribute("groupFilter", nil)  -- nameList acts as the filter
-                    header:SetAttribute("roleFilter", nil)
-                    header:SetAttribute("strictFiltering", nil)
-
-                    -- Set nameList and sortMethod directly (bypass cache)
-                    header:SetAttribute("nameList", nameList)
-                    header:SetAttribute("sortMethod", "NAMELIST")
-
-                    if DF.debugHeaders then
-                        local tag = isPlayerGroup and "(player)" or ""
-                        print("|cFF00FF00[DF Headers]|r   Group", i, tag, ": nameList mode -", nameList)
-                    end
-                else
-                    sortKey = "ROLE:" .. i .. ":" .. roleOrderString
-
-                    -- Use native sorting with groupFilter (simple role sorting only)
-                    -- Use direct SetAttribute to bypass cache
-                    header:SetAttribute("nameList", nil)
-                    header:SetAttribute("groupFilter", tostring(i))
-                    header:SetAttribute("groupingOrder", roleOrderString)
-                    header:SetAttribute("groupBy", "ASSIGNEDROLE")
-                    header:SetAttribute("sortMethod", "NAME")
-
-                    if DF.debugHeaders then
-                        print("|cFF00FF00[DF Headers]|r   Group", i, ": native role sorting, groupFilter=", i)
-                    end
-                end
-            end
-
-            -- Determine if we need the destructive Hide/Show cycle.
-            -- SecureGroupHeaderTemplate re-evaluates children on Show(), calling
-            -- ClearAllPoints+SetPoint on every child. This causes visible frame
-            -- jumping. Only do it when sorting actually changed.
-            local sortChanged = (sortKey ~= DF._lastGroupSortKey[i])
-            DF._lastGroupSortKey[i] = sortKey
-
-            if not showGroup then
-                -- Group is hidden per user settings — keep it hidden
                 if header:IsShown() then header:Hide() end
-                -- Set count to 0 so positioning handler skips this group (no gap)
                 if DF.raidPositionHandler then
                     DF.raidPositionHandler:SetAttribute("group" .. i .. "count", 0)
                 end
                 DF:SetHeaderChildrenEventsEnabled(header, false)
-                DF:Debug("ROSTER", "  Group %d: hidden (user setting)", i)
-            elseif not sortChanged and header:IsShown() then
-                -- Sorting unchanged and header already shown — skip Hide/Show
-                DF:Debug("ROSTER", "  Group %d: sort unchanged, skipping Hide/Show", i)
+
+                -- Track sortKey so re-enabling triggers a full Hide/Show cycle
+                DF._lastGroupSortKey[i] = "HIDDEN"
+
+                DF:Debug("ROSTER", "  Group %d: hidden (user setting, attrs cleared)", i)
             else
-                -- Sorting changed or header needs to be shown — do the full cycle
-                header:Hide()
-                header:Show()
-                DF:SetHeaderChildrenEventsEnabled(header, true)
-                local childCountAfter = 0
-                for ci = 1, 5 do
-                    local ch = header:GetAttribute("child" .. ci)
-                    if ch and ch:IsShown() then childCountAfter = childCountAfter + 1 end
+                -- Visible group: set up sorting attributes normally
+                header:SetAttribute("showPlayer", true)
+                header:SetAttribute("showRaid", true)
+                header:SetAttribute("showParty", false)
+
+                -- NOTE: Positioning attributes (point, yOffset, sortDir, ClearAllPoints/SetPoint)
+                -- are now handled by the secure position handler via UpdateRaidPositionAttributes
+
+                -- Build the sorting key BEFORE applying attributes.
+                -- This lets us detect whether anything actually changed and skip the
+                -- destructive Hide/Show cycle when the sorting is identical.
+                local sortKey
+
+                -- CHECK sortEnabled FIRST (like party sorting does)
+                -- This ensures ALL headers get sorting disabled, not just those that don't need nameList
+                if not sortEnabled then
+                    sortKey = "INDEX:" .. i
+
+                    -- Sorting disabled - clear ALL sorting attributes with nil
+                    -- CRITICAL: Must use nil, not empty string, for SecureGroupHeaderTemplate
+                    header:SetAttribute("nameList", nil)
+                    header:SetAttribute("groupBy", nil)
+                    header:SetAttribute("groupingOrder", nil)
+                    header:SetAttribute("roleFilter", nil)
+                    header:SetAttribute("strictFiltering", nil)
+                    header:SetAttribute("groupFilter", tostring(i))  -- Keep groupFilter to show correct group
+                    header:SetAttribute("sortMethod", "INDEX")
+
+                    if DF.debugHeaders then
+                        print("|cFF00FF00[DF Headers]|r   Group", i, ": sorting DISABLED, using INDEX")
+                    end
+                else
+                    -- Sorting enabled - determine if this group uses nameList
+                    -- Use nameList when:
+                    -- 1. Advanced sorting enabled (all groups)
+                    -- 2. OR player's group with FIRST/LAST position
+                    local isPlayerGroup = (i == playerGroup)
+                    local useNameList = needsAdvancedSorting or (isPlayerGroup and playerNeedsNameList)
+
+                    if useNameList then
+                        -- Use nameList for custom sorting
+                        -- For player's group: use selfPosition
+                        -- For other groups: use "SORTED" (player position doesn't matter)
+                        local groupSelfPosition = isPlayerGroup and selfPosition or "SORTED"
+                        local nameList = DF:BuildRaidGroupNameList(i, groupSelfPosition)
+                        sortKey = "NL:" .. (nameList or "")
+
+                        -- Clear native sorting attributes - use direct SetAttribute to bypass cache
+                        -- This ensures attributes are always set fresh when switching modes
+                        header:SetAttribute("groupBy", nil)
+                        header:SetAttribute("groupingOrder", nil)
+                        header:SetAttribute("groupFilter", nil)  -- nameList acts as the filter
+                        header:SetAttribute("roleFilter", nil)
+                        header:SetAttribute("strictFiltering", nil)
+
+                        -- Set nameList and sortMethod directly (bypass cache)
+                        header:SetAttribute("nameList", nameList)
+                        header:SetAttribute("sortMethod", "NAMELIST")
+
+                        if DF.debugHeaders then
+                            local tag = isPlayerGroup and "(player)" or ""
+                            print("|cFF00FF00[DF Headers]|r   Group", i, tag, ": nameList mode -", nameList)
+                        end
+                    else
+                        sortKey = "ROLE:" .. i .. ":" .. roleOrderString
+
+                        -- Use native sorting with groupFilter (simple role sorting only)
+                        -- Use direct SetAttribute to bypass cache
+                        header:SetAttribute("nameList", nil)
+                        header:SetAttribute("groupFilter", tostring(i))
+                        header:SetAttribute("groupingOrder", roleOrderString)
+                        header:SetAttribute("groupBy", "ASSIGNEDROLE")
+                        header:SetAttribute("sortMethod", "NAME")
+
+                        if DF.debugHeaders then
+                            print("|cFF00FF00[DF Headers]|r   Group", i, ": native role sorting, groupFilter=", i)
+                        end
+                    end
                 end
-                DF:Debug("ROSTER", "  Group %d: Hide/Show (sortChanged=%s), children -> %d", i, tostring(sortChanged), childCountAfter)
+
+                -- Determine if we need the destructive Hide/Show cycle.
+                -- SecureGroupHeaderTemplate re-evaluates children on Show(), calling
+                -- ClearAllPoints+SetPoint on every child. This causes visible frame
+                -- jumping. Only do it when sorting actually changed.
+                local sortChanged = (sortKey ~= DF._lastGroupSortKey[i])
+                DF._lastGroupSortKey[i] = sortKey
+
+                if not sortChanged and header:IsShown() then
+                    -- Sorting unchanged and header already shown — skip Hide/Show
+                    DF:Debug("ROSTER", "  Group %d: sort unchanged, skipping Hide/Show", i)
+                else
+                    -- Sorting changed or header needs to be shown — do the full cycle
+                    header:Hide()
+                    header:Show()
+                    DF:SetHeaderChildrenEventsEnabled(header, true)
+                    local childCountAfter = 0
+                    for ci = 1, 5 do
+                        local ch = header:GetAttribute("child" .. ci)
+                        if ch and ch:IsShown() then childCountAfter = childCountAfter + 1 end
+                    end
+                    DF:Debug("ROSTER", "  Group %d: Hide/Show (sortChanged=%s), children -> %d", i, tostring(sortChanged), childCountAfter)
+                end
             end
         end
     end
@@ -5172,6 +5190,15 @@ function DF:UpdateRaidHeaderVisibility(skipReposition)
                             DF.raidPositionHandler:SetAttribute("group" .. i .. "count", count)
                         end
                     else
+                        -- DEFENSE IN DEPTH: Neutralize header so it can never claim
+                        -- or display units even if something unexpectedly shows it.
+                        header:SetAttribute("showRaid", false)
+                        header:SetAttribute("showParty", false)
+                        header:SetAttribute("showPlayer", false)
+                        header:SetAttribute("nameList", "")
+                        header:SetAttribute("sortMethod", "NAMELIST")
+                        header:SetAttribute("groupFilter", nil)
+
                         header:Hide()
                         DF:SetHeaderChildrenEventsEnabled(header, false)
                         -- Set count to 0 so positioning skips this group (no gap)
