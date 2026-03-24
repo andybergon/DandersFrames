@@ -4,7 +4,8 @@
 
 ### Bug Fixes
 * (Grouped Raids) Fix hidden groups sometimes showing frames when players join or are moved into them — hidden group headers are now fully neutralized (attributes cleared) so they can never claim or display units
-* (Auras) Remove private aura reanchor system — tokens auto-resolve in Midnight and the reanchor APIs are now combat-locked
+* (Boss Debuffs) Fix private auras showing on wrong players after sorting or roster changes — restore reanchor system with combat lockdown guards so anchors rebind to the correct unit token
+* (Targeted Spells) Stagger icon pool creation for raid frames to prevent script-ran-too-long errors when 40 frames initialise simultaneously
 * (Auras) Use SetCooldownFromDurationObject for secret-safe aura cooldowns
 * (Auras) Add issecretvalue local cache to Icons.lua and DebugAuras.lua
 
