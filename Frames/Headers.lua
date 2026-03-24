@@ -641,13 +641,7 @@ function DF:InitializeHeaderChild(frame)
                 
                 -- No event re-registration needed: global headerChildEventFrame
                 -- uses unitFrameMap[unit] for dispatch, which we just updated above.
-                
-                -- Rebind private aura (boss debuff) anchors to new unit token
-                -- Containers stay on the same frame, only the monitored unit changes
-                if DF.ReanchorPrivateAuras then
-                    DF:ReanchorPrivateAuras(self)
-                end
-                
+
                 return
             end
             
@@ -679,11 +673,6 @@ function DF:InitializeHeaderChild(frame)
             -- Clear stale range state - prevents new player inheriting old player's
             -- faded-out appearance until next range timer tick
             self.dfInRange = nil
-            -- Clear private aura unit tracking so next reanchor won't skip
-            if not actualUnit then
-                self.bossDebuffAnchoredUnit = nil
-            end
-            
             -- Cache new unit's GUID
             if actualUnit then
                 -- Clear stale aura/range data that may belong to old occupant of this slot
@@ -714,12 +703,6 @@ function DF:InitializeHeaderChild(frame)
             
             -- Trigger a comprehensive update for the frame
             if actualUnit then
-                -- Rebind private aura (boss debuff) anchors to new unit token immediately
-                -- Safe to call in combat - Add/RemovePrivateAuraAnchor are not protected
-                if DF.ReanchorPrivateAuras then
-                    DF:ReanchorPrivateAuras(self)
-                end
-                
                 C_Timer.After(0, function()
                     if self:IsVisible() and self.unit then
                         -- Use full frame refresh for complete update
@@ -4171,11 +4154,6 @@ function DF:ApplyRaidGroupSorting()
     if DF.debugHeaders then
         print("|cFF00FF00[DF Headers]|r Raid group sorting applied")
     end
-    
-    -- Schedule private aura reanchor after all attribute changes settle (combat-safe)
-    if DF.SchedulePrivateAuraReanchor then
-        DF:SchedulePrivateAuraReanchor()
-    end
 end
 
 -- Refresh all group-based raid frames after sorting changes
@@ -5877,11 +5855,6 @@ function DF:ApplyPartyGroupSorting()
     
     -- NOTE: Frame refresh is handled by OnAttributeChanged when units swap
     -- No need for explicit refresh here - it causes flicker due to double update
-    
-    -- Schedule private aura reanchor after all attribute changes settle (combat-safe)
-    if DF.SchedulePrivateAuraReanchor then
-        DF:SchedulePrivateAuraReanchor()
-    end
 end
 
 -- ============================================================
@@ -6006,11 +5979,6 @@ function DF:ApplyArenaHeaderSorting()
         if DF.debugHeaders then
             print("|cFF00FF00[DF Headers]|r   Arena using nameList mode:", nameList)
         end
-    end
-    
-    -- Schedule private aura reanchor after all attribute changes settle (combat-safe)
-    if DF.SchedulePrivateAuraReanchor then
-        DF:SchedulePrivateAuraReanchor()
     end
 end
 
@@ -7001,10 +6969,6 @@ function DF:ApplyHeaderSettings()
     -- Arena: skip raid sorting entirely (arena orientation was already applied above)
     local contentType = DF.GetContentType and DF:GetContentType()
     if contentType == "arena" then
-        -- Schedule private aura reanchor after attribute changes settle
-        if DF.SchedulePrivateAuraReanchor then
-            DF:SchedulePrivateAuraReanchor()
-        end
         return
     end
 
@@ -7073,12 +7037,6 @@ function DF:ApplyHeaderSettings()
         print("|cFFFF00FF[DF Flat Debug]|r ==========================================")
     end
     
-    -- Schedule private aura reanchor after ALL attribute changes settle.
-    -- This catches the showRaid false/true toggle above which can cause a second
-    -- round of unit reassignments after the sorting functions have already run.
-    if DF.SchedulePrivateAuraReanchor then
-        DF:SchedulePrivateAuraReanchor()
-    end
 end
 
 -- ============================================================

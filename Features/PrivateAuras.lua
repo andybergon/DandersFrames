@@ -348,9 +348,6 @@ function DF:SetupPrivateAuraAnchors(frame)
         end
     end
     
-    -- Track which unit we're now monitoring (idempotency guard for ReanchorPrivateAuras)
-    frame.bossDebuffAnchoredUnit = unit
-    
 end
 
 function DF:ClearPrivateAuraAnchors(frame)
@@ -388,176 +385,7 @@ function DF:ClearPrivateAuraAnchors(frame)
         end
     end
     
-    -- Clear tracked unit so next ReanchorPrivateAuras will re-register
-    frame.bossDebuffAnchoredUnit = nil
-    
     frame.isBeingCleared = nil
-end
-
--- ============================================================
--- LIGHTWEIGHT REANCHOR (unit token changed, containers stay)
--- ============================================================
--- When sorting moves a player to a different frame position, the
--- container is still visually attached to the correct frame, but
--- the Blizzard anchor is monitoring the OLD unit token.
--- This function removes old anchors and re-adds with the new unit
--- token, reusing existing containers (no layout/parenting changes).
---
--- SAFE TO CALL IN COMBAT: C_UnitAuras.AddPrivateAuraAnchor and
--- RemovePrivateAuraAnchor are NOT protected functions.
--- ============================================================
-
-function DF:ReanchorPrivateAuras(frame)
-    if not frame or not frame.unit then return end
-    
-    -- Nothing to reanchor if no containers exist
-    if not frame.bossDebuffContainers or #frame.bossDebuffContainers == 0 then return end
-    
-    -- PERF TEST: Skip if disabled
-    if DF.PerfTest and not DF.PerfTest.enablePrivateAuras then return end
-    
-    local newUnit = frame.unit
-    local db = DF:GetFrameDB(frame)
-    if not db or not db.bossDebuffsEnabled then return end
-    
-    -- Idempotency guard: skip if anchors already monitoring this unit (Grid2-style).
-    -- Prevents redundant Remove+Add cycles during Hide/Show sorting churn.
-    if frame.bossDebuffAnchoredUnit == newUnit then return end
-    
-    -- Step 1: Remove all old Blizzard anchors (API only, keep containers)
-    local oldAnchors = frameAnchors[frame]
-    if oldAnchors then
-        for i, anchorID in ipairs(oldAnchors) do
-            pcall(function()
-                C_UnitAuras.RemovePrivateAuraAnchor(anchorID)
-            end)
-        end
-    end
-    frameAnchors[frame] = {}
-    
-    -- Step 2: Re-read settings for anchor params
-    local showCountdown = db.bossDebuffsShowCountdown ~= false
-    local showNumbers = db.bossDebuffsShowNumbers ~= false
-    local iconWidth = db.bossDebuffsIconWidth or 30
-    local iconHeight = db.bossDebuffsIconHeight or 30
-    local borderScale = db.bossDebuffsBorderScale or 1.0
-    local textScale = db.bossDebuffsTextScale or 1.0
-    local textOffsetX = db.bossDebuffsTextOffsetX or 0
-    local textOffsetY = db.bossDebuffsTextOffsetY or 0
-    local mainShowNumbers = false
-    
-    -- Step 3: Re-register each container with new unit token
-    for i, container in ipairs(frame.bossDebuffContainers) do
-        local success, anchorID = pcall(function()
-            return C_UnitAuras.AddPrivateAuraAnchor({
-                unitToken = newUnit,
-                auraIndex = i,
-                parent = container,
-                showCountdownFrame = showCountdown,
-                showCountdownNumbers = mainShowNumbers,
-                iconInfo = {
-                    iconWidth = iconWidth,
-                    iconHeight = iconHeight,
-                    borderScale = borderScale,
-                    iconAnchor = {
-                        point = "CENTER",
-                        relativeTo = container,
-                        relativePoint = "CENTER",
-                        offsetX = 0,
-                        offsetY = 0,
-                    },
-                },
-            })
-        end)
-        
-        if success and anchorID then
-            table.insert(frameAnchors[frame], anchorID)
-            
-            -- Re-register scaled duration numbers anchor if enabled
-            if showNumbers and frame.bossDebuffScaleFrames and frame.bossDebuffScaleFrames[i] then
-                local scaleFrame = frame.bossDebuffScaleFrames[i]
-                local anchorOffX = textOffsetX / textScale
-                local anchorOffY = textOffsetY / textScale
-                
-                local scaleSuccess, scaleAnchorID = pcall(function()
-                    return C_UnitAuras.AddPrivateAuraAnchor({
-                        unitToken = newUnit,
-                        auraIndex = i,
-                        parent = scaleFrame,
-                        showCountdownFrame = true,
-                        showCountdownNumbers = true,
-                        iconInfo = {
-                            iconWidth = 0.001,
-                            iconHeight = 0.001,
-                            borderScale = -100,
-                            iconAnchor = {
-                                point = "CENTER",
-                                relativeTo = container,
-                                relativePoint = "CENTER",
-                                offsetX = anchorOffX,
-                                offsetY = anchorOffY,
-                            },
-                        },
-                    })
-                end)
-                
-                if scaleSuccess and scaleAnchorID then
-                    table.insert(frameAnchors[frame], scaleAnchorID)
-                end
-            end
-        end
-    end
-    
-    -- Track which unit we're now monitoring (idempotency guard)
-    frame.bossDebuffAnchoredUnit = newUnit
-    
-    if DF.bossDebuffDebug then
-        print("|cff00ff00DF BossDebuff:|r Reanchored " .. #frame.bossDebuffContainers .. " containers to " .. newUnit .. " (" .. #frameAnchors[frame] .. " anchors)")
-    end
-end
-
--- ============================================================
--- DEBOUNCED REANCHOR ALL FRAMES (combat-safe)
--- ============================================================
--- Called after sorting completes to ensure all private aura anchors
--- are monitoring the correct unit token. Uses C_Timer.After(0) so
--- it runs on the NEXT frame, after all SecureGroupHeaderTemplate
--- attribute changes have settled. Multiple calls in the same frame
--- coalesce into a single reanchor pass via the pendingReanchor flag.
---
--- Fully combat-safe: ReanchorPrivateAuras only calls
--- C_UnitAuras.Add/RemovePrivateAuraAnchor (not protected).
--- ============================================================
-
-local pendingReanchor = false
-
-function DF:SchedulePrivateAuraReanchor()
-    if pendingReanchor then return end
-    pendingReanchor = true
-    C_Timer.After(0, function()
-        pendingReanchor = false
-        if DF.IterateAllFrames then
-            DF:IterateAllFrames(function(frame)
-                if frame and frame.unit then
-                    DF:ReanchorPrivateAuras(frame)
-                end
-            end)
-        end
-        -- Also cover pinned frames
-        if DF.PinnedFrames and DF.PinnedFrames.initialized and DF.PinnedFrames.headers then
-            for setIndex = 1, 2 do
-                local header = DF.PinnedFrames.headers[setIndex]
-                if header then
-                    for i = 1, 40 do
-                        local child = header:GetAttribute("child" .. i)
-                        if child and child.unit then
-                            DF:ReanchorPrivateAuras(child)
-                        end
-                    end
-                end
-            end
-        end
-    end)
 end
 
 -- ============================================================
@@ -849,9 +677,9 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         end
         
     elseif event == "GROUP_ROSTER_UPDATE" then
-        -- Roster changed - new frames may need containers, or units may have shifted.
-        -- Out of combat: set up containers for any frames that don't have them yet.
-        -- In combat: schedule a reanchor for existing containers (combat-safe).
+        -- Roster changed - new frames may need initial container setup.
+        -- Private aura anchors bind to tokens, so existing anchors auto-resolve
+        -- to the correct player when tokens shift. No reanchor needed.
         if not InCombatLockdown() then
             -- Delay slightly to let header children get their unit assignments first
             C_Timer.After(0.1, function()
@@ -859,9 +687,6 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
                     DF:UpdateAllPrivateAuraAnchors()
                 end
             end)
-        else
-            -- Combat-safe: reanchor existing containers to potentially new unit tokens
-            DF:SchedulePrivateAuraReanchor()
         end
     end
 end)

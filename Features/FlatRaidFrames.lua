@@ -990,11 +990,6 @@ function FlatRaidFrames:UpdateSorting()
     -- Resize innerContainer to fit visible frames
     -- Note: Call directly, no delays (combat safety)
     self:ResizeInnerContainer()
-    
-    -- Schedule private aura reanchor after all attribute changes settle (combat-safe)
-    if DF.SchedulePrivateAuraReanchor then
-        DF:SchedulePrivateAuraReanchor()
-    end
 end
 
 -- Alias for backward compatibility
