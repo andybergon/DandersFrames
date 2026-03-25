@@ -4,15 +4,11 @@ DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
 
-## Unreleased (v4.1.5-alpha.2)
+## [4.1.6] - 2026-03-25
 
-- Update changelog: restore private aura reanchor, add targeted spell stagger fix
-- fix: restore private aura reanchor system with combat lockdown
-- (Auras) Switch default aura data source to Direct API for all new and existing profiles — provides full control over buff/debuff filtering. Users can switch back to Blizzard mode in settings if preferred.
-- (Auras) Update default Direct API filters: enable Important Spells for buffs, show all debuffs, sort by time remaining
-
----
-
+### Changes
+* (Auras) Switch default aura data source to Direct API for all new and existing profiles — provides full control over buff/debuff filtering. Users can switch back to Blizzard mode in settings if preferred.
+* (Auras) Update default Direct API filters: enable Important Spells for buffs, show all debuffs, sort by time remaining
 
 ## [4.1.5] - 2026-03-24
 
