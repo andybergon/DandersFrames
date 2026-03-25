@@ -1929,10 +1929,14 @@ end
 
 -- Compose {orientation, wrap, direction} back into "LEFT_UP"
 local function ComposeGrowth(orientation, wrap, direction)
+    -- Safety: if wrap is nil, pick a sensible default for the orientation
+    if not wrap then
+        wrap = (orientation == "HORIZONTAL") and "UP" or "LEFT"
+    end
     if direction == "CENTER" then
         return "CENTER_" .. wrap
     else
-        return direction .. "_" .. wrap
+        return direction .. "_" .. (wrap or "UP")
     end
 end
 
