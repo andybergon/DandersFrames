@@ -469,8 +469,11 @@ local function TriggerAuraUpdateForUnit(unit)
     -- Fast unit→frame lookup via exposed unitFrameMap
     local ourFrame = DF.unitFrameMap and DF.unitFrameMap[unit]
 
+    DF:Debug("BLIZAURA", "TriggerUpdate for %s — unitFrameMap hit: %s", unit, ourFrame and ourFrame:GetName() or "nil")
+
     -- Fallback: iterate if unitFrameMap not yet available (early init)
     if not ourFrame then
+        DF:Debug("BLIZAURA", "TriggerUpdate fallback iterate for %s", unit)
         -- Check arena first (IsInRaid()=true in arena)
         if DF.IsInArena and DF:IsInArena() then
             if DF.IterateArenaFrames then
@@ -499,10 +502,16 @@ local function TriggerAuraUpdateForUnit(unit)
                 end)
             end
         end
+        if ourFrame then
+            DF:Debug("BLIZAURA", "TriggerUpdate fallback found: %s", ourFrame:GetName())
+        else
+            DF:DebugWarn("BLIZAURA", "TriggerUpdate NO frame found for %s", unit)
+        end
     end
 
     if ourFrame and ourFrame:IsVisible() then
         if DF.UpdateAuras_Enhanced then
+            DF:Debug("BLIZAURA", "Calling UpdateAuras_Enhanced for %s on %s", unit, ourFrame:GetName())
             DF:UpdateAuras_Enhanced(ourFrame)
         end
         if DF.UpdateDefensiveBar then
@@ -517,6 +526,8 @@ local function TriggerAuraUpdateForUnit(unit)
         if DF.UpdateDispelOverlay then
             DF:UpdateDispelOverlay(ourFrame)
         end
+    elseif ourFrame then
+        DF:DebugWarn("BLIZAURA", "TriggerUpdate SKIPPED for %s — frame %s not visible", unit, ourFrame:GetName())
     end
 
     -- Also update pinned frames showing this unit
@@ -595,8 +606,13 @@ local function CaptureAurasFromBlizzardFrame(frame, triggerUpdate)
     local modeFrame = DF.unitFrameMap and DF.unitFrameMap[unit]
     if modeFrame then
         local modeDb = DF:GetFrameDB(modeFrame)
-        if modeDb and modeDb.auraSourceMode == "DIRECT" then return end
+        if modeDb and modeDb.auraSourceMode == "DIRECT" then
+            DF:Debug("BLIZAURA", "Capture SKIPPED for %s — Direct mode active", unit)
+            return
+        end
     end
+
+    DF:Debug("BLIZAURA", "Capture START for %s (frame: %s, trigger: %s)", unit, frameName or "?", tostring(triggerUpdate))
 
     -- Initialize cache for this unit
     if not DF.BlizzardAuraCache[unit] then
@@ -624,6 +640,8 @@ local function CaptureAurasFromBlizzardFrame(frame, triggerUpdate)
             end
             return false
         end)
+    else
+        DF:DebugWarn("BLIZAURA", "No buffs container on frame for %s (buffs: %s, Iterate: %s)", unit, tostring(frame.buffs ~= nil), tostring(frame.buffs and frame.buffs.Iterate ~= nil))
     end
 
     -- Capture debuff auraInstanceIDs from Blizzard's container
@@ -644,6 +662,8 @@ local function CaptureAurasFromBlizzardFrame(frame, triggerUpdate)
             end
             return false
         end)
+    else
+        DF:DebugWarn("BLIZAURA", "No debuffs container on frame for %s (debuffs: %s, Iterate: %s)", unit, tostring(frame.debuffs ~= nil), tostring(frame.debuffs and frame.debuffs.Iterate ~= nil))
     end
 
     -- LEGACY (pre-12.0.8): Blizzard used frame arrays for aura data.
@@ -684,6 +704,10 @@ local function CaptureAurasFromBlizzardFrame(frame, triggerUpdate)
     end
     ]]
     
+    local dispelCount = 0
+    for _ in pairs(cache.playerDispellable) do dispelCount = dispelCount + 1 end
+    DF:Debug("BLIZAURA", "Capture DONE for %s — buffs: %d, debuffs: %d, dispel: %d", unit, #cache.buffOrder, #cache.debuffOrder, dispelCount)
+
     -- Capture defensive auras from CenterDefensiveBuff frame
     -- This is a single frame that shows the "big defensive" aura Blizzard chose to display
     if frame.CenterDefensiveBuff then
