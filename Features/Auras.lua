@@ -612,9 +612,43 @@ local function CaptureAurasFromBlizzardFrame(frame, triggerUpdate)
     wipe(cache.playerDispellable)
     wipe(cache.defensives)
     
-    -- Capture buff auraInstanceIDs from Blizzard's buff frames
-    -- ipairs preserves Blizzard's sorted display order (buffOrder array)
-    -- Set (buffs) kept for fast lookups elsewhere in the codebase
+    -- Capture buff auraInstanceIDs from Blizzard's container
+    -- In 12.0.8+ Blizzard moved aura data from frame arrays (buffFrames/debuffFrames)
+    -- to container objects with :Iterate()/:Size() methods. The containers provide full
+    -- aura data directly, including canActivePlayerDispel for dispel detection.
+    if frame.buffs and frame.buffs.Iterate then
+        frame.buffs:Iterate(function(auraInstanceID, data)
+            if auraInstanceID then
+                cache.buffs[auraInstanceID] = true
+                cache.buffOrder[#cache.buffOrder + 1] = auraInstanceID
+            end
+            return false
+        end)
+    end
+
+    -- Capture debuff auraInstanceIDs from Blizzard's container
+    -- All aura data fields are secret/tainted in combat, so we can only capture the
+    -- auraInstanceID (iterator key). For dispel detection we use Direct API's
+    -- IsAuraFilteredOutByInstanceID which is secret-safe — same approach as Direct mode.
+    -- Use Direct API for dispel detection — IsAuraFilteredOutByInstanceID is secret-safe
+    local dispelFilterStr = "HARMFUL|RAID_PLAYER_DISPELLABLE"
+    if frame.debuffs and frame.debuffs.Iterate then
+        frame.debuffs:Iterate(function(auraInstanceID)
+            if auraInstanceID then
+                cache.debuffs[auraInstanceID] = true
+                cache.debuffOrder[#cache.debuffOrder + 1] = auraInstanceID
+                -- Dispel check via Direct API (secret-safe C function)
+                if IsAuraFilteredOut and not IsAuraFilteredOut(unit, auraInstanceID, dispelFilterStr) then
+                    cache.playerDispellable[auraInstanceID] = true
+                end
+            end
+            return false
+        end)
+    end
+
+    -- LEGACY (pre-12.0.8): Blizzard used frame arrays for aura data.
+    -- Kept for reference in case Blizzard reverts. See new container implementation above.
+    --[[ OLD BUFF FRAMES METHOD:
     if frame.buffFrames and type(frame.buffFrames) == "table" then
         for i, buffFrame in ipairs(frame.buffFrames) do
             if buffFrame and buffFrame.IsShown and buffFrame:IsShown() and buffFrame.auraInstanceID then
@@ -623,8 +657,9 @@ local function CaptureAurasFromBlizzardFrame(frame, triggerUpdate)
             end
         end
     end
+    ]]
 
-    -- Capture debuff auraInstanceIDs from Blizzard's debuff frames
+    --[[ OLD DEBUFF FRAMES METHOD:
     if frame.debuffFrames and type(frame.debuffFrames) == "table" then
         for i, debuffFrame in ipairs(frame.debuffFrames) do
             if debuffFrame and debuffFrame.IsShown and debuffFrame:IsShown() and debuffFrame.auraInstanceID then
@@ -633,14 +668,12 @@ local function CaptureAurasFromBlizzardFrame(frame, triggerUpdate)
             end
         end
     end
-    
-    -- Capture player-dispellable debuffs from dispelDebuffFrames
-    -- These are debuffs that the CURRENT PLAYER can dispel (Blizzard handles the logic)
+    ]]
+
+    --[[ OLD DISPEL DEBUFF FRAMES METHOD:
     if frame.dispelDebuffFrames and type(frame.dispelDebuffFrames) == "table" then
         for i, debuffFrame in ipairs(frame.dispelDebuffFrames) do
             if debuffFrame and debuffFrame.IsShown and debuffFrame:IsShown() and debuffFrame.auraInstanceID then
-                -- Add to both debuffs (for general display) and playerDispellable (for filtering)
-                -- Only append to debuffOrder if not already captured from debuffFrames
                 if not cache.debuffs[debuffFrame.auraInstanceID] then
                     cache.debuffs[debuffFrame.auraInstanceID] = true
                     cache.debuffOrder[#cache.debuffOrder + 1] = debuffFrame.auraInstanceID
@@ -649,6 +682,7 @@ local function CaptureAurasFromBlizzardFrame(frame, triggerUpdate)
             end
         end
     end
+    ]]
     
     -- Capture defensive auras from CenterDefensiveBuff frame
     -- This is a single frame that shows the "big defensive" aura Blizzard chose to display

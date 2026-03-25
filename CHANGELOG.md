@@ -1,5 +1,21 @@
 # DandersFrames Changelog
 
+## [4.1.7] - 2026-03-25
+
+### Bug Fixes
+* (Auras) Fix Blizzard data source showing no debuffs — Blizzard moved aura data from frame arrays to container objects in 12.0.8, updated reader to use new Iterate API
+* (Auras) Fix dispel overlay not working in Blizzard data source — use Direct API dispel filter (IsAuraFilteredOutByInstanceID) for secret-safe dispel detection since old dispelDebuffFrames no longer populated
+
+### Changes
+* (Auras) Switch default aura data source to Direct API for all new and existing profiles — provides full control over buff/debuff filtering. Users can switch back to Blizzard mode in settings if preferred
+* (Auras) Update default Direct API filters: show all debuffs, sort buffs and debuffs by time remaining
+
+## [4.1.6] - 2026-03-25
+
+### Bug Fixes
+* (Growth) Fix nil wrap error when growth direction value has no underscore separator
+* (Growth) Add safety fallback for nil wrap in growth direction composer
+
 ## [4.1.5] - 2026-03-24
 
 ### Bug Fixes
