@@ -833,6 +833,12 @@ DF.PartyDefaults = {
     bossDebuffsShowCountdown = true,
     bossDebuffsShowNumbers = true,
     bossDebuffsSpacing = 5,
+    bossDebuffsOverlayClipBorder = true,
+    bossDebuffsOverlayEnabled = false,
+    bossDebuffsOverlayFrameLevel = 14,
+    bossDebuffsOverlayIconRatio = 2.6,
+    bossDebuffsOverlayMaxSlots = 3,
+    bossDebuffsOverlayScale = 1.05,
 
     -- Buff settings
     buffAlpha = 1,
@@ -2040,6 +2046,12 @@ DF.RaidDefaults = {
     bossDebuffsShowCountdown = true,
     bossDebuffsShowNumbers = true,
     bossDebuffsSpacing = 5,
+    bossDebuffsOverlayClipBorder = true,
+    bossDebuffsOverlayEnabled = false,
+    bossDebuffsOverlayFrameLevel = 14,
+    bossDebuffsOverlayIconRatio = 2.6,
+    bossDebuffsOverlayMaxSlots = 3,
+    bossDebuffsOverlayScale = 1.05,
 
     -- Buff settings
     buffAlpha = 1,
