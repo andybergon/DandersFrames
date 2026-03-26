@@ -388,25 +388,20 @@ DF.ExportCategories = {
         "bossDebuffHighlight",
         "bossDebuffScale",
         
-        -- Boss Debuffs Feature (new)
+        -- Boss Debuffs Feature
         "bossDebuffsEnabled",
         "bossDebuffsAnchor",
         "bossDebuffsBorderScale",
-        "bossDebuffsClickCastingEnabled",
         "bossDebuffsFrameLevel",
         "bossDebuffsGrowth",
+        "bossDebuffsHideTooltip",
         "bossDebuffsIconHeight",
         "bossDebuffsIconWidth",
         "bossDebuffsMax",
         "bossDebuffsOffsetX",
         "bossDebuffsOffsetY",
-        "bossDebuffsScale",
         "bossDebuffsShowCountdown",
-        "bossDebuffsShowDebugOverlay",
         "bossDebuffsShowNumbers",
-        "bossDebuffsTextScale",
-        "bossDebuffsTextOffsetX",
-        "bossDebuffsTextOffsetY",
         "bossDebuffsSpacing",
         
         -- Buff Filters
