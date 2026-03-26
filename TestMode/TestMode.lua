@@ -2134,72 +2134,55 @@ end
 -- is a pixel-perfect preview of live behavior.
 function DF:UpdateTestBossDebuffs(frame)
     if not frame then return end
-    
+
     local db = DF:GetFrameDB(frame)
-    
+
     -- Check if boss debuffs are enabled (both feature and test mode toggle)
     if not db.bossDebuffsEnabled or not db.testShowBossDebuffs then
         DF:HideTestBossDebuffs(frame)
         return
     end
-    
+
     -- Use the real private aura system for positioning.
     -- Override unit to "player" so the API call succeeds (player always exists).
-    -- Since the player has no boss debuff private auras outside encounters,
-    -- Blizzard renders nothing inside the containers - our test icons sit on top.
     local savedUnit = frame.unit
     frame.unit = "player"
     DF:SetupPrivateAuraAnchors(frame)
     frame.unit = savedUnit
-    
-    -- Now frame.bossDebuffContainers has positioned containers.
-    -- Parent test icon visuals to each container.
-    
+
+    -- Now frame.bossDebuffFrames has positioned frames.
+    -- Parent test icon visuals to each frame.
+
     local maxIcons = db.bossDebuffsMax or 4
     local showCountdown = db.bossDebuffsShowCountdown ~= false
     local showNumbers = db.bossDebuffsShowNumbers ~= false
-    local textScale = db.bossDebuffsTextScale or 1.0
-    local textOffsetX = db.bossDebuffsTextOffsetX or 0
-    local textOffsetY = db.bossDebuffsTextOffsetY or 0
-    
+
     -- Create test icon frames if they don't exist
     if not frame.testBossDebuffIcons then
         frame.testBossDebuffIcons = {}
     end
-    
-    -- Show boss debuffs based on max icons setting
+
     local displayCount = math.min(maxIcons, #DF.TestData.bossDebuffs)
-    
+
     for i = 1, maxIcons do
-        local container = frame.bossDebuffContainers and frame.bossDebuffContainers[i]
+        local container = frame.bossDebuffFrames and frame.bossDebuffFrames[i]
         local bossDebuffData = DF.TestData.bossDebuffs[i]
-        
+
         if container and i <= displayCount and bossDebuffData then
-            -- Create icon frame if it doesn't exist
             local icon = frame.testBossDebuffIcons[i]
             if not icon then
                 icon = CreateFrame("Frame", nil, container)
-                
+
                 -- Icon texture
                 icon.texture = icon:CreateTexture(nil, "ARTWORK")
                 icon.texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-                
+
                 -- Cooldown
                 icon.cooldown = CreateFrame("Cooldown", nil, icon, "CooldownFrameTemplate")
                 icon.cooldown:SetDrawEdge(false)
                 icon.cooldown:SetDrawSwipe(true)
                 icon.cooldown:SetReverse(true)
-                icon.cooldown:SetHideCountdownNumbers(false)
-                
-                -- Scaled duration text overlay
-                icon.scaledDurFrame = CreateFrame("Frame", nil, icon)
-                icon.scaledDurFrame:SetSize(0.001, 0.001)
-                icon.scaledDurFrame:SetFrameLevel(icon:GetFrameLevel() + 5)
-                icon.scaledDurText = icon.scaledDurFrame:CreateFontString(nil, "OVERLAY")
-                icon.scaledDurText:SetFont(STANDARD_TEXT_FONT, 12, "OUTLINE")
-                icon.scaledDurText:SetTextColor(1, 0.82, 0)
-                icon.scaledDurFrame:Hide()
-                
+
                 -- Debug background
                 icon.debugBg = icon:CreateTexture(nil, "BORDER")
                 icon.debugBg:SetAllPoints()
@@ -2207,118 +2190,44 @@ function DF:UpdateTestBossDebuffs(frame)
                 local c = colors[i] or colors[1]
                 icon.debugBg:SetColorTexture(c[1], c[2], c[3], c[4])
                 icon.debugBg:Hide()
-                
+
                 frame.testBossDebuffIcons[i] = icon
             end
-            
-            -- Re-parent to this container (container may have changed from pool recycling)
+
+            -- Re-parent to this container
             icon:SetParent(container)
             icon:ClearAllPoints()
             icon:SetAllPoints(container)
-            
+
             -- Anchor sub-elements to fill the icon frame
             icon.texture:SetAllPoints()
             icon.cooldown:SetAllPoints(icon.texture)
-            
-            -- Anchor scaled text elements to the icon
-            icon.scaledDurFrame:ClearAllPoints()
-            icon.scaledDurFrame:SetPoint("CENTER", icon, "CENTER", 0, 0)
-            icon.scaledDurText:ClearAllPoints()
-            icon.scaledDurText:SetPoint("CENTER", icon, "CENTER", 0, 0)
-            
+
             -- Set icon texture
             icon.texture:SetTexture(bossDebuffData.icon)
-            
+
             -- Set cooldown
             if showCountdown and bossDebuffData.duration then
-                local useScaledText = showNumbers
-                
-                -- Clear existing cooldown first so state is clean
                 icon.cooldown:Clear()
-                
-                -- Must set hide BEFORE SetCooldown so Blizzard doesn't create countdown text
-                icon.cooldown:SetHideCountdownNumbers(useScaledText or (not showNumbers))
-                
+                icon.cooldown:SetHideCountdownNumbers(not showNumbers)
+
                 local startTime = GetTime() - (bossDebuffData.duration * 0.3)
                 icon.cooldown:SetCooldown(startTime, bossDebuffData.duration)
                 icon.cooldown:Show()
-                
-                -- Forcibly hide/show Blizzard's countdown text (it can be in regions or child frames)
-                local shouldHideNumbers = useScaledText or (not showNumbers)
-                for _, region in ipairs({icon.cooldown:GetRegions()}) do
-                    if region.GetText and region:IsObjectType("FontString") then
-                        if shouldHideNumbers then region:Hide() else region:Show() end
-                    end
-                end
-                for _, child in ipairs({icon.cooldown:GetChildren()}) do
-                    -- Blizzard's countdown is typically a child frame with a FontString
-                    if child.GetText then
-                        if shouldHideNumbers then child:Hide() else child:Show() end
-                    end
-                    for _, region in ipairs({child:GetRegions()}) do
-                        if region.GetText and region:IsObjectType("FontString") then
-                            if shouldHideNumbers then region:Hide() else region:Show() end
-                        end
-                    end
-                end
-                
-                -- Handle scaled duration text
-                if useScaledText then
-                    -- Test mode compensation: Blizzard's native countdown renders slightly
-                    -- differently than our custom fontstring, so nudge to match
-                    local testCompX = -2
-                    local testCompY = -2
-                    local testScaleComp = 0.1
-                    
-                    local effectiveScale = textScale + testScaleComp
-                    icon.scaledDurFrame:ClearAllPoints()
-                    icon.scaledDurFrame:SetPoint("CENTER", icon, "CENTER", 0, 0)
-                    icon.scaledDurFrame:SetScale(effectiveScale)
-                    icon.scaledDurFrame:Show()
-                    -- Offset the text with scale compensation (fontstring is inside scaled frame)
-                    local compOffX = (textOffsetX + testCompX) / effectiveScale
-                    local compOffY = (textOffsetY + testCompY) / effectiveScale
-                    icon.scaledDurText:ClearAllPoints()
-                    icon.scaledDurText:SetPoint("CENTER", icon, "CENTER", compOffX, compOffY)
-                    -- Show simulated remaining time
-                    local remaining = bossDebuffData.duration * 0.7
-                    icon.scaledDurText:SetText(math.floor(remaining))
-                    icon.scaledDurText:Show()
-                    -- Tick it down with OnUpdate
-                    icon.scaledDurFrame.expirationTime = GetTime() + remaining
-                    icon.scaledDurFrame:SetScript("OnUpdate", function(self, elapsed)
-                        local timeLeft = self.expirationTime - GetTime()
-                        if timeLeft <= 0 then
-                            icon.scaledDurText:SetText("")
-                            self:SetScript("OnUpdate", nil)
-                        else
-                            icon.scaledDurText:SetText(math.floor(timeLeft + 0.5))
-                        end
-                    end)
-                else
-                    icon.scaledDurFrame:Hide()
-                    icon.scaledDurFrame:SetScript("OnUpdate", nil)
-                end
             else
                 icon.cooldown:Hide()
-                icon.scaledDurFrame:Hide()
-                icon.scaledDurFrame:SetScript("OnUpdate", nil)
             end
-            
+
             icon:Show()
         else
             -- Hide icon if no container or no data
             local icon = frame.testBossDebuffIcons[i]
             if icon then
                 icon:Hide()
-                if icon.scaledDurFrame then
-                    icon.scaledDurFrame:Hide()
-                    icon.scaledDurFrame:SetScript("OnUpdate", nil)
-                end
             end
         end
     end
-    
+
     -- Hide any extra icons beyond maxIcons
     if frame.testBossDebuffIcons then
         for i = maxIcons + 1, #frame.testBossDebuffIcons do
@@ -2330,26 +2239,15 @@ end
 -- Hide test boss debuffs when exiting test mode
 function DF:HideTestBossDebuffs(frame)
     if not frame then return end
-    
+
     -- Hide test icons
     if frame.testBossDebuffIcons then
-        for i, icon in ipairs(frame.testBossDebuffIcons) do
+        for _, icon in ipairs(frame.testBossDebuffIcons) do
             icon:Hide()
-            -- Clear cooldown
             if icon.cooldown then
                 icon.cooldown:Clear()
             end
-            -- Clear scaled duration
-            if icon.scaledDurFrame then
-                icon.scaledDurFrame:Hide()
-                icon.scaledDurFrame:SetScript("OnUpdate", nil)
-            end
         end
-    end
-    
-    -- Release private aura containers back to the pool
-    if DF.ClearPrivateAuraAnchors then
-        DF:ClearPrivateAuraAnchors(frame)
     end
 end
 
