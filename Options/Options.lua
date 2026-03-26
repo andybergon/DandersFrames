@@ -4643,10 +4643,6 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             if DF.RefreshAllPrivateAuraAnchors then DF:RefreshAllPrivateAuraAnchors() end
         end, true), 55)
         ovScale.hideOn = HideOverlayOptions
-        local ovRatio = overlayGroup:AddWidget(GUI:CreateSlider(self.child, "Icon Ratio", 0.5, 5.0, 0.1, db, "bossDebuffsOverlayIconRatio", nil, function()
-            if DF.RefreshAllPrivateAuraAnchors then DF:RefreshAllPrivateAuraAnchors() end
-        end, true), 55)
-        ovRatio.hideOn = HideOverlayOptions
         local ovLevel = overlayGroup:AddWidget(GUI:CreateSlider(self.child, "Frame Level", 0, 50, 1, db, "bossDebuffsOverlayFrameLevel", nil, function()
             if DF.UpdateAllOverlayFrameLevel then DF:UpdateAllOverlayFrameLevel() end
         end, true), 55)

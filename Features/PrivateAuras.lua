@@ -268,15 +268,17 @@ SetupOverlayAnchors = function(frame, unit, db)
     if not fw or not fh or fw <= 0 or fh <= 0 then return end
 
     local overlayScale = db.bossDebuffsOverlayScale or 1.05
-    local iconRatio = db.bossDebuffsOverlayIconRatio or 2.6
     local overlayFrameLevel = db.bossDebuffsOverlayFrameLevel or 14
     local maxSlots = db.bossDebuffsOverlayMaxSlots or 3
     local clipBorder = db.bossDebuffsOverlayClipBorder ~= false
 
-    -- Icon dimensions: shrink by factor of 10, compensate with borderScale * 10
-    local iconW = fw * iconRatio / 10
-    local iconH = 0.001
-    local bScale = 2 * 10 * overlayScale
+    -- Shrink both frame dimensions equally so the icon is sub-pixel but the
+    -- border ring aspect ratio matches the frame exactly. borderScale is
+    -- inflated by the same factor to keep the ring at full frame size.
+    local shrink = 100
+    local iconW = fw / shrink
+    local iconH = fh / shrink
+    local bScale = 2 * shrink * overlayScale
 
     -- Create or reuse the overlay container
     local container = frame.overlayContainer
@@ -486,11 +488,13 @@ function DF:ReanchorPrivateAuras(frame)
 
     if db.bossDebuffsOverlayEnabled and frame.overlaySubContainers then
         local overlayScale = db.bossDebuffsOverlayScale or 1.05
-        local iconRatio = db.bossDebuffsOverlayIconRatio or 2.6
         local maxSlots = db.bossDebuffsOverlayMaxSlots or 3
         local fw = frame:GetWidth()
-        local iconW = fw * iconRatio / 10
-        local bScale = 2 * 10 * overlayScale
+        local fh = frame:GetHeight()
+        local shrink = 100
+        local iconW = fw / shrink
+        local iconH = fh / shrink
+        local bScale = 2 * shrink * overlayScale
 
         for i = 1, math.min(maxSlots, #frame.overlaySubContainers) do
             local sub = frame.overlaySubContainers[i]
@@ -504,7 +508,7 @@ function DF:ReanchorPrivateAuras(frame)
                         showCountdownNumbers = false,
                         iconInfo = {
                             iconWidth = math.max(iconW, 0.001),
-                            iconHeight = 0.001,
+                            iconHeight = math.max(iconH, 0.001),
                             borderScale = bScale,
                             iconAnchor = {
                                 point = "CENTER",

@@ -836,7 +836,6 @@ DF.PartyDefaults = {
     bossDebuffsOverlayClipBorder = true,
     bossDebuffsOverlayEnabled = false,
     bossDebuffsOverlayFrameLevel = 14,
-    bossDebuffsOverlayIconRatio = 2.6,
     bossDebuffsOverlayMaxSlots = 3,
     bossDebuffsOverlayScale = 1.05,
 
@@ -2049,7 +2048,6 @@ DF.RaidDefaults = {
     bossDebuffsOverlayClipBorder = true,
     bossDebuffsOverlayEnabled = false,
     bossDebuffsOverlayFrameLevel = 14,
-    bossDebuffsOverlayIconRatio = 2.6,
     bossDebuffsOverlayMaxSlots = 3,
     bossDebuffsOverlayScale = 1.05,
 
