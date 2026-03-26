@@ -18,41 +18,23 @@ local InCombatLockdown = InCombatLockdown
 local UnitExists = UnitExists
 
 -- ============================================================
--- FILE SCOPE: Create overlay pool and register for click casting
--- These frames are created once at file load time.
--- They are registered with ClickCastFrames immediately.
--- SetupPrivateAuraAnchors will use frames from this pool.
+-- FILE-SCOPE STATE
 -- ============================================================
 
--- ============================================================
--- CLICK-CASTING OVERLAY SYSTEM - DISABLED
--- ============================================================
--- What: Overlay buttons positioned over private aura (boss debuff) icons
--- Why we had it: Private auras are rendered by Blizzard directly, and addon
---                frames couldn't receive mouse clicks on them. We created
---                invisible SecureUnitButton overlays that sat on top of the
---                private aura icons to intercept clicks for click-casting.
--- Why it's disabled: Blizzard fixed this issue - private aura icons now
---                    properly propagate mouse events to the parent frame,
---                    so click-casting works natively without our overlays.
--- Date disabled: 2026-02-01
--- ============================================================
-
-
--- Store anchor IDs for cleanup
+-- Track anchor IDs per frame for cleanup
 local frameAnchors = {}
 
 -- Pending updates queue (for changes made during combat)
 local pendingUpdates = {}
 
--- Track if we need to set up anchors after combat (from combat reload)
+-- Track if we need to set up anchors after combat
 local needsPostCombatSetup = false
 
 -- Helper to queue or execute updates
 local function QueueOrExecute(updateType, func)
     if InCombatLockdown() then
         pendingUpdates[updateType] = func
-        print("|cffff9900DandersFrames:|r Boss debuff changes queued until combat ends.")
+        DF:Debug("Boss debuff changes queued until combat ends.")
     else
         func()
     end
@@ -62,76 +44,18 @@ end
 local combatFrame = CreateFrame("Frame")
 combatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 combatFrame:SetScript("OnEvent", function()
-    -- Handle pending updates
     if next(pendingUpdates) then
         for updateType, func in pairs(pendingUpdates) do
             func()
         end
         pendingUpdates = {}
     end
-    
-    -- Handle post-combat setup (from combat reload)
     if needsPostCombatSetup then
         needsPostCombatSetup = false
-        print("|cff00ff00DandersFrames:|r Combat ended - setting up boss debuff anchors")
+        DF:Debug("Combat ended - setting up boss debuff anchors")
         DF:UpdateAllPrivateAuraAnchors()
     end
 end)
-
--- ============================================================
--- FILE-SCOPE CONTAINER POOL
--- ============================================================
-local containerPool = {}
-local POOL_SIZE = 120  -- Enough for 60 frames * 2 icons each
-
-for i = 1, POOL_SIZE do
-    local container = CreateFrame("Frame", "DFBossDebuffContainer" .. i, UIParent)
-    container:SetSize(30, 30)
-    container:Hide()
-    container:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    -- Propagate mouse events so boss debuff tooltips reach the unit frame
-    if container.SetPropagateMouseMotion then container:SetPropagateMouseMotion(true) end
-    if container.SetPropagateMouseClicks then container:SetPropagateMouseClicks(true) end
-
-    -- Debug background
-    container.debugBg = container:CreateTexture(nil, "BACKGROUND")
-    container.debugBg:SetAllPoints()
-    container.debugBg:SetColorTexture(1, 0, 0, 0.4)
-    container.debugBg:Hide()
-
-    container.poolIndex = i
-    container.inUse = false
-    containerPool[i] = container
-end
-
--- Get a container from the pool
-local function GetContainer()
-    for i, container in ipairs(containerPool) do
-        if not container.inUse then
-            container.inUse = true
-            return container
-        end
-    end
-    return nil
-end
-
--- Return a container to the pool
-local function ReleaseContainer(container)
-    if not container then return end
-    if container.isBeingReleased then return end  -- Prevent recursion
-    if InCombatLockdown() then return end  -- Protected operations
-    container.isBeingReleased = true
-    
-    -- Note: Overlays are now per-frame (not per-container), released in ClearPrivateAuraAnchors
-    
-    container.inUse = false
-    container:Hide()
-    container:ClearAllPoints()
-    container:SetParent(UIParent)
-    container.unitFrame = nil
-    container.auraIndex = nil
-    container.isBeingReleased = nil
-end
 
 -- ============================================================
 -- POSITIONING HELPERS
@@ -147,7 +71,6 @@ local function GetGrowthAnchors(growth)
     elseif growth == "UP" then
         return "BOTTOM", "TOP", 0, 1
     end
-    -- Default to RIGHT
     return "LEFT", "RIGHT", 1, 0
 end
 
@@ -157,89 +80,86 @@ end
 
 function DF:SetupPrivateAuraAnchors(frame)
     if not frame or not frame.unit then return end
-    
+
     -- PERF TEST: Skip if disabled
     if DF.PerfTest and not DF.PerfTest.enablePrivateAuras then return end
-    
-    -- Can't do protected operations during combat
-    if InCombatLockdown() then
-        return
-    end
-    
+
+    if InCombatLockdown() then return end
+
     local unit = frame.unit
     local db = DF:GetFrameDB(frame)
-    
+
     -- Clear existing anchors first
     DF:ClearPrivateAuraAnchors(frame)
-    
-    if not db.bossDebuffsEnabled then
-        return
-    end
-    
-    -- Get settings
-    local maxIcons = db.bossDebuffsMax or 2
+
+    if not db.bossDebuffsEnabled then return end
+
+    -- Read settings
+    local maxIcons = db.bossDebuffsMax or 4
     local spacing = db.bossDebuffsSpacing or 2
     local growth = db.bossDebuffsGrowth or "RIGHT"
     local anchor = db.bossDebuffsAnchor or "LEFT"
     local offsetX = db.bossDebuffsOffsetX or 0
     local offsetY = db.bossDebuffsOffsetY or 0
-    local frameLevel = db.bossDebuffsFrameLevel or 50
+    local frameLevel = db.bossDebuffsFrameLevel or 35
     local showCountdown = db.bossDebuffsShowCountdown ~= false
     local showNumbers = db.bossDebuffsShowNumbers ~= false
-    local iconWidth = db.bossDebuffsIconWidth or 30
-    local iconHeight = db.bossDebuffsIconHeight or 30
+    local iconWidth = db.bossDebuffsIconWidth or 20
+    local iconHeight = db.bossDebuffsIconHeight or 20
     local borderScale = db.bossDebuffsBorderScale or 1.0
-    local textScale = db.bossDebuffsTextScale or 1.0
-    local textOffsetX = db.bossDebuffsTextOffsetX or 0
-    local textOffsetY = db.bossDebuffsTextOffsetY or 0
-    
-    -- Get growth anchoring
+    local hideTooltip = db.bossDebuffsHideTooltip or false
+
+    -- Growth anchoring
     local pointOnCurrent, pointOnPrev, xMult, yMult = GetGrowthAnchors(growth)
-    
-    -- Initialize storage
-    if not frame.bossDebuffContainers then
-        frame.bossDebuffContainers = {}
-    end
-    if not frame.bossDebuffScaleFrames then
-        frame.bossDebuffScaleFrames = {}
+
+    -- Lazy-init frame storage
+    if not frame.bossDebuffFrames then
+        frame.bossDebuffFrames = {}
     end
     frameAnchors[frame] = {}
-    
-    -- Base frame level
+
     local baseLevel = frame:GetFrameLevel()
-    
-    -- Track if any anchors succeeded (for overlay setup)
-    local anyAnchorSucceeded = false
-    
-    -- Create containers and register with Blizzard API
+
     for i = 1, maxIcons do
-        local container = GetContainer()
-        if not container then break end
-        
-        -- Store reference
-        frame.bossDebuffContainers[i] = container
-        container.unitFrame = frame
-        container.auraIndex = i
-        
-        -- Parent to contentOverlay or frame
-        container:SetParent(frame.contentOverlay or frame)
-        container:ClearAllPoints()
-        container:SetFrameLevel(baseLevel + frameLevel)
-        container:SetSize(iconWidth, iconHeight)
-        
-        if i == 1 then
-            container:SetPoint(pointOnCurrent, frame, anchor, offsetX, offsetY)
-        else
-            local prevContainer = frame.bossDebuffContainers[i - 1]
-            local spacingX = spacing * xMult
-            local spacingY = spacing * yMult
-            container:SetPoint(pointOnCurrent, prevContainer, pointOnPrev, spacingX, spacingY)
+        -- Lazy-create the icon frame
+        local iconFrame = frame.bossDebuffFrames[i]
+        if not iconFrame then
+            iconFrame = CreateFrame("Frame", nil, frame.contentOverlay or frame)
+            if iconFrame.SetPropagateMouseMotion then iconFrame:SetPropagateMouseMotion(true) end
+            if iconFrame.SetPropagateMouseClicks then iconFrame:SetPropagateMouseClicks(true) end
+
+            -- Debug background
+            iconFrame.debugBg = iconFrame:CreateTexture(nil, "BACKGROUND")
+            iconFrame.debugBg:SetAllPoints()
+            iconFrame.debugBg:Hide()
+
+            frame.bossDebuffFrames[i] = iconFrame
         end
-        
-        container:Show()
-        
+
+        -- Parent and position
+        iconFrame:SetParent(frame.contentOverlay or frame)
+        iconFrame:ClearAllPoints()
+        iconFrame:SetFrameLevel(baseLevel + frameLevel)
+
+        -- Hide tooltip trick: shrink parent to sub-pixel so nothing is hoverable,
+        -- but the icon still renders at full size via iconInfo dimensions
+        if hideTooltip then
+            iconFrame:SetSize(0.001, 0.001)
+        else
+            iconFrame:SetSize(iconWidth, iconHeight)
+        end
+
+        if i == 1 then
+            iconFrame:SetPoint(pointOnCurrent, frame, anchor, offsetX, offsetY)
+        else
+            local prevFrame = frame.bossDebuffFrames[i - 1]
+            iconFrame:SetPoint(pointOnCurrent, prevFrame, pointOnPrev, spacing * xMult, spacing * yMult)
+        end
+
+        iconFrame:Show()
+
         -- Debug background
-        if DF.bossDebuffDebug and container.debugBg then
+        if DF.bossDebuffDebug and iconFrame.debugBg then
             local colors = {
                 {1, 0, 0, 0.4},
                 {0, 1, 0, 0.4},
@@ -247,32 +167,27 @@ function DF:SetupPrivateAuraAnchors(frame)
                 {1, 1, 0, 0.4},
             }
             local c = colors[i] or colors[1]
-            container.debugBg:SetColorTexture(c[1], c[2], c[3], c[4])
-            container.debugBg:Show()
-        else
-            container.debugBg:Hide()
+            iconFrame.debugBg:SetColorTexture(c[1], c[2], c[3], c[4])
+            iconFrame.debugBg:Show()
+        elseif iconFrame.debugBg then
+            iconFrame.debugBg:Hide()
         end
-        
-        -- Always disable numbers on main anchor (we show them scaled via second anchor)
-        local mainShowNumbers = false
 
-        -- Register main anchor with Blizzard's system
-        -- Parent is the full-sized container so Blizzard's icon inherits proper
-        -- hit-testing and tooltips work on mouseover (ElvUI/Grid2 pattern).
+        -- Single anchor registration with Blizzard API
         local success, anchorID = pcall(function()
             return C_UnitAuras.AddPrivateAuraAnchor({
                 unitToken = unit,
                 auraIndex = i,
-                parent = container,
+                parent = iconFrame,
                 showCountdownFrame = showCountdown,
-                showCountdownNumbers = mainShowNumbers,
+                showCountdownNumbers = showNumbers,
                 iconInfo = {
                     iconWidth = iconWidth,
                     iconHeight = iconHeight,
                     borderScale = borderScale,
                     iconAnchor = {
                         point = "CENTER",
-                        relativeTo = container,
+                        relativeTo = iconFrame,
                         relativePoint = "CENTER",
                         offsetX = 0,
                         offsetY = 0,
@@ -280,141 +195,66 @@ function DF:SetupPrivateAuraAnchors(frame)
                 },
             })
         end)
-        
-        -- Debug output
+
         if DF.bossDebuffDebug then
-            print("      [" .. i .. "] AddPrivateAuraAnchor unit=" .. unit .. " success=" .. tostring(success) .. " anchorID=" .. tostring(anchorID))
+            DF:Debug("  [" .. i .. "] AddPrivateAuraAnchor unit=" .. unit .. " success=" .. tostring(success) .. " anchorID=" .. tostring(anchorID))
         end
-        
+
         if success and anchorID then
             table.insert(frameAnchors[frame], anchorID)
-            anyAnchorSucceeded = true
-            
-            -- Register second anchor for scaled duration numbers
-            if showNumbers then
-                -- Create/reuse a tiny scale parent frame
-                local scaleFrame = frame.bossDebuffScaleFrames[i]
-                if not scaleFrame then
-                    scaleFrame = CreateFrame("Frame", nil, frame.contentOverlay or frame)
-                    frame.bossDebuffScaleFrames[i] = scaleFrame
-                end
-                scaleFrame:SetSize(0.001, 0.001)
-                scaleFrame:SetScale(textScale)
-                scaleFrame:SetFrameStrata("DIALOG")
-                scaleFrame:ClearAllPoints()
-                scaleFrame:SetPoint("CENTER", container, "CENTER", 0, 0)
-                if scaleFrame.SetPropagateMouseMotion then scaleFrame:SetPropagateMouseMotion(true) end
-                if scaleFrame.SetPropagateMouseClicks then scaleFrame:SetPropagateMouseClicks(true) end
-                scaleFrame:Show()
-                
-                -- Offsets go in the iconAnchor (what Blizzard uses to position content).
-                -- Divide by textScale to compensate for the scaled parent frame.
-                local anchorOffX = textOffsetX / textScale
-                local anchorOffY = textOffsetY / textScale
-                
-                local scaleSuccess, scaleAnchorID = pcall(function()
-                    return C_UnitAuras.AddPrivateAuraAnchor({
-                        unitToken = unit,
-                        auraIndex = i,
-                        parent = scaleFrame,
-                        showCountdownFrame = true,
-                        showCountdownNumbers = true,
-                        iconInfo = {
-                            iconWidth = 0.001,
-                            iconHeight = 0.001,
-                            borderScale = -100,
-                            iconAnchor = {
-                                point = "CENTER",
-                                relativeTo = container,
-                                relativePoint = "CENTER",
-                                offsetX = anchorOffX,
-                                offsetY = anchorOffY,
-                            },
-                        },
-                    })
-                end)
-                
-                if scaleSuccess and scaleAnchorID then
-                    table.insert(frameAnchors[frame], scaleAnchorID)
-                    if DF.bossDebuffDebug then
-                        print("      [" .. i .. "] Scale anchor added, scale=" .. textScale .. " anchorID=" .. tostring(scaleAnchorID))
-                    end
-                end
-            end
         else
-            -- API call failed - release container
-            ReleaseContainer(container)
-            frame.bossDebuffContainers[i] = nil
+            iconFrame:Hide()
         end
     end
 
-    -- Track which unit we're now monitoring (idempotency guard for ReanchorPrivateAuras)
+    -- Track which unit anchors are monitoring
     frame.bossDebuffAnchoredUnit = unit
-
 end
+
+-- ============================================================
+-- CLEAR ANCHORS
+-- ============================================================
 
 function DF:ClearPrivateAuraAnchors(frame)
     if not frame then return end
-    if frame.isBeingCleared then return end  -- Prevent recursion
-    if InCombatLockdown() then return end  -- Can't do protected operations
+    if frame.isBeingCleared then return end
+    if InCombatLockdown() then return end
     frame.isBeingCleared = true
-    
+
     -- Remove Blizzard anchors
     local anchors = frameAnchors[frame]
     if anchors then
-        for i, anchorID in ipairs(anchors) do
+        for _, anchorID in ipairs(anchors) do
             pcall(function()
                 C_UnitAuras.RemovePrivateAuraAnchor(anchorID)
             end)
         end
         frameAnchors[frame] = nil
     end
-    
-    
-    -- Return containers to pool
-    if frame.bossDebuffContainers then
-        local containers = frame.bossDebuffContainers
-        frame.bossDebuffContainers = {}  -- Clear reference first
-        for i, container in ipairs(containers) do
-            ReleaseContainer(container)
-        end
-    end
-    
-    -- Hide scale frames (reused on next setup)
-    if frame.bossDebuffScaleFrames then
-        for i, scaleFrame in ipairs(frame.bossDebuffScaleFrames) do
-            scaleFrame:Hide()
-            scaleFrame:ClearAllPoints()
+
+    -- Hide frames (keep for reuse)
+    if frame.bossDebuffFrames then
+        for _, iconFrame in ipairs(frame.bossDebuffFrames) do
+            iconFrame:Hide()
+            iconFrame:ClearAllPoints()
         end
     end
 
-    -- Clear tracked unit so next ReanchorPrivateAuras will re-register
     frame.bossDebuffAnchoredUnit = nil
-
     frame.isBeingCleared = nil
 end
 
 -- ============================================================
--- LIGHTWEIGHT REANCHOR (unit token changed, containers stay)
--- ============================================================
--- When sorting moves a player to a different frame position, the
--- container is still visually attached to the correct frame, but
--- the Blizzard anchor is monitoring the OLD unit token.
--- This function removes old anchors and re-adds with the new unit
--- token, reusing existing containers (no layout/parenting changes).
+-- LIGHTWEIGHT REANCHOR (unit token changed, frames stay)
 -- ============================================================
 
 function DF:ReanchorPrivateAuras(frame)
     if not frame or not frame.unit then return end
-
-    -- Can't modify anchors during combat
     if InCombatLockdown() then
         needsPostCombatSetup = true
         return
     end
-
-    -- Nothing to reanchor if no containers exist
-    if not frame.bossDebuffContainers or #frame.bossDebuffContainers == 0 then return end
+    if not frame.bossDebuffFrames or #frame.bossDebuffFrames == 0 then return end
 
     -- PERF TEST: Skip if disabled
     if DF.PerfTest and not DF.PerfTest.enablePrivateAuras then return end
@@ -423,14 +263,13 @@ function DF:ReanchorPrivateAuras(frame)
     local db = DF:GetFrameDB(frame)
     if not db or not db.bossDebuffsEnabled then return end
 
-    -- Idempotency guard: skip if anchors already monitoring this unit
-    -- Prevents redundant Remove+Add cycles during Hide/Show sorting churn
+    -- Idempotency guard
     if frame.bossDebuffAnchoredUnit == newUnit then return end
 
-    -- Step 1: Remove all old Blizzard anchors (API only, keep containers)
+    -- Remove old anchors (API only, keep frames)
     local oldAnchors = frameAnchors[frame]
     if oldAnchors then
-        for i, anchorID in ipairs(oldAnchors) do
+        for _, anchorID in ipairs(oldAnchors) do
             pcall(function()
                 C_UnitAuras.RemovePrivateAuraAnchor(anchorID)
             end)
@@ -438,95 +277,53 @@ function DF:ReanchorPrivateAuras(frame)
     end
     frameAnchors[frame] = {}
 
-    -- Step 2: Re-read settings for anchor params
+    -- Re-read settings
     local showCountdown = db.bossDebuffsShowCountdown ~= false
     local showNumbers = db.bossDebuffsShowNumbers ~= false
-    local iconWidth = db.bossDebuffsIconWidth or 30
-    local iconHeight = db.bossDebuffsIconHeight or 30
+    local iconWidth = db.bossDebuffsIconWidth or 20
+    local iconHeight = db.bossDebuffsIconHeight or 20
     local borderScale = db.bossDebuffsBorderScale or 1.0
-    local textScale = db.bossDebuffsTextScale or 1.0
-    local textOffsetX = db.bossDebuffsTextOffsetX or 0
-    local textOffsetY = db.bossDebuffsTextOffsetY or 0
-    local mainShowNumbers = false
 
-    -- Step 3: Re-register each container with new unit token
-    for i, container in ipairs(frame.bossDebuffContainers) do
-        local success, anchorID = pcall(function()
-            return C_UnitAuras.AddPrivateAuraAnchor({
-                unitToken = newUnit,
-                auraIndex = i,
-                parent = container,
-                showCountdownFrame = showCountdown,
-                showCountdownNumbers = mainShowNumbers,
-                iconInfo = {
-                    iconWidth = iconWidth,
-                    iconHeight = iconHeight,
-                    borderScale = borderScale,
-                    iconAnchor = {
-                        point = "CENTER",
-                        relativeTo = container,
-                        relativePoint = "CENTER",
-                        offsetX = 0,
-                        offsetY = 0,
-                    },
-                },
-            })
-        end)
-
-        if success and anchorID then
-            table.insert(frameAnchors[frame], anchorID)
-
-            -- Re-register scaled duration numbers anchor if enabled
-            if showNumbers and frame.bossDebuffScaleFrames and frame.bossDebuffScaleFrames[i] then
-                local scaleFrame = frame.bossDebuffScaleFrames[i]
-                local anchorOffX = textOffsetX / textScale
-                local anchorOffY = textOffsetY / textScale
-
-                local scaleSuccess, scaleAnchorID = pcall(function()
-                    return C_UnitAuras.AddPrivateAuraAnchor({
-                        unitToken = newUnit,
-                        auraIndex = i,
-                        parent = scaleFrame,
-                        showCountdownFrame = true,
-                        showCountdownNumbers = true,
-                        iconInfo = {
-                            iconWidth = 0.001,
-                            iconHeight = 0.001,
-                            borderScale = -100,
-                            iconAnchor = {
-                                point = "CENTER",
-                                relativeTo = container,
-                                relativePoint = "CENTER",
-                                offsetX = anchorOffX,
-                                offsetY = anchorOffY,
-                            },
+    -- Re-register each frame with new unit token
+    for i, iconFrame in ipairs(frame.bossDebuffFrames) do
+        if iconFrame:IsShown() then
+            local success, anchorID = pcall(function()
+                return C_UnitAuras.AddPrivateAuraAnchor({
+                    unitToken = newUnit,
+                    auraIndex = i,
+                    parent = iconFrame,
+                    showCountdownFrame = showCountdown,
+                    showCountdownNumbers = showNumbers,
+                    iconInfo = {
+                        iconWidth = iconWidth,
+                        iconHeight = iconHeight,
+                        borderScale = borderScale,
+                        iconAnchor = {
+                            point = "CENTER",
+                            relativeTo = iconFrame,
+                            relativePoint = "CENTER",
+                            offsetX = 0,
+                            offsetY = 0,
                         },
-                    })
-                end)
+                    },
+                })
+            end)
 
-                if scaleSuccess and scaleAnchorID then
-                    table.insert(frameAnchors[frame], scaleAnchorID)
-                end
+            if success and anchorID then
+                table.insert(frameAnchors[frame], anchorID)
             end
         end
     end
 
-    -- Track which unit we're now monitoring (idempotency guard)
     frame.bossDebuffAnchoredUnit = newUnit
 
     if DF.bossDebuffDebug then
-        print("|cff00ff00DF BossDebuff:|r Reanchored " .. #frame.bossDebuffContainers .. " containers to " .. newUnit .. " (" .. #frameAnchors[frame] .. " anchors)")
+        DF:Debug("Reanchored " .. #frame.bossDebuffFrames .. " frames to " .. newUnit .. " (" .. #frameAnchors[frame] .. " anchors)")
     end
 end
 
 -- ============================================================
 -- DEBOUNCED REANCHOR ALL FRAMES
--- ============================================================
--- Called after sorting completes to ensure all private aura anchors
--- are monitoring the correct unit token. Uses C_Timer.After(0) so
--- it runs on the NEXT frame, after all SecureGroupHeaderTemplate
--- attribute changes have settled. Multiple calls in the same frame
--- coalesce into a single reanchor pass via the pendingReanchor flag.
 -- ============================================================
 
 local pendingReanchor = false
@@ -536,7 +333,6 @@ function DF:SchedulePrivateAuraReanchor()
     pendingReanchor = true
     C_Timer.After(0, function()
         pendingReanchor = false
-        -- Skip if in combat — queue for post-combat instead
         if InCombatLockdown() then
             needsPostCombatSetup = true
             return
@@ -548,7 +344,7 @@ function DF:SchedulePrivateAuraReanchor()
                 end
             end)
         end
-        -- Also cover pinned frames
+        -- Pinned frames
         if DF.PinnedFrames and DF.PinnedFrames.initialized and DF.PinnedFrames.headers then
             for setIndex = 1, 2 do
                 local header = DF.PinnedFrames.headers[setIndex]
@@ -569,150 +365,84 @@ end
 -- LIGHTWEIGHT UPDATE FUNCTIONS (no anchor recreation)
 -- ============================================================
 
--- Update position/layout without recreating anchors
 local function UpdateFramePositions(frame)
-    if not frame or not frame.bossDebuffContainers or #frame.bossDebuffContainers == 0 then return end
-    
+    if not frame or not frame.bossDebuffFrames or #frame.bossDebuffFrames == 0 then return end
+
     local db = DF:GetFrameDB(frame)
     local spacing = db.bossDebuffsSpacing or 2
     local growth = db.bossDebuffsGrowth or "RIGHT"
     local anchor = db.bossDebuffsAnchor or "LEFT"
     local offsetX = db.bossDebuffsOffsetX or 0
     local offsetY = db.bossDebuffsOffsetY or 0
-    
+
     local pointOnCurrent, pointOnPrev, xMult, yMult = GetGrowthAnchors(growth)
-    
-    for i, container in ipairs(frame.bossDebuffContainers) do
-        container:ClearAllPoints()
+
+    for i, iconFrame in ipairs(frame.bossDebuffFrames) do
+        iconFrame:ClearAllPoints()
         if i == 1 then
-            container:SetPoint(pointOnCurrent, frame, anchor, offsetX, offsetY)
+            iconFrame:SetPoint(pointOnCurrent, frame, anchor, offsetX, offsetY)
         else
-            local prevContainer = frame.bossDebuffContainers[i - 1]
-            local spacingX = spacing * xMult
-            local spacingY = spacing * yMult
-            container:SetPoint(pointOnCurrent, prevContainer, pointOnPrev, spacingX, spacingY)
+            local prevFrame = frame.bossDebuffFrames[i - 1]
+            iconFrame:SetPoint(pointOnCurrent, prevFrame, pointOnPrev, spacing * xMult, spacing * yMult)
         end
     end
 end
 
 function DF:UpdateAllPrivateAuraPositions()
     QueueOrExecute("positions", function()
-        local function update(frame)
-            if frame and frame.bossDebuffContainers then
+        DF:IterateAllFrames(function(frame)
+            if frame and frame.bossDebuffFrames then
                 UpdateFramePositions(frame)
             end
-        end
-        
-        DF:IterateAllFrames(update)
+        end)
     end)
 end
 
--- Update scale without recreating anchors
--- Update frame level without recreating anchors
 function DF:UpdateAllPrivateAuraFrameLevel()
     QueueOrExecute("frameLevel", function()
-        local function update(frame)
-            if not frame or not frame.bossDebuffContainers then return end
+        DF:IterateAllFrames(function(frame)
+            if not frame or not frame.bossDebuffFrames then return end
             local db = DF:GetFrameDB(frame)
-            local frameLevel = db.bossDebuffsFrameLevel or 50
+            local frameLevel = db.bossDebuffsFrameLevel or 35
             local baseLevel = frame:GetFrameLevel()
-            for _, container in ipairs(frame.bossDebuffContainers) do
-                container:SetFrameLevel(baseLevel + frameLevel)
+            for _, iconFrame in ipairs(frame.bossDebuffFrames) do
+                iconFrame:SetFrameLevel(baseLevel + frameLevel)
             end
-        end
-        
-        DF:IterateAllFrames(update)
+        end)
     end)
 end
 
-
--- Update visibility of all containers (for enable/disable toggle)
 function DF:UpdateAllPrivateAuraVisibility()
     QueueOrExecute("visibility", function()
-        local function update(frame)
-            if not frame or not frame.bossDebuffContainers then return end
+        DF:IterateAllFrames(function(frame)
+            if not frame or not frame.bossDebuffFrames then return end
             local db = DF:GetFrameDB(frame)
             local enabled = db.bossDebuffsEnabled
-            for _, container in ipairs(frame.bossDebuffContainers) do
+            for _, iconFrame in ipairs(frame.bossDebuffFrames) do
                 if enabled then
-                    container:Show()
+                    iconFrame:Show()
                 else
-                    container:Hide()
+                    iconFrame:Hide()
                 end
             end
-        end
-        
-        DF:IterateAllFrames(update)
+        end)
     end)
 end
 
 -- ============================================================
--- UPDATE ALL FRAMES
+-- REFRESH ALL FRAMES
 -- ============================================================
 
-function DF:UpdateAllPrivateAuraAnchors()
-    -- Can't do protected operations during combat
-    if InCombatLockdown() then
-        needsPostCombatSetup = true
-        return
-    end
-    
-    -- Only setup frames that don't already have anchors
-    local function setupIfNeeded(frame)
-        if frame and frame.unit then
-            local anchors = frameAnchors[frame]
-            -- Setup if no anchors table or it's empty
-            if not anchors or #anchors == 0 then
-                DF:SetupPrivateAuraAnchors(frame)
-            end
-        end
-    end
-    
-    -- Party frames (player + party1-4) via iterator
-    if DF.IteratePartyFrames then
-        DF:IteratePartyFrames(setupIfNeeded)
-    end
-    
-    -- Raid frames via iterator
-    if DF.IterateRaidFrames then
-        DF:IterateRaidFrames(setupIfNeeded)
-    end
-    
-    -- Pinned frames
-    if DF.PinnedFrames and DF.PinnedFrames.initialized and DF.PinnedFrames.headers then
-        for setIndex = 1, 2 do
-            local header = DF.PinnedFrames.headers[setIndex]
-            if header then
-                for i = 1, 40 do
-                    local child = header:GetAttribute("child" .. i)
-                    if child then
-                        setupIfNeeded(child)
-                    end
-                end
-            end
-        end
-    end
-end
-
--- ============================================================
--- REFRESH ALL FRAMES (Clear and recreate to reset children)
--- ============================================================
-
--- Debounce timer for refresh
 local refreshTimer = nil
 
--- Preview function - updates only active frames immediately, then all frames after delay
--- This gives live feedback while dragging sliders without lag
 function DF:PreviewPrivateAuraAnchors()
-    -- Skip if in combat
     if InCombatLockdown() then
-        -- Just queue a full refresh for after combat
         QueueOrExecute("refresh", function()
             DF:RefreshAllPrivateAuraAnchors()
         end)
         return
     end
-    
+
     -- Immediately update first visible frame for preview
     local updatedFirst = false
     if DF.IteratePartyFrames then
@@ -724,19 +454,17 @@ function DF:PreviewPrivateAuraAnchors()
             end
         end)
     end
-    
-    -- Schedule debounced full refresh for all other frames
+
+    -- Debounced full refresh for remaining frames
     if refreshTimer then
         refreshTimer:Cancel()
     end
     refreshTimer = C_Timer.NewTimer(0.3, function()
         refreshTimer = nil
-        -- Update remaining frames (skip ones we already updated)
         DF:RefreshRemainingPrivateAuraAnchors()
     end)
 end
 
--- Refresh remaining frames (called after preview delay)
 function DF:RefreshRemainingPrivateAuraAnchors()
     if InCombatLockdown() then
         QueueOrExecute("refreshRemaining", function()
@@ -744,14 +472,13 @@ function DF:RefreshRemainingPrivateAuraAnchors()
         end)
         return
     end
-    
-    -- Party frames (skip first visible one, already updated in preview)
+
     local skippedFirst = false
     if DF.IteratePartyFrames then
         DF:IteratePartyFrames(function(frame)
             if frame and frame.unit then
                 if not skippedFirst and frame:IsVisible() then
-                    skippedFirst = true  -- Skip the one we updated in preview
+                    skippedFirst = true
                 else
                     DF:ClearPrivateAuraAnchors(frame)
                     DF:SetupPrivateAuraAnchors(frame)
@@ -759,8 +486,7 @@ function DF:RefreshRemainingPrivateAuraAnchors()
             end
         end)
     end
-    
-    -- Raid frames
+
     if DF.IterateRaidFrames then
         DF:IterateRaidFrames(function(frame)
             if frame and frame.unit then
@@ -771,7 +497,6 @@ function DF:RefreshRemainingPrivateAuraAnchors()
     end
 end
 
--- Debounced refresh - waits for slider to stop moving
 function DF:RefreshAllPrivateAuraAnchorsDebounced()
     if refreshTimer then
         refreshTimer:Cancel()
@@ -788,7 +513,6 @@ end
 
 function DF:RefreshAllPrivateAuraAnchors()
     QueueOrExecute("refresh", function()
-        -- Party frames via iterator
         if DF.IteratePartyFrames then
             DF:IteratePartyFrames(function(frame)
                 if frame and frame.unit then
@@ -797,8 +521,7 @@ function DF:RefreshAllPrivateAuraAnchors()
                 end
             end)
         end
-        
-        -- Raid frames via iterator
+
         if DF.IterateRaidFrames then
             DF:IterateRaidFrames(function(frame)
                 if frame and frame.unit then
@@ -807,7 +530,7 @@ function DF:RefreshAllPrivateAuraAnchors()
                 end
             end)
         end
-        
+
         -- Pinned frames
         if DF.PinnedFrames and DF.PinnedFrames.initialized and DF.PinnedFrames.headers then
             for setIndex = 1, 2 do
@@ -827,6 +550,49 @@ function DF:RefreshAllPrivateAuraAnchors()
 end
 
 -- ============================================================
+-- UPDATE ALL FRAMES
+-- ============================================================
+
+function DF:UpdateAllPrivateAuraAnchors()
+    if InCombatLockdown() then
+        needsPostCombatSetup = true
+        return
+    end
+
+    local function setupIfNeeded(frame)
+        if frame and frame.unit then
+            local anchors = frameAnchors[frame]
+            if not anchors or #anchors == 0 then
+                DF:SetupPrivateAuraAnchors(frame)
+            end
+        end
+    end
+
+    if DF.IteratePartyFrames then
+        DF:IteratePartyFrames(setupIfNeeded)
+    end
+
+    if DF.IterateRaidFrames then
+        DF:IterateRaidFrames(setupIfNeeded)
+    end
+
+    -- Pinned frames
+    if DF.PinnedFrames and DF.PinnedFrames.initialized and DF.PinnedFrames.headers then
+        for setIndex = 1, 2 do
+            local header = DF.PinnedFrames.headers[setIndex]
+            if header then
+                for i = 1, 40 do
+                    local child = header:GetAttribute("child" .. i)
+                    if child then
+                        setupIfNeeded(child)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- ============================================================
 -- EVENT HANDLING
 -- ============================================================
 
@@ -837,38 +603,29 @@ eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == "DandersFrames" then
-        
-        -- Set up anchors immediately if not in combat
         if not InCombatLockdown() then
             DF:UpdateAllPrivateAuraAnchors()
         else
             needsPostCombatSetup = true
         end
-        
+
     elseif event == "PLAYER_ENTERING_WORLD" then
-        -- Just update anchors if not in combat (frames may have changed)
         if not InCombatLockdown() then
             DF:UpdateAllPrivateAuraAnchors()
         else
             needsPostCombatSetup = true
         end
-        
+
     elseif event == "GROUP_ROSTER_UPDATE" then
-        -- Roster changed - new frames may need containers, or units may have shifted.
-        -- Out of combat: set up containers for any frames that don't have them yet.
-        -- In combat: schedule a reanchor for existing containers (deferred to post-combat).
         if not InCombatLockdown() then
-            -- Delay slightly to let header children get their unit assignments first
             C_Timer.After(0.1, function()
                 if not InCombatLockdown() then
                     DF:UpdateAllPrivateAuraAnchors()
                 else
-                    -- Entered combat during the delay — queue reanchor for post-combat
                     DF:SchedulePrivateAuraReanchor()
                 end
             end)
         else
-            -- Combat-safe: schedule reanchor (deferred to post-combat)
             DF:SchedulePrivateAuraReanchor()
         end
     end
@@ -881,70 +638,58 @@ end)
 SLASH_DFBOSSDEBUFFS1 = "/dfboss"
 SlashCmdList["DFBOSSDEBUFFS"] = function(msg)
     msg = msg:lower():trim()
-    
+
     if msg == "refresh" or msg == "update" then
         DF:RefreshAllPrivateAuraAnchors()
-        print("|cff00ff00DandersFrames:|r Boss debuff anchors refreshed (cleared and recreated)")
-        
+        print("|cff00ff00DandersFrames:|r Boss debuff anchors refreshed")
+
     elseif msg == "debug" then
         DF.bossDebuffDebug = not DF.bossDebuffDebug
         local show = DF.bossDebuffDebug
-        
-        local function toggleDebug(frame)
-            if frame and frame.bossDebuffContainers then
+
+        DF:IterateAllFrames(function(frame)
+            if frame and frame.bossDebuffFrames then
                 local colors = {
                     {1, 0, 0, 0.4},
                     {0, 1, 0, 0.4},
                     {0, 0, 1, 0.4},
                     {1, 1, 0, 0.4},
                 }
-                for i, container in ipairs(frame.bossDebuffContainers) do
-                    if container.debugBg then
+                for i, iconFrame in ipairs(frame.bossDebuffFrames) do
+                    if iconFrame.debugBg then
                         if show then
                             local c = colors[i] or colors[1]
-                            container.debugBg:SetColorTexture(c[1], c[2], c[3], c[4])
-                            container.debugBg:Show()
+                            iconFrame.debugBg:SetColorTexture(c[1], c[2], c[3], c[4])
+                            iconFrame.debugBg:Show()
                         else
-                            container.debugBg:Hide()
+                            iconFrame.debugBg:Hide()
                         end
                     end
                 end
             end
-        end
-        
-        -- Toggle on all frames
-        DF:IterateAllFrames(toggleDebug)
-        
+        end)
+
         print("|cff00ff00DandersFrames:|r Debug mode " .. (show and "ON" or "OFF"))
-    
-        
+
     elseif msg == "status" then
-        local count = 0
-        for _, container in ipairs(containerPool) do
-            if container.inUse then count = count + 1 end
-        end
-        print("|cff00ff00DandersFrames:|r Containers in use: " .. count .. "/" .. POOL_SIZE)
-        
-        -- Count anchors
         local anchorCount = 0
+        local frameCount = 0
         for frame, anchors in pairs(frameAnchors) do
+            frameCount = frameCount + 1
             anchorCount = anchorCount + #anchors
         end
+        print("|cff00ff00DandersFrames:|r Frames with anchors: " .. frameCount)
         print("|cff00ff00DandersFrames:|r Total anchors registered: " .. anchorCount)
-        
-        -- Show db settings
+
         local db = DF:GetDB()
         print("|cff00ff00DandersFrames:|r Settings:")
         print("  bossDebuffsEnabled: " .. tostring(db.bossDebuffsEnabled))
-        print("  bossDebuffsClickCastingEnabled: " .. tostring(db.bossDebuffsClickCastingEnabled))
-        print("  bossDebuffsShowDebugOverlay: " .. tostring(db.bossDebuffsShowDebugOverlay))
         print("  bossDebuffsMax: " .. tostring(db.bossDebuffsMax))
-        
+        print("  bossDebuffsHideTooltip: " .. tostring(db.bossDebuffsHideTooltip))
+
     elseif msg == "frames" then
-        -- Debug: show what frames we can find
         print("|cff00ff00DandersFrames:|r Frame Debug:")
-        
-        -- Count party frames
+
         local partyCount = 0
         if DF.IteratePartyFrames then
             DF:IteratePartyFrames(function(frame)
@@ -953,8 +698,7 @@ SlashCmdList["DFBOSSDEBUFFS"] = function(msg)
             end)
         end
         print("  Party frames total: " .. partyCount)
-        
-        -- Count raid frames
+
         local raidCount = 0
         if DF.IterateRaidFrames then
             DF:IterateRaidFrames(function(frame)
@@ -962,64 +706,55 @@ SlashCmdList["DFBOSSDEBUFFS"] = function(msg)
             end)
         end
         print("  Raid frames total: " .. raidCount)
-        
+
     elseif msg == "force" then
-        -- Force setup on all frames regardless of settings
         print("|cff00ff00DandersFrames:|r Force setting up anchors...")
         DF.bossDebuffDebug = true
-        
+
         local function forceSetup(frame, name)
             if frame and frame.unit then
                 print("  Setting up: " .. name .. " unit=" .. frame.unit)
-                
-                -- Clear existing first
+
                 DF:ClearPrivateAuraAnchors(frame)
-                
-                -- Force setup bypassing enabled check
+
                 local db = DF:GetFrameDB(frame)
                 print("    DB bossDebuffsEnabled: " .. tostring(db.bossDebuffsEnabled))
-                
-                -- Temporarily force enable
+
                 local wasEnabled = db.bossDebuffsEnabled
                 db.bossDebuffsEnabled = true
-                
                 DF:SetupPrivateAuraAnchors(frame)
-                
-                -- Restore setting
                 db.bossDebuffsEnabled = wasEnabled
-                
-                if frame.bossDebuffContainers then
-                    print("    Containers created: " .. #frame.bossDebuffContainers)
-                    for i, c in ipairs(frame.bossDebuffContainers) do
-                        print("      [" .. i .. "] shown=" .. tostring(c:IsShown()) .. " parent=" .. tostring(c:GetParent() and c:GetParent():GetName()))
-                        if c.debugBg then c.debugBg:Show() end
+
+                if frame.bossDebuffFrames then
+                    print("    Frames created: " .. #frame.bossDebuffFrames)
+                    for i, f in ipairs(frame.bossDebuffFrames) do
+                        print("      [" .. i .. "] shown=" .. tostring(f:IsShown()) .. " parent=" .. tostring(f:GetParent() and f:GetParent():GetName()))
+                        if f.debugBg then f.debugBg:Show() end
                     end
                 else
-                    print("    No containers created!")
+                    print("    No frames created!")
                 end
             end
         end
-        
-        -- Force setup on all frames via iterators
+
         local idx = 0
         DF:IteratePartyFrames(function(frame)
             idx = idx + 1
             forceSetup(frame, "partyFrame["..idx.."]")
         end)
-        
+
         idx = 0
         DF:IterateRaidFrames(function(frame)
             idx = idx + 1
             forceSetup(frame, "raidFrame["..idx.."]")
         end)
         print("|cff00ff00DandersFrames:|r Done!")
-        
+
     else
         print("|cff00ff00DandersFrames Boss Debuffs:|r")
         print("  /dfboss refresh - Refresh anchors")
-        print("  /dfboss debug - Toggle debug backgrounds (red/green)")
-        -- print("  /dfboss overlay - Toggle overlay debug (cyan)")  -- DISABLED: Overlay no longer needed
-        print("  /dfboss status - Show pool status")
+        print("  /dfboss debug - Toggle debug backgrounds")
+        print("  /dfboss status - Show anchor status")
         print("  /dfboss frames - Show all frame references")
         print("  /dfboss force - Force setup on all frames with debug")
     end
