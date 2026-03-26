@@ -3342,23 +3342,6 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
             end
         end
         
-        -- Force bossDebuffsScaleText = true (scale text is now always-on, no longer user-configurable)
-        for _, mode in ipairs({"party", "raid"}) do
-            local modeDb = DF.db[mode]
-            if modeDb then
-                modeDb.bossDebuffsScaleText = true
-            end
-        end
-        if DandersFramesDB_v2 and DandersFramesDB_v2.profiles then
-            for profileName, profile in pairs(DandersFramesDB_v2.profiles) do
-                for _, mode in ipairs({"party", "raid"}) do
-                    if profile[mode] then
-                        profile[mode].bossDebuffsScaleText = true
-                    end
-                end
-            end
-        end
-        
         -- Force Direct mode filter defaults (v4.0.9):
         -- Debuffs: All Debuffs enabled (show everything)
         -- Buffs: All Buffs disabled, My Buffs + Raid In Combat checked
