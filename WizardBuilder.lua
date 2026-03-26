@@ -2101,7 +2101,7 @@ WB:RegisterBuiltinWizard({
                 {
                     id = "welcome",
                     question = "Would you like to set up your aura filters?",
-                    description = "If you've had trouble seeing certain buffs or debuffs on your frames, this wizard will help you pick the right settings.",
+                    description = "• Having trouble seeing certain buffs or debuffs?\n• This wizard helps you pick the right aura settings",
                     type = "single",
                     options = {
                         { label = "Yes, let's set it up", value = "yes" },
@@ -2126,7 +2126,7 @@ WB:RegisterBuiltinWizard({
                             value = "direct",
                         },
                     },
-                    description = "Blizzard mirrors the exact buffs and debuffs shown on the default Blizzard frames. It requires Blizzard's raid frame settings to be configured correctly and is slightly more performance heavy in large groups.\n\nDirect API gives you some control over what is shown on your frames using filter categories. Some filters may miss certain buffs or debuffs, while others might show unwanted ones. You can fine-tune these filters to get the best results for your setup.",
+                    description = "Blizzard:\n• Mirrors the buffs/debuffs from default Blizzard frames\n• Requires Blizzard raid settings to be configured correctly\n• Slightly more performance heavy in large groups\n\nDirect API:\n• Gives you control over what shows on your frames\n• Some filters may miss certain buffs/debuffs\n• Others might show unwanted ones\n• Can be fine-tuned for best results",
                     branches = {
                         { condition = { equals = "blizzard" }, ["goto"] = "summary" },
                     },
@@ -2135,7 +2135,7 @@ WB:RegisterBuiltinWizard({
                 {
                     id = "direct_config",
                     question = "How would you like to configure the filters?",
-                    description = "We can apply sensible defaults that work well for most players, or you can fine-tune every filter option yourself.",
+                    description = "• Recommended defaults work well for most players\n• Manual lets you fine-tune every filter option",
                     type = "single",
                     options = {
                         { label = "Use recommended defaults", value = "defaults" },
@@ -2213,10 +2213,19 @@ WB:RegisterBuiltinWizard({
                 -- If user chose manual config, open the aura filters tab and highlight settings
                 if answers.direct_config == "manual" then
                     C_Timer.After(0.2, function()
-                        if DF.ToggleGUI then DF:ToggleGUI() end
+                        -- Open GUI if not already open (don't toggle closed)
+                        local guiAlreadyOpen = DF.GUIFrame and DF.GUIFrame:IsShown()
+                        if not guiAlreadyOpen then
+                            if DF.ToggleGUI then DF:ToggleGUI() end
+                        end
                         C_Timer.After(0.3, function()
+                            -- Switch to aura filters tab
                             if DF.GUI and DF.GUI.Tabs and DF.GUI.Tabs["auras_filters"] then
                                 DF.GUI.Tabs["auras_filters"]:Click()
+                            end
+                            -- Refresh the page so settings reflect changes
+                            if DF.GUI and DF.GUI.RefreshCurrentPage then
+                                DF.GUI.RefreshCurrentPage()
                             end
                             C_Timer.After(0.3, function()
                                 DF:HighlightSettings("auras_filters", directFilterKeys)
