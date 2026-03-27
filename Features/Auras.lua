@@ -625,9 +625,11 @@ local function CaptureAurasFromBlizzardFrame(frame, triggerUpdate)
     wipe(cache.debuffs)
     wipe(cache.buffOrder)
     wipe(cache.debuffOrder)
+    wipe(cache.buffData)
+    wipe(cache.debuffData)
     wipe(cache.playerDispellable)
     wipe(cache.defensives)
-    
+
     -- Capture buff auraInstanceIDs from Blizzard's container
     -- In 12.0.8+ Blizzard moved aura data from frame arrays (buffFrames/debuffFrames)
     -- to container objects with :Iterate()/:Size() methods. The containers provide full
@@ -1123,6 +1125,11 @@ function DF:SetAuraSourceMode(mode)
         DF:EnableDirectAuraMode()
     else
         DF:DisableDirectAuraMode()
+        -- Restore events on Blizzard frames that were fully stripped during Direct mode
+        -- Without this, UNIT_AURA never fires and the Blizzard hook can't repopulate the cache
+        if DF.RestoreStrippedFrameEvents then
+            DF:RestoreStrippedFrameEvents()
+        end
         -- Re-prime Blizzard cache
         ScanAllBlizzardFrames()
     end
@@ -2499,6 +2506,13 @@ local function RestoreUnitFrameEvents(frame)
         end
     end)
     strippedFrames[frame] = nil
+end
+
+-- Restore events on ALL stripped frames (called when switching away from Direct mode)
+function DF:RestoreStrippedFrameEvents()
+    for frame in pairs(strippedFrames) do
+        RestoreUnitFrameEvents(frame)
+    end
 end
 
 -- Install hooks once to intercept Blizzard's event registration
