@@ -4659,14 +4659,6 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             if DF.UpdateAllOverlayClip then DF:UpdateAllOverlayClip() end
         end), 30)
         ovClip.hideOn = HideOverlayOptions
-        local ovTestW = overlayGroup:AddWidget(GUI:CreateSlider(self.child, "Test Width Mult", 0.01, 0.3, 0.005, db, "bossDebuffsTestWidthMult", nil, function()
-            if DF.UpdateAllTestBossDebuffs then DF:UpdateAllTestBossDebuffs() end
-        end, true), 55)
-        ovTestW.hideOn = HideOverlayOptions
-        local ovTestH = overlayGroup:AddWidget(GUI:CreateSlider(self.child, "Test Height Mult", 0.01, 0.3, 0.005, db, "bossDebuffsTestHeightMult", nil, function()
-            if DF.UpdateAllTestBossDebuffs then DF:UpdateAllTestBossDebuffs() end
-        end, true), 55)
-        ovTestH.hideOn = HideOverlayOptions
         overlayGroup.hideOn = HideBossDebuffOptions
         Add(overlayGroup, nil, 2)
 

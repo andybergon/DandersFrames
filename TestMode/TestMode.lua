@@ -2273,10 +2273,9 @@ function DF:UpdateTestOverlayBorder(frame)
     -- The Blizzard border ring extends outward from the icon center.
     -- Approximate the rendered border width/height from iconW * bScale.
     -- Multipliers calibrated against live overlay screenshots.
-    local testWidthMult = db.bossDebuffsTestWidthMult or 0.085
-    local testHeightMult = db.bossDebuffsTestHeightMult or 0.055
-    local borderW = iconW * bScale * testWidthMult
-    local borderH = fh * bScale * testHeightMult
+    -- Multipliers calibrated to match Blizzard's private aura border ring
+    local borderW = iconW * bScale * 0.10
+    local borderH = fh * bScale * 0.06
 
     -- Edge thickness scales with the border size
     local edgeSize = math.max(2, math.min(borderW, borderH) * 0.08)
