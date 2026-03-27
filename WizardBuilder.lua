@@ -2289,11 +2289,13 @@ WB:RegisterBuiltinWizard({
                             label = "Enable Overlay",
                             value = "enable",
                             image = "Interface\\AddOns\\DandersFrames\\Textures\\Wizards\\overlay_enabled",
+                            texCoord = {0.07, 0.93, 0, 1},  -- crop transparent padding
                         },
                         {
                             label = "Disable Overlay",
                             value = "disable",
                             image = "Interface\\AddOns\\DandersFrames\\Textures\\Wizards\\overlay_disabled",
+                            texCoord = {0.055, 0.945, 0, 1},  -- crop transparent padding
                         },
                     },
                     next = "summary",
