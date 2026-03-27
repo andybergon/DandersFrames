@@ -25,6 +25,7 @@ local DEBUG_INTERVAL = 3  -- seconds between debug dumps
 local sanitizedSpecAuras = {}
 
 DF.AuraDesigner = DF.AuraDesigner or {}
+DF.adConfigVersion = 0
 
 local Engine = {}
 DF.AuraDesigner.Engine = Engine
@@ -919,6 +920,9 @@ end
 -- ============================================================
 
 function Engine:ForceRefreshAllFrames()
+    -- Bump config version so all indicators reconfigure on next UpdateFrame
+    DF.adConfigVersion = (DF.adConfigVersion or 0) + 1
+
     local function TryUpdate(frame)
         if frame and frame:IsVisible() and DF:IsAuraDesignerEnabled(frame) then
             Engine:UpdateFrame(frame)

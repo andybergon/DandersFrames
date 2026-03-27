@@ -5002,6 +5002,9 @@ function DF:FullProfileRefresh()
         DF:UpdateAllFrameAppearances()
     end
     
+    -- Bump AD config version so indicators reconfigure with new profile settings
+    DF.adConfigVersion = (DF.adConfigVersion or 0) + 1
+
     -- === REFRESH AURAS ===
     if DF.UpdateAllAuras then
         DF:UpdateAllAuras()
