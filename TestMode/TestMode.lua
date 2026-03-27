@@ -2234,6 +2234,76 @@ function DF:UpdateTestBossDebuffs(frame)
             frame.testBossDebuffIcons[i]:Hide()
         end
     end
+
+    -- Show overlay border preview in test mode
+    DF:UpdateTestOverlayBorder(frame)
+end
+
+-- Create or update the overlay border preview for test mode.
+-- Draws a magenta border on the overlay container to simulate
+-- what the private aura border ring looks like in combat.
+function DF:UpdateTestOverlayBorder(frame)
+    if not frame then return end
+
+    local db = DF:GetFrameDB(frame)
+
+    -- Only show if overlay is enabled and we have the container
+    if not db.bossDebuffsOverlayEnabled or not frame.overlayContainer then
+        DF:HideTestOverlayBorder(frame)
+        return
+    end
+
+    local container = frame.overlayContainer
+    local maxSlots = db.bossDebuffsOverlayMaxSlots or 3
+
+    if not frame.testOverlayBorders then
+        frame.testOverlayBorders = {}
+    end
+
+    for i = 1, maxSlots do
+        local sub = frame.overlaySubContainers and frame.overlaySubContainers[i]
+        if not sub then break end
+
+        local border = frame.testOverlayBorders[i]
+        if not border then
+            border = CreateFrame("Frame", nil, sub, "BackdropTemplate")
+            border:EnableMouse(false)
+            if border.SetMouseClickEnabled then border:SetMouseClickEnabled(false) end
+            frame.testOverlayBorders[i] = border
+        end
+
+        border:SetParent(sub)
+        border:ClearAllPoints()
+        border:SetAllPoints(container)
+        border:SetFrameLevel(sub:GetFrameLevel() + 1)
+
+        local borderColors = {
+            {1.0, 0.0, 0.6, 0.9},  -- magenta-pink
+            {0.0, 0.8, 1.0, 0.9},  -- cyan
+            {1.0, 0.6, 0.0, 0.9},  -- orange
+        }
+        local c = borderColors[i] or borderColors[1]
+
+        border:SetBackdrop({
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 2,
+        })
+        border:SetBackdropBorderColor(c[1], c[2], c[3], c[4])
+        border:Show()
+    end
+
+    -- Hide extra borders if maxSlots shrank
+    for i = maxSlots + 1, #frame.testOverlayBorders do
+        frame.testOverlayBorders[i]:Hide()
+    end
+end
+
+-- Hide overlay border previews
+function DF:HideTestOverlayBorder(frame)
+    if not frame or not frame.testOverlayBorders then return end
+    for _, border in ipairs(frame.testOverlayBorders) do
+        border:Hide()
+    end
 end
 
 -- Hide test boss debuffs when exiting test mode
@@ -2249,6 +2319,9 @@ function DF:HideTestBossDebuffs(frame)
             end
         end
     end
+
+    -- Hide overlay border preview
+    DF:HideTestOverlayBorder(frame)
 end
 
 -- Update all test boss debuffs (for live preview during slider dragging)
