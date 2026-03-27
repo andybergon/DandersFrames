@@ -4659,6 +4659,36 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             if DF.UpdateAllOverlayClip then DF:UpdateAllOverlayClip() end
         end), 30)
         ovClip.hideOn = HideOverlayOptions
+        local ovAutoFit = overlayGroup:AddWidget(GUI:CreateButton(self.child, "Auto-Detect from Frame Size", 200, 24, function()
+            -- Calibrated from 125x64 frame: scale=1.65, ratio=5.80
+            -- Vertical constant: bScale / fh = 10 * 1.65 / 64 = 0.2578
+            -- Horizontal constant: iconRatio * overlayScale = 5.80 * 1.65 = 9.57
+            local fw = db.frameWidth or 125
+            local fh = db.frameHeight or 64
+            local newScale = fh * 0.02578
+            local newRatio = 9.57 / newScale
+
+            -- Clamp to slider ranges
+            newScale = math.max(0.1, math.min(5.0, newScale))
+            newRatio = math.max(0.5, math.min(10.0, newRatio))
+
+            -- Round to slider step precision
+            newScale = math.floor(newScale / 0.05 + 0.5) * 0.05
+            newRatio = math.floor(newRatio / 0.1 + 0.5) * 0.1
+
+            db.bossDebuffsOverlayScale = newScale
+            db.bossDebuffsOverlayIconRatio = newRatio
+
+            -- Update slider visuals
+            if ovScale.slider then ovScale.slider:SetValue(newScale) end
+            if ovScale.valueText then ovScale.valueText:SetText(format("%.2f", newScale)) end
+            if ovRatio.slider then ovRatio.slider:SetValue(newRatio) end
+            if ovRatio.valueText then ovRatio.valueText:SetText(format("%.1f", newRatio)) end
+
+            if DF.RefreshAllPrivateAuraAnchors then DF:RefreshAllPrivateAuraAnchors() end
+            if DF.UpdateAllTestBossDebuffs then DF:UpdateAllTestBossDebuffs() end
+        end), 30)
+        ovAutoFit.hideOn = HideOverlayOptions
         overlayGroup.hideOn = HideBossDebuffOptions
         Add(overlayGroup, nil, 2)
 
