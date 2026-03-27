@@ -4659,7 +4659,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             if DF.UpdateAllOverlayClip then DF:UpdateAllOverlayClip() end
         end), 30)
         ovClip.hideOn = HideOverlayOptions
-        local ovAutoFit = overlayGroup:AddWidget(GUI:CreateButton(self.child, "Auto-Detect from Frame Size", 200, 24, function()
+        local ovAutoFit = overlayGroup:AddWidget(GUI:CreateButton(self.child, "Auto-Fit Border to Frame Size", 210, 24, function()
             -- Calibrated from 125x64 frame: scale=1.65, ratio=5.80
             -- Vertical constant: bScale / fh = 10 * 1.65 / 64 = 0.2578
             -- Horizontal constant: iconRatio * overlayScale = 5.80 * 1.65 = 9.57
