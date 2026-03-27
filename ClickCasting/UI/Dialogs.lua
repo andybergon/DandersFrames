@@ -2563,6 +2563,9 @@ SlashCmdList["DFCCGLOBAL"] = function(msg)
                 local macroAttr = frame:GetAttribute("macrotext" .. i)
                 if typeAttr or spellAttr or macroAttr then
                     print("    type" .. i .. "=" .. tostring(typeAttr) .. " spell" .. i .. "=" .. tostring(spellAttr))
+                    if macroAttr then
+                        print("    macrotext" .. i .. "=" .. tostring(macroAttr))
+                    end
                 end
             end
         else
