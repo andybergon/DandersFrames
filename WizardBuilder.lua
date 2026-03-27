@@ -2284,6 +2284,7 @@ WB:RegisterBuiltinWizard({
                     question = "Choose whether to enable the frame border overlay.",
                     description = "The first image shows the overlay border active on a frame. The second shows the standard boss debuff icon only.",
                     type = "imageselect",
+                    imageAspect = 1.7,
                     options = {
                         {
                             label = "Enable Overlay",

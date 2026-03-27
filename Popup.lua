@@ -1243,8 +1243,10 @@ RenderWizardStep = function()
         local numCards = min(numOptions, MAX_IMAGE_CARDS)
         local cardWidth = floor((availWidth - (numCards - 1) * IMAGE_CARD_SPACING) / numCards)
         cardWidth = min(cardWidth, IMAGE_CARD_SIZE + 40)  -- cap max size
-        local cardImageHeight = cardWidth - 8
-        local cardHeight = cardWidth + 24
+        -- Allow steps to specify an image aspect ratio (width/height, e.g. 1.8 for wide images)
+        local imageAspect = step.imageAspect
+        local cardImageHeight = imageAspect and floor((cardWidth - 8) / imageAspect) or (cardWidth - 8)
+        local cardHeight = cardImageHeight + 8 + 24
         f.ImageContainer:SetHeight(cardHeight)
         f.ImageContainer:Show()
 
