@@ -35,7 +35,7 @@ Multiple features can be developed in parallel using `claude -w <branch>`. Each 
 
 ## Fork Changes Tracking
 
-All fork changes are tracked in [`FORK_CHANGES.md`](FORK_CHANGES.md). Update it after committing new features or when syncing with upstream.
+All fork changes are tracked in [`FORK_CHANGES.md`](FORK_CHANGES.md). **Always update it as part of every commit** — not as an afterthought. Include it in the same commit.
 
 ## PR Conventions
 
