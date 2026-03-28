@@ -52,6 +52,8 @@ This is an external repo -- always preview PR title/body for user review before 
 
 - `Core.lua` - Main addon logic (~206K, largest file)
 - `Config.lua` - Configuration/defaults (~108K)
+- `Popup.lua` - Popup wizard system (v4.1.8+)
+- `WizardBuilder.lua` - Wizard builder framework (v4.1.8+)
 - `Profile.lua` - Profile import/export
 - `API.lua` - External API for Wago UI Packs etc.
 - `DandersFrames.xml` - XML frame templates
@@ -77,3 +79,5 @@ This is an external repo -- always preview PR title/body for user review before 
 ```bash
 find . -name '*.lua' -not -path './.git/*' -not -path './.claude/*' -not -path './Libs/*' -exec luac -p {} +
 ```
+
+**Known false positive:** `Features/Search.lua` has a UTF-8 BOM (upstream) that `luac -p` reports as a syntax error. WoW's Lua engine handles BOMs fine — ignore this.
