@@ -1083,6 +1083,12 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
                     end
                 end)
             end
+            -- Defer label repositioning so headers have settled into new direction first
+            C_Timer.After(0, function()
+                if DF.UpdateRaidGroupLabels then
+                    DF:UpdateRaidGroupLabels()
+                end
+            end)
         end
         
         -- ===== FRAME SIZE GROUP (Column 1) =====
