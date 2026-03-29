@@ -117,6 +117,7 @@ function DF:SetupPrivateAuraAnchors(frame)
     local iconHeight = db.bossDebuffsIconHeight or 20
     local borderScale = db.bossDebuffsBorderScale or 1.0
     local hideTooltip = db.bossDebuffsHideTooltip or false
+    local stackScale = db.bossDebuffsStackScale or 1.0
 
     -- Growth anchoring
     local pointOnCurrent, pointOnPrev, xMult, yMult = GetGrowthAnchors(growth)
@@ -129,7 +130,9 @@ function DF:SetupPrivateAuraAnchors(frame)
         frame.bossDebuffStackFrames = {}
     end
     frameAnchors[frame] = {}
-    stackAnchors[frame] = {}
+    if stackScale ~= 1 then
+        stackAnchors[frame] = {}
+    end
 
     local baseLevel = frame:GetFrameLevel()
 
@@ -236,47 +239,51 @@ function DF:SetupPrivateAuraAnchors(frame)
             iconFrame:Hide()
         end
 
-        -- Register a second anchor per slot for stack count text.
-        -- Blizzard's private aura rendering uses the same text slot for
-        -- both duration and stack count, with duration taking priority.
-        -- This invisible anchor has no countdown/duration, so Blizzard
-        -- falls through to rendering the stack count text instead.
-        local stackFrame = frame.bossDebuffStackFrames[i]
-        if not stackFrame then
-            stackFrame = CreateFrame("Frame", nil, frame.contentOverlay or frame)
-            stackFrame:SetSize(0.001, 0.001)
-            frame.bossDebuffStackFrames[i] = stackFrame
-        end
-        stackFrame:SetParent(frame.contentOverlay or frame)
-        stackFrame:ClearAllPoints()
-        stackFrame:SetPoint("CENTER", iconFrame, "CENTER", 0, 0)
-        stackFrame:SetFrameStrata("DIALOG")
-        stackFrame:Show()
+        -- When stack scale ~= 1, register a second anchor per slot for
+        -- stack count text. Blizzard's private aura rendering uses the same
+        -- text slot for both duration and stack count, with duration taking
+        -- priority. This invisible anchor has no countdown/duration, so
+        -- Blizzard falls through to rendering the stack count text instead.
+        -- The stack frame is scaled independently from the icon.
+        if stackScale ~= 1 then
+            local stackFrame = frame.bossDebuffStackFrames[i]
+            if not stackFrame then
+                stackFrame = CreateFrame("Frame", nil, frame.contentOverlay or frame)
+                stackFrame:SetSize(0.001, 0.001)
+                frame.bossDebuffStackFrames[i] = stackFrame
+            end
+            stackFrame:SetParent(frame.contentOverlay or frame)
+            stackFrame:ClearAllPoints()
+            stackFrame:SetPoint("CENTER", iconFrame, "CENTER", 0, 0)
+            stackFrame:SetFrameStrata("DIALOG")
+            stackFrame:SetScale(stackScale)
+            stackFrame:Show()
 
-        local stackSuccess, stackAnchorID = pcall(function()
-            return C_UnitAuras.AddPrivateAuraAnchor({
-                unitToken = unit,
-                auraIndex = i,
-                parent = stackFrame,
-                showCountdownFrame = false,
-                showCountdownNumbers = false,
-                iconInfo = {
-                    iconWidth = 0.001,
-                    iconHeight = 0.001,
-                    borderScale = -100,
-                    iconAnchor = {
-                        point = "BOTTOMRIGHT",
-                        relativeTo = iconFrame,
-                        relativePoint = "BOTTOMRIGHT",
-                        offsetX = 2,
-                        offsetY = -4,
+            local stackSuccess, stackAnchorID = pcall(function()
+                return C_UnitAuras.AddPrivateAuraAnchor({
+                    unitToken = unit,
+                    auraIndex = i,
+                    parent = stackFrame,
+                    showCountdownFrame = false,
+                    showCountdownNumbers = false,
+                    iconInfo = {
+                        iconWidth = 0.001,
+                        iconHeight = 0.001,
+                        borderScale = -100,
+                        iconAnchor = {
+                            point = "BOTTOMRIGHT",
+                            relativeTo = iconFrame,
+                            relativePoint = "BOTTOMRIGHT",
+                            offsetX = 2,
+                            offsetY = -4,
+                        },
                     },
-                },
-            })
-        end)
+                })
+            end)
 
-        if stackSuccess and stackAnchorID then
-            table.insert(stackAnchors[frame], stackAnchorID)
+            if stackSuccess and stackAnchorID then
+                table.insert(stackAnchors[frame], stackAnchorID)
+            end
         end
     end
 
@@ -514,7 +521,7 @@ function DF:ReanchorPrivateAuras(frame)
             end)
         end
     end
-    stackAnchors[frame] = {}
+    stackAnchors[frame] = nil
 
     -- Re-read settings
     local showCountdown = db.bossDebuffsShowCountdown ~= false
@@ -522,6 +529,11 @@ function DF:ReanchorPrivateAuras(frame)
     local iconWidth = db.bossDebuffsIconWidth or 20
     local iconHeight = db.bossDebuffsIconHeight or 20
     local borderScale = db.bossDebuffsBorderScale or 1.0
+    local stackScale = db.bossDebuffsStackScale or 1.0
+
+    if stackScale ~= 1 then
+        stackAnchors[frame] = {}
+    end
 
     -- Re-register each frame with new unit token
     for i, iconFrame in ipairs(frame.bossDebuffFrames) do
@@ -552,33 +564,36 @@ function DF:ReanchorPrivateAuras(frame)
                 table.insert(frameAnchors[frame], anchorID)
             end
 
-            -- Re-register stack count anchor
-            local stackFrame = frame.bossDebuffStackFrames and frame.bossDebuffStackFrames[i]
-            if stackFrame then
-                local stackSuccess, stackAnchorID = pcall(function()
-                    return C_UnitAuras.AddPrivateAuraAnchor({
-                        unitToken = newUnit,
-                        auraIndex = i,
-                        parent = stackFrame,
-                        showCountdownFrame = false,
-                        showCountdownNumbers = false,
-                        iconInfo = {
-                            iconWidth = 0.001,
-                            iconHeight = 0.001,
-                            borderScale = -100,
-                            iconAnchor = {
-                                point = "BOTTOMRIGHT",
-                                relativeTo = iconFrame,
-                                relativePoint = "BOTTOMRIGHT",
-                                offsetX = 2,
-                                offsetY = -4,
+            -- Re-register stack count anchor when scale ~= 1
+            if stackScale ~= 1 then
+                local stackFrame = frame.bossDebuffStackFrames and frame.bossDebuffStackFrames[i]
+                if stackFrame then
+                    stackFrame:SetScale(stackScale)
+                    local stackSuccess, stackAnchorID = pcall(function()
+                        return C_UnitAuras.AddPrivateAuraAnchor({
+                            unitToken = newUnit,
+                            auraIndex = i,
+                            parent = stackFrame,
+                            showCountdownFrame = false,
+                            showCountdownNumbers = false,
+                            iconInfo = {
+                                iconWidth = 0.001,
+                                iconHeight = 0.001,
+                                borderScale = -100,
+                                iconAnchor = {
+                                    point = "BOTTOMRIGHT",
+                                    relativeTo = iconFrame,
+                                    relativePoint = "BOTTOMRIGHT",
+                                    offsetX = 2,
+                                    offsetY = -4,
+                                },
                             },
-                        },
-                    })
-                end)
+                        })
+                    end)
 
-                if stackSuccess and stackAnchorID then
-                    table.insert(stackAnchors[frame], stackAnchorID)
+                    if stackSuccess and stackAnchorID then
+                        table.insert(stackAnchors[frame], stackAnchorID)
+                    end
                 end
             end
         end

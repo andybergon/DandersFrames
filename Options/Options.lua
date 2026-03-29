@@ -4575,8 +4575,13 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             if DF.UpdateAllTestBossDebuffs then DF:UpdateAllTestBossDebuffs() end
         end), 30)
         hideTooltip.hideOn = HideBossDebuffOptions
+        local stackScale = settingsGroup:AddWidget(GUI:CreateSlider(self.child, "Stack Text Scale", 0.5, 3.0, 0.1, db, "bossDebuffsStackScale", nil, function()
+            if DF.RefreshAllPrivateAuraAnchors then DF:RefreshAllPrivateAuraAnchors() end
+            if DF.UpdateAllTestBossDebuffs then DF:UpdateAllTestBossDebuffs() end
+        end, true), 55)
+        stackScale.hideOn = HideBossDebuffOptions
         Add(settingsGroup, nil, 1)
-        
+
         -- ===== POSITION GROUP (Column 2) =====
         local positionGroup = GUI:CreateSettingsGroup(self.child, 280)
         positionGroup:AddWidget(GUI:CreateHeader(self.child, "Position"), 40)
