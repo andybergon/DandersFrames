@@ -3,27 +3,26 @@
 ## [4.1.9] - 2026-03-27
 
 ### New Features
-* (Boss Debuffs) **Frame Border Overlay** — adds a border around the entire unit frame when private aura boss debuffs are active. Includes settings for border scale, icon ratio, frame level, max slots, and clip-to-frame. An auto-fit button calculates optimal border size from your frame dimensions
-* (Boss Debuffs) **Overlay Setup Wizard** — guided setup that explains the overlay feature and lets users enable/disable it with image previews. Runs automatically for existing users on first login, or manually via the Boss Debuffs settings tab
-* (Boss Debuffs) **Overlay Warning Page** — first-time enable now shows a warning wizard explaining visual quirks (orange non-dispellable borders, floating stack text) before activating the overlay
-* (Boss Debuffs) **Stack Text Scale** setting — registers a separate invisible anchor per aura slot so Blizzard renders stack count independently of duration text (hidden behind a scale slider for future use)
-* (Boss Debuffs) **Hide Tooltip** option — shrinks the private aura parent frame to sub-pixel size so hovering over boss debuff icons no longer shows a tooltip, while the icon remains visible
-* (Boss Debuffs) **Test Mode Overlay Preview** — test mode now shows a coloured border approximation of the overlay so you can tune settings without being in combat
-* (Boss Debuffs) Small icon warning note — dynamically shown in Size & Spacing when icon dimensions are below 30x30, with a "Show me" button that highlights the duration numbers setting
+* (Boss Debuffs) **Frame Border Overlay** — shows a border around the entire unit frame when boss debuffs are active, with auto-fit sizing and adjustable settings
+* (Boss Debuffs) **Overlay Setup Wizard** — guided setup with image previews when enabling the overlay for the first time, including a warning about visual quirks
+* (Boss Debuffs) **Hide Tooltip** option — prevents the tooltip from appearing when hovering over boss debuff icons
+* (Boss Debuffs) **Test Mode Overlay Preview** — preview the overlay border in test mode without needing to be in combat
 
 ### Changes
-* (Boss Debuffs) Rewrite private aura system to use a single anchor per icon instead of the dual-anchor approach — simpler, cleaner, and eliminates duplicate text and sizing issues
-* (Boss Debuffs) Remove deprecated settings: text scale/offset, click-casting toggle, debug overlay, and unused scale setting
-* (Boss Debuffs) Increase overlay icon ratio slider max from 10 to 15 to support very wide frames
+* (Boss Debuffs) Simplified private aura system — cleaner single-anchor approach, removed unused settings
+* (Boss Debuffs) Overlay icon ratio slider now goes up to 15 to support very wide frames
 
 ### Bug Fixes
-* (Auras) Fix Blizzard aura mode not repopulating cache when switching from Direct mode — stripped frame events are now restored on mode switch
-* (Auras) Fix profile switch not initializing Direct API aura mode — switching to a profile using Direct API now populates the aura cache immediately
-* (Auras) Fix profile switch not fully reinitializing aura source mode — use SetAuraSourceMode for full teardown and reinit so stale caches and event handlers are always cleared
-* (Aura Designer) Fix indicator icons, squares, and bars blocking click-casting in combat — refactored to configure-once pattern so mouse propagation is set outside combat and never reset
+* (Auras) Fix auras not showing after switching profiles with different data source settings
+* (Aura Designer) Fix indicator icons blocking click-casting in combat
+* (Grouped Raids) Fix groups growing from the wrong direction after changing settings
+* (Grouped Raids) Fix group display order resetting when changing raid settings
+* (Grouped Raids) Fix group labels misaligning after switching layout direction
+* (Flat Raids) Fix hidden groups sometimes showing frames when sorting is active
+* (Flat Raids) Fix a group disappearing after roster changes during combat
 
 ### Performance
-* (Aura Designer) Reduce per-event work for indicator updates — static properties (size, strata, fonts, borders, propagation) are now set once on config change instead of every aura event
+* (Aura Designer) Reduced per-event work — static properties are now set once on config change instead of every aura event
 
 ## [4.1.8] - 2026-03-26
 
