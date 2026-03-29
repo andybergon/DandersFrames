@@ -24,6 +24,9 @@ local UnitExists = UnitExists
 -- Track anchor IDs per frame for cleanup
 local frameAnchors = {}
 
+-- Track stack count anchor IDs per frame for cleanup
+local stackAnchors = {}
+
 -- Track overlay anchor IDs per frame for cleanup
 local overlayAnchors = {}
 
@@ -122,7 +125,11 @@ function DF:SetupPrivateAuraAnchors(frame)
     if not frame.bossDebuffFrames then
         frame.bossDebuffFrames = {}
     end
+    if not frame.bossDebuffStackFrames then
+        frame.bossDebuffStackFrames = {}
+    end
     frameAnchors[frame] = {}
+    stackAnchors[frame] = {}
 
     local baseLevel = frame:GetFrameLevel()
 
@@ -227,6 +234,49 @@ function DF:SetupPrivateAuraAnchors(frame)
             table.insert(frameAnchors[frame], anchorID)
         else
             iconFrame:Hide()
+        end
+
+        -- Register a second anchor per slot for stack count text.
+        -- Blizzard's private aura rendering uses the same text slot for
+        -- both duration and stack count, with duration taking priority.
+        -- This invisible anchor has no countdown/duration, so Blizzard
+        -- falls through to rendering the stack count text instead.
+        local stackFrame = frame.bossDebuffStackFrames[i]
+        if not stackFrame then
+            stackFrame = CreateFrame("Frame", nil, frame.contentOverlay or frame)
+            stackFrame:SetSize(0.001, 0.001)
+            frame.bossDebuffStackFrames[i] = stackFrame
+        end
+        stackFrame:SetParent(frame.contentOverlay or frame)
+        stackFrame:ClearAllPoints()
+        stackFrame:SetPoint("CENTER", iconFrame, "CENTER", 0, 0)
+        stackFrame:SetFrameStrata("DIALOG")
+        stackFrame:Show()
+
+        local stackSuccess, stackAnchorID = pcall(function()
+            return C_UnitAuras.AddPrivateAuraAnchor({
+                unitToken = unit,
+                auraIndex = i,
+                parent = stackFrame,
+                showCountdownFrame = false,
+                showCountdownNumbers = false,
+                iconInfo = {
+                    iconWidth = 0.001,
+                    iconHeight = 0.001,
+                    borderScale = -100,
+                    iconAnchor = {
+                        point = "BOTTOMRIGHT",
+                        relativeTo = iconFrame,
+                        relativePoint = "BOTTOMRIGHT",
+                        offsetX = 2,
+                        offsetY = -4,
+                    },
+                },
+            })
+        end)
+
+        if stackSuccess and stackAnchorID then
+            table.insert(stackAnchors[frame], stackAnchorID)
         end
     end
 
@@ -375,11 +425,30 @@ function DF:ClearPrivateAuraAnchors(frame)
         frameAnchors[frame] = nil
     end
 
+    -- Remove stack count anchors
+    local sAnchors = stackAnchors[frame]
+    if sAnchors then
+        for _, anchorID in ipairs(sAnchors) do
+            pcall(function()
+                C_UnitAuras.RemovePrivateAuraAnchor(anchorID)
+            end)
+        end
+        stackAnchors[frame] = nil
+    end
+
     -- Hide frames (keep for reuse)
     if frame.bossDebuffFrames then
         for _, iconFrame in ipairs(frame.bossDebuffFrames) do
             iconFrame:Hide()
             iconFrame:ClearAllPoints()
+        end
+    end
+
+    -- Hide stack frames (keep for reuse)
+    if frame.bossDebuffStackFrames then
+        for _, stackFrame in ipairs(frame.bossDebuffStackFrames) do
+            stackFrame:Hide()
+            stackFrame:ClearAllPoints()
         end
     end
 
@@ -436,6 +505,17 @@ function DF:ReanchorPrivateAuras(frame)
     end
     frameAnchors[frame] = {}
 
+    -- Remove old stack anchors
+    local oldStackAnchors = stackAnchors[frame]
+    if oldStackAnchors then
+        for _, anchorID in ipairs(oldStackAnchors) do
+            pcall(function()
+                C_UnitAuras.RemovePrivateAuraAnchor(anchorID)
+            end)
+        end
+    end
+    stackAnchors[frame] = {}
+
     -- Re-read settings
     local showCountdown = db.bossDebuffsShowCountdown ~= false
     local showNumbers = db.bossDebuffsShowNumbers ~= false
@@ -470,6 +550,36 @@ function DF:ReanchorPrivateAuras(frame)
 
             if success and anchorID then
                 table.insert(frameAnchors[frame], anchorID)
+            end
+
+            -- Re-register stack count anchor
+            local stackFrame = frame.bossDebuffStackFrames and frame.bossDebuffStackFrames[i]
+            if stackFrame then
+                local stackSuccess, stackAnchorID = pcall(function()
+                    return C_UnitAuras.AddPrivateAuraAnchor({
+                        unitToken = newUnit,
+                        auraIndex = i,
+                        parent = stackFrame,
+                        showCountdownFrame = false,
+                        showCountdownNumbers = false,
+                        iconInfo = {
+                            iconWidth = 0.001,
+                            iconHeight = 0.001,
+                            borderScale = -100,
+                            iconAnchor = {
+                                point = "BOTTOMRIGHT",
+                                relativeTo = iconFrame,
+                                relativePoint = "BOTTOMRIGHT",
+                                offsetX = 2,
+                                offsetY = -4,
+                            },
+                        },
+                    })
+                end)
+
+                if stackSuccess and stackAnchorID then
+                    table.insert(stackAnchors[frame], stackAnchorID)
+                end
             end
         end
     end
