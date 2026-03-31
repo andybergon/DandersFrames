@@ -1366,7 +1366,7 @@ function Indicators:ConfigureIcon(frame, config, defaults, auraName, priority)
     icon:SetFrameLevel(math.max(0, baseLevel + level + priorityBoost))
 
     -- Frame strata: per-indicator override, falls back to global default
-    local strata = config.frameStrata or (defaults and defaults.indicatorFrameStrata) or "INHERIT"
+    local strata = config.frameStrata or (defaults and defaults.indicatorFrameStrata) or "HIGH"
     if strata ~= "INHERIT" then
         SafeSetFrameStrata(icon, frame, strata)
     else
@@ -1997,7 +1997,7 @@ function Indicators:ConfigureSquare(frame, config, defaults, auraName, priority)
     sq:SetFrameLevel(math.max(0, baseLevel + level + priorityBoost))
 
     -- Frame strata: per-indicator override, falls back to global default
-    local strata = config.frameStrata or (defaults and defaults.indicatorFrameStrata) or "INHERIT"
+    local strata = config.frameStrata or (defaults and defaults.indicatorFrameStrata) or "HIGH"
     if strata ~= "INHERIT" then
         SafeSetFrameStrata(sq, frame, strata)
     else
@@ -2943,7 +2943,7 @@ function Indicators:ConfigureBar(frame, config, defaults, auraName, priority)
     bar:SetFrameLevel(math.max(0, baseLevel + level + priorityBoost))
 
     -- Frame strata: per-indicator override, falls back to global default
-    local strata = config.frameStrata or (defaults and defaults.indicatorFrameStrata) or "INHERIT"
+    local strata = config.frameStrata or (defaults and defaults.indicatorFrameStrata) or "HIGH"
     if strata ~= "INHERIT" then
         SafeSetFrameStrata(bar, frame, strata)
     else

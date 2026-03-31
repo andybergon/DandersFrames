@@ -258,7 +258,13 @@ function DF:UpdateSummonIcon(frame)
     local showIcon = false
     local texture = nil
     local statusText = nil
-    
+
+    -- If the unit no longer exists (player left group), clear the icon immediately
+    if not UnitExists(unit) then
+        frame.summonIcon:Hide()
+        return
+    end
+
     -- Check for incoming summon (secret-safe)
     if C_IncomingSummon and C_IncomingSummon.HasIncomingSummon then
         local hasSummon = nil

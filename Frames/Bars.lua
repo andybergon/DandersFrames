@@ -44,6 +44,9 @@ function DF:ShouldShowResourceBar(unit, db)
             roleAllowed = db.resourceBarShowTank == true
         elseif role == "DAMAGER" then
             roleAllowed = db.resourceBarShowDPS == true
+        elseif not role or role == "NONE" then
+            -- Unassigned role (e.g. delves) — treat as DPS
+            roleAllowed = db.resourceBarShowDPS == true
         end
     else
         local inSoloMode = not IsInGroup() and not IsInRaid()

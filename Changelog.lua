@@ -16,6 +16,12 @@ DF.CHANGELOG_TEXT = [===[
 * (Boss Debuffs) Fix overlay border showing tooltips when it shouldn't
 * (Aura Designer) Fix Adapter nil error on login when spec is set to auto
 * (Click-Casting) Fix deleted click bindings being silently restored
+* (Frames) Fix ADDON_ACTION_BLOCKED error when entering combat while dragging raid frames
+* (Frames) Fix role icon alpha setting not applying in test mode
+* (Aura Designer) Fix indicator borders rendering below the unit frame border
+* (Frames) Fix resource bar not showing in delves due to unassigned role
+* (Grouped Raids) Fix raid frame anchor shifting position when changing specs
+* (Frames) Fix summon icon staying visible after a player leaves the group
 
 ## [4.1.9] - 2026-03-27
 

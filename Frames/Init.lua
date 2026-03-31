@@ -711,6 +711,7 @@ function DF:CreateRaidMoverFrame()
     local raidDragOffsetX, raidDragOffsetY = 0, 0
 
     mover:SetScript("OnDragStart", function(self)
+        if InCombatLockdown() then return end
         -- Use saved db position as truth — avoids all GetCenter/GetLeft
         -- ambiguity on scaled frames
         local db = DF:GetRaidDB()
@@ -728,6 +729,7 @@ function DF:CreateRaidMoverFrame()
 
         -- Start OnUpdate to track cursor and sync positions during drag
         self:SetScript("OnUpdate", function()
+            if InCombatLockdown() then self:SetScript("OnUpdate", nil); return end
             local cursorX, cursorY = GetCursorPosition()
             local ps = UIParent:GetEffectiveScale()
             cursorX = cursorX / ps

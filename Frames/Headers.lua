@@ -8078,6 +8078,12 @@ function DF:ProcessRosterUpdate()
                 DF:UpdateSummonIcon(frame)
             end
         end)
+        -- Also refresh pinned frames (not covered by IterateAllFrames)
+        IteratePinnedFrames(function(frame)
+            if frame and frame.unit then
+                DF:UpdateSummonIcon(frame)
+            end
+        end)
     end
 
     -- ============================================================

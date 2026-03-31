@@ -658,12 +658,10 @@ end
 function DF:UpdateRoleIconAppearance(frame)
     if not IsDandersFrame(frame) then return end
     if not frame.roleIcon then return end
-    
+
     local db = GetDB(frame)
     if not db then return end
-    
-    if DF.testMode or DF.raidTestMode then return end
-    
+
     local deadOrOffline = IsDeadOrOffline(frame)
     local inRange = GetInRange(frame)
     
