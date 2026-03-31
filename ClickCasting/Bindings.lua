@@ -2498,6 +2498,10 @@ function CC:ApplyBindingsToFrameUnified(frame, skipKeyboardUpdate)
         frame:EnableMouseWheel(true)
     end
     
+    -- Track which base (no modifier) mouse buttons get a binding applied to THIS frame.
+    -- Used to restore defaults for uncovered buttons on non-DandersFrames.
+    local coveredBaseButtons = {}
+
     -- Apply each macro binding (these will override defaults where bindings exist)
     for keyString, data in pairs(self.unifiedMacroMap) do
         local binding = data.templateBinding
@@ -2529,6 +2533,11 @@ function CC:ApplyBindingsToFrameUnified(frame, skipKeyboardUpdate)
                 -- Mouse binding: use frame attributes
                 local buttonNum = GetButtonNumber(binding.button)
                 local modPrefix = BuildModifierPrefix(binding.modifiers)
+
+                -- Track base (no modifier) mouse buttons that get a binding on this frame
+                if modPrefix == "" then
+                    coveredBaseButtons[buttonNum] = true
+                end
 
                 local typeAttr = modPrefix .. "type" .. buttonNum
                 local spellAttr = modPrefix .. "spell" .. buttonNum
@@ -2637,14 +2646,23 @@ function CC:ApplyBindingsToFrameUnified(frame, skipKeyboardUpdate)
         end
     end
     
-    -- NOTE: We intentionally do NOT restore default type1/type2 here.
-    -- If the user's profile has no LeftButton or RightButton binding,
-    -- that means they deleted it — respect that choice.
-    -- Defaults are already handled by:
-    --   1. InitializeHeaderChild (sets type1=target, type2=togglemenu on creation)
-    --   2. The hasAnyBindings early-return above (restores Blizzard defaults
-    --      when the profile has zero bindings at all)
-    
+    -- For non-DandersFrames, restore default behavior for any base mouse buttons
+    -- that weren't covered by a binding on this frame. ClearBlizzardClickCastFromFrame
+    -- wipes type1/type2 to "" when ANY binding targets other frames, but individual
+    -- bindings may be DandersFrames-only. Without this, right-click menu (or left-click
+    -- target) breaks on Blizzard frames when the binding doesn't apply to them.
+    if not isDandersFrame then
+        local defaults = { [1] = "target", [2] = "togglemenu" }
+        for btn, defaultType in pairs(defaults) do
+            if not coveredBaseButtons[btn] then
+                local currentType = frame:GetAttribute("type" .. btn)
+                if not currentType or currentType == "" then
+                    frame:SetAttribute("type" .. btn, defaultType)
+                end
+            end
+        end
+    end
+
     -- Mark this frame as having had bindings applied (for optimization in ClearBindingsFromFrame)
     frame.dfBindingsEverApplied = true
 

@@ -1,5 +1,10 @@
 # DandersFrames Changelog
 
+## [4.1.11] - 2026-04-01
+
+### Bug Fixes
+* (Click-Casting) Fix right-click menu not working on Blizzard frames when a right-click spell binding is set to DandersFrames only
+
 ## [4.1.10] - 2026-03-31
 
 ### New Features
