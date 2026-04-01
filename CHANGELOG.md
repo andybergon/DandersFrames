@@ -1,5 +1,11 @@
 # DandersFrames Changelog
 
+## [4.1.12] - 2026-04-01
+
+### Bug Fixes
+* (Auto Layouts) Fix frames using wrong positions or settings when switching between grouped and flat raid layouts
+* (Resource Bar) Remove stale type guards that could prevent the resource bar from displaying power values
+
 ## [4.1.11] - 2026-04-01
 
 ### Bug Fixes
