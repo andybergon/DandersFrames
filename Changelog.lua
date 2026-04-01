@@ -1,8 +1,19 @@
 local addonName, DF = ...
-DF.BUILD_DATE = "2026-03-31T16:40:18Z"
+DF.BUILD_DATE = "2026-04-01T21:44:57Z"
 DF.RELEASE_CHANNEL = "alpha"
 DF.CHANGELOG_TEXT = [===[
 # DandersFrames Changelog
+
+## [4.1.12] - 2026-04-01
+
+### Bug Fixes
+* (Auto Layouts) Fix frames using wrong positions or settings when switching between grouped and flat raid layouts
+* (Resource Bar) Remove stale type guards that could prevent the resource bar from displaying power values
+
+## [4.1.11] - 2026-04-01
+
+### Bug Fixes
+* (Click-Casting) Fix right-click menu not working on Blizzard frames when a right-click spell binding is set to DandersFrames only
 
 ## [4.1.10] - 2026-03-31
 
@@ -12,6 +23,9 @@ DF.CHANGELOG_TEXT = [===[
 * (Aura Designer) Add expire sound alert — plays a sound when the longest active buff duration drops below a configurable threshold
 * (Aura Designer) Add collapsible settings groups — indicator settings sections can be collapsed/expanded by clicking the header, with state persisted across sessions
 * (Aura Designer) Add bottom collapse bar to expanded indicator cards and settings groups for quick access
+
+### Improvements
+* (Aura Designer) Add warning messages when Preview Sound has no sound file selected or the file fails to play
 
 ### Bug Fixes
 * (Frames) Fix IteratePinnedFrames error on roster update caused by function used before declaration
