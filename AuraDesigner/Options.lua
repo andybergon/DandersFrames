@@ -5726,7 +5726,11 @@ function DF.BuildAuraDesignerPage(guiRef, pageRef, dbRef)
         else
             btn:SetPoint("TOPLEFT", tabButtons[TAB_DEFS[i-1].key], "TOPRIGHT", 0, 0)
         end
-        btn:SetWidth(tabBar:GetWidth() / #TAB_DEFS)  -- Equal width
+        local provW = parent:GetWidth()
+        if provW < 100 and GUI and GUI.contentFrame then provW = GUI.contentFrame:GetWidth() end
+        if provW < 100 then provW = 600 end
+        local provTabW = max(60, floor((provW / 2) / #TAB_DEFS))
+        btn:SetWidth(provTabW)
 
         -- Bottom accent line
         btn.accent = btn:CreateTexture(nil, "OVERLAY")
@@ -5881,13 +5885,24 @@ function DF.BuildAuraDesignerPage(guiRef, pageRef, dbRef)
     -- calculate from the parent which already has valid geometry on a mode
     -- switch (Party↔Raid).
     local parentW = parent:GetWidth()
-    if parentW < 100 then parentW = (GUI.contentFrame and GUI.contentFrame:GetWidth() or 600) - 30 end
+    if parentW < 100 and GUI and GUI.contentFrame then parentW = GUI.contentFrame:GetWidth() end
+    if parentW < 100 then parentW = UIParent:GetWidth() / 2 end
     local initW = (parentW / 2) - 2 - 22  -- half split minus gap minus scrollbar
     if initW > 50 then
         tabContentFrame:SetWidth(initW)
     end
 
     SwitchTab("effects")
+    C_Timer.After(0, function()
+        if tabBar and tabBar:IsVisible() and tabBar:GetWidth() > 10 then
+            local tabW = tabBar:GetWidth() / #TAB_DEFS
+            for _, def in ipairs(TAB_DEFS) do
+                if tabButtons[def.key] then
+                    tabButtons[def.key]:SetWidth(tabW)
+                end
+            end
+        end
+    end)
     RefreshPlacedIndicators()
     RefreshPreviewEffects()
 end

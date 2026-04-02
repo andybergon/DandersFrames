@@ -526,12 +526,15 @@ end
 
 function DF:GetSoundList()
     -- Returns a table of soundName -> soundName for dropdown compatibility
+    -- Excludes entries whose LSM fetch returns a non-string (e.g. "None" returns integer 1)
     local list = {}
     local LSM = GetLSM()
     if LSM then
         local sounds = LSM:List(LSM.MediaType.SOUND)
         for _, name in ipairs(sounds) do
-            list[name] = name
+            if type(LSM:Fetch(LSM.MediaType.SOUND, name)) == "string" then
+                list[name] = name
+            end
         end
     end
     return list
@@ -545,7 +548,11 @@ function DF:GetSoundPath(soundName)
     end
     local LSM = GetLSM()
     if LSM then
-        return LSM:Fetch(LSM.MediaType.SOUND, soundName)
+        local path = LSM:Fetch(LSM.MediaType.SOUND, soundName)
+        if type(path) == "string" and path ~= "" then
+            return path
+        end
+        return nil
     end
     return nil
 end
@@ -1157,6 +1164,7 @@ DF.PartyDefaults = {
     permanentMoverWidth = 15,
     pixelPerfect = true,
     snapToGrid = true,
+    hideDragOverlay = false,
 
     -- Group Labels
     groupLabelColor = {r = 1, g = 1, b = 1, a = 1},
@@ -2371,6 +2379,7 @@ DF.RaidDefaults = {
     permanentMoverWidth = 15,
     pixelPerfect = true,
     snapToGrid = true,
+    hideDragOverlay = false,
 
     -- Group Labels
     groupLabelColor = {r = 1, g = 1, b = 1, a = 1},

@@ -1631,6 +1631,8 @@ function DF:CreatePositionPanel()
 
     hideOverlayCheck:SetScript("OnClick", function(self)
         DF.hideDragOverlay = self:GetChecked()
+        local activeDB = DF.positionPanelMode == "raid" and DF:GetRaidDB() or DF:GetDB()
+        activeDB.hideDragOverlay = DF.hideDragOverlay
         local mover = DF.positionPanelMode == "raid" and DF.raidMoverFrame or DF.moverFrame
         if mover then
             mover:SetAlpha(DF.hideDragOverlay and 0 or 1)
@@ -1796,7 +1798,7 @@ function DF:UpdatePositionPanel()
     DF.positionPanel.gridSlider:SetValue(db.gridSize or 20)
     DF.positionPanel.gridInput:SetText(tostring(db.gridSize or 20))
     if DF.positionPanel.hideOverlayCheck then
-        DF.positionPanel.hideOverlayCheck:SetChecked(DF.hideDragOverlay or false)
+        DF.positionPanel.hideOverlayCheck:SetChecked(db.hideDragOverlay or false)
     end
 
     -- Update position override indicator if editing profile
@@ -2014,7 +2016,7 @@ function DF:UnlockFrames()
     
     db.locked = false
     DF.positionPanelMode = "party"  -- Set mode for position panel
-    DF.hideDragOverlay = false  -- Reset overlay toggle on unlock
+    DF.hideDragOverlay = db.hideDragOverlay or false
     
     local scale = db.frameScale or 1.0
     DF.container:SetScale(scale)

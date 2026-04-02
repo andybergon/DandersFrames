@@ -1388,8 +1388,8 @@ function Indicators:ConfigureIcon(frame, config, defaults, auraName, priority)
     if icon.border then
         if borderEnabled and not hideIcon then
             icon.border:ClearAllPoints()
-            icon.border:SetPoint("TOPLEFT", icon, "TOPLEFT", -borderInset, borderInset)
-            icon.border:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", borderInset, -borderInset)
+            PixelUtil.SetPoint(icon.border, "TOPLEFT", icon, "TOPLEFT", -borderInset, borderInset)
+            PixelUtil.SetPoint(icon.border, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", borderInset, -borderInset)
             icon.border:SetColorTexture(0, 0, 0, 0.8)
             icon.border:Show()
         else
@@ -2018,8 +2018,8 @@ function Indicators:ConfigureSquare(frame, config, defaults, auraName, priority)
 
     if showBorder and not hideIcon then
         sq.border:ClearAllPoints()
-        sq.border:SetPoint("TOPLEFT", sq, "TOPLEFT", -borderInset, borderInset)
-        sq.border:SetPoint("BOTTOMRIGHT", sq, "BOTTOMRIGHT", borderInset, -borderInset)
+        PixelUtil.SetPoint(sq.border, "TOPLEFT", sq, "TOPLEFT", -borderInset, borderInset)
+        PixelUtil.SetPoint(sq.border, "BOTTOMRIGHT", sq, "BOTTOMRIGHT", borderInset, -borderInset)
         sq.border:SetColorTexture(0, 0, 0, 1)
         sq.border:Show()
     else

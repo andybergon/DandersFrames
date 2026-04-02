@@ -38,7 +38,8 @@ local function CreateStatusIcon(parent, size)
     icon:SetSize(size or 16, size or 16)
     icon:SetFrameLevel(parent:GetFrameLevel() + 5)
     icon:Hide()
-    
+    icon:SetIgnoreParentAlpha(true)
+
     icon.texture = icon:CreateTexture(nil, "OVERLAY")
     icon.texture:SetAllPoints()
     icon.texture:SetDrawLayer("OVERLAY", 6)
@@ -89,7 +90,37 @@ function DF:CreateStatusIcons(frame)
     frame.resurrectionIcon:SetPoint("CENTER", frame, "CENTER", 0, 10)
     frame.resurrectionIcon.texture:SetTexture("Interface\\RaidFrame\\Raid-Icon-Rez")
     frame.resurrectionIcon.text:SetTextColor(0.2, 1, 0.2, 1)  -- Green for res
-    
+    frame.resurrectionIcon.unitFrame = frame
+    frame.resurrectionIcon:EnableMouse(true)
+    if frame.resurrectionIcon.SetPropagateMouseMotion then
+        frame.resurrectionIcon:SetPropagateMouseMotion(true)
+    end
+    if frame.resurrectionIcon.SetPropagateMouseClicks then
+        frame.resurrectionIcon:SetPropagateMouseClicks(true)
+    end
+    if frame.resurrectionIcon.SetMouseClickEnabled then
+        frame.resurrectionIcon:SetMouseClickEnabled(false)
+    end
+    frame.resurrectionIcon:SetScript("OnEnter", function(self)
+        local unit = self.unitFrame and self.unitFrame.unit
+        local state = unit and resCache[unit]
+        GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+        GameTooltip:ClearLines()
+        if state == 1 then
+            GameTooltip:AddLine("Resurrection Incoming", 0.2, 1, 0.2)
+            GameTooltip:AddLine("A resurrection is being cast on this player.", 0.8, 0.8, 0.8, true)
+        elseif type(state) == "number" then
+            GameTooltip:AddLine("Resurrection Pending", 1, 1, 0)
+            GameTooltip:AddLine("Waiting for this player to accept the resurrection.", 0.8, 0.8, 0.8, true)
+        else
+            GameTooltip:AddLine("Resurrection", 1, 1, 1)
+        end
+        GameTooltip:Show()
+    end)
+    frame.resurrectionIcon:SetScript("OnLeave", function(self)
+        GameTooltip:Hide()
+    end)
+
     -- ========================================
     -- PHASED ICON (unit is phased/different instance)
     -- ========================================

@@ -2221,8 +2221,8 @@ function DF:CreateAuraIcon(parent, index, auraType)
     -- Border - use BACKGROUND layer so icon texture draws ON TOP of it
     -- This creates a visible border around the edges where the icon doesn't cover
     icon.border = icon:CreateTexture(nil, "BACKGROUND")
-    icon.border:SetPoint("TOPLEFT", -1, 1)
-    icon.border:SetPoint("BOTTOMRIGHT", 1, -1)
+    PixelUtil.SetPoint(icon.border, "TOPLEFT", icon, "TOPLEFT", -1, 1)
+    PixelUtil.SetPoint(icon.border, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", 1, -1)
     icon.border:SetColorTexture(0, 0, 0, 0.8)
     
     -- Normal texture - Masque expects this for proper button structure
@@ -2234,8 +2234,8 @@ function DF:CreateAuraIcon(parent, index, auraType)
     -- Masque border texture - only used when user enables "Masque Border Control"
     -- This is a separate texture that Masque can skin, kept hidden by default
     icon.masqueBorder = icon:CreateTexture(nil, "OVERLAY")
-    icon.masqueBorder:SetPoint("TOPLEFT", -1, 1)
-    icon.masqueBorder:SetPoint("BOTTOMRIGHT", 1, -1)
+    PixelUtil.SetPoint(icon.masqueBorder, "TOPLEFT", icon, "TOPLEFT", -1, 1)
+    PixelUtil.SetPoint(icon.masqueBorder, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", 1, -1)
     icon.masqueBorder:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
     icon.masqueBorder:SetBlendMode("BLEND")  -- Use BLEND, not ADD - ADD causes dimming issues
     icon.masqueBorder:Hide()  -- Hidden by default, shown only if Masque border control enabled

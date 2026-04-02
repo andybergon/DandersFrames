@@ -848,7 +848,7 @@ function DF:UnlockRaidFrames()
     
     db.raidLocked = false
     DF.positionPanelMode = "raid"  -- Set mode for position panel
-    DF.hideDragOverlay = false  -- Reset overlay toggle on unlock
+    DF.hideDragOverlay = db.hideDragOverlay or false
     
     local scale = db.frameScale or 1.0
 

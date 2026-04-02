@@ -3603,6 +3603,7 @@ function DF:ShowTestFrames(silent)
         if frame then
             if i < testFrameCount then
                 frame:Show()
+                DF:ApplyTestFrameLayout(frame)
                 DF:UpdateTestFrame(frame, i, true)  -- true = apply layout
             else
                 frame:Hide()
@@ -4253,6 +4254,7 @@ function DF:UpdateRaidTestFrames()
         local frame = DF.testRaidFrames[i]
         if frame then
             -- Use unified UpdateTestFrame with layout (true = apply aura layout)
+            DF:ApplyTestFrameLayout(frame)
             DF:UpdateTestFrame(frame, i, true)
         end
     end

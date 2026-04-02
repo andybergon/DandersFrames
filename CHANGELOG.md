@@ -1,10 +1,20 @@
 # DandersFrames Changelog
 
-## [4.1.12] - 2026-04-01
+## [4.1.12] - 2026-04-02
+
+### Improvements
+* (Frames) Add tooltip to resurrection icon showing cast status (green = incoming, yellow = pending accept)
+* (Frames) Status icons (summon, AFK, phased, resurrection) now stay fully visible when unit is out of range or dead
 
 ### Bug Fixes
 * (Auto Layouts) Fix frames using wrong positions or settings when switching between grouped and flat raid layouts
 * (Resource Bar) Remove stale type guards that could prevent the resource bar from displaying power values
+* (Missing Buffs) Fix missing buff indicators not fading when a unit is dead or offline
+* (Aura Designer) Fix icon border appearing asymmetric at certain sizes by snapping to pixel boundaries
+* (Aura Designer) Fix right panel sizing breaking when switching between Party and Raid mode on narrow windows
+* (Aura Designer) Fix sound alert preview failing when "None" is selected or LSM returns a non-path value
+* (Test Mode) Fix heal prediction animations showing inconsistent direction after importing a profile
+* (Position Panel) Fix "Hide Drag Overlay" preference resetting every time the mover is unlocked
 
 ## [4.1.11] - 2026-04-01
 
