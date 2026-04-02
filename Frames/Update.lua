@@ -852,9 +852,15 @@ function DF:UpdateUnitFrame(frame, source)
                 frame.dfPowerBar:SetMinMaxValues(0, maxPower)
                 frame.dfPowerBar:SetValue(power)
 
-                local powerType, powerToken = UnitPowerType(unit)
-                local powerColor = DF:GetPowerColor(powerToken, powerType)
-                frame.dfPowerBar:SetStatusBarColor(powerColor.r, powerColor.g, powerColor.b, 1)
+                local _, classToken = UnitClass(unit)
+                local classColor = db.resourceBarClassColor and classToken and DF:GetClassColor(classToken)
+                if classColor then
+                    frame.dfPowerBar:SetStatusBarColor(classColor.r, classColor.g, classColor.b, 1)
+                else
+                    local powerType, powerToken = UnitPowerType(unit)
+                    local powerColor = DF:GetPowerColor(powerToken, powerType)
+                    frame.dfPowerBar:SetStatusBarColor(powerColor.r, powerColor.g, powerColor.b, 1)
+                end
                 frame.dfPowerBar:Show()
                 -- Let the appearance system handle alpha (OOR, dead, element-specific)
                 if DF.UpdatePowerBarAppearance then
@@ -1168,9 +1174,15 @@ function DF:UpdatePower(frame)
     frame.dfPowerBar:SetValue(power)
 
     -- Update color
-    local powerType, powerToken = UnitPowerType(unit)
-    local powerColor = DF:GetPowerColor(powerToken, powerType)
-    frame.dfPowerBar:SetStatusBarColor(powerColor.r, powerColor.g, powerColor.b, 1)
+    local _, classToken = UnitClass(unit)
+    local classColor = db.resourceBarClassColor and classToken and DF:GetClassColor(classToken)
+    if classColor then
+        frame.dfPowerBar:SetStatusBarColor(classColor.r, classColor.g, classColor.b, 1)
+    else
+        local powerType, powerToken = UnitPowerType(unit)
+        local powerColor = DF:GetPowerColor(powerToken, powerType)
+        frame.dfPowerBar:SetStatusBarColor(powerColor.r, powerColor.g, powerColor.b, 1)
+    end
     frame.dfPowerBar:Show()
 end
 
