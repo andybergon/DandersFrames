@@ -23,6 +23,9 @@ local IsInRaid = IsInRaid
 local InCombatLockdown = InCombatLockdown
 local CreateFrame = CreateFrame
 
+-- Forward declarations for caches used in closures
+local resCache = {}    -- unit -> 1 (casting) or timestamp (pending accept start time)
+
 -- Secret value handling (Midnight-safe)
 local issecretvalue = issecretvalue or function() return false end
 local canaccessvalue = function(v)
@@ -348,7 +351,6 @@ end
 -- pending accept expired after 60s - the WoW accept window).
 -- ============================================================
 
-local resCache = {}    -- unit -> 1 (casting) or timestamp (pending accept start time)
 local resTimer
 
 local RES_ACCEPT_TIMEOUT = 60  -- WoW's res accept window is 60 seconds
