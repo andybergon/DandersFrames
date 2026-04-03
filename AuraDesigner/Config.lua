@@ -76,6 +76,7 @@ DF.AuraDesigner.IconTextures = {
     Germination         = 1033478,
     WildGrowth          = 236153,
     SymbioticRelationship = 1408837,
+    SymbioticBlooms     = 463540,
     IronBark            = 572025,
     -- Discipline Priest
     PowerWordShield     = 135940,
@@ -145,7 +146,7 @@ DF.AuraDesigner.SpellIDs = {
     RestorationDruid = {
         Rejuvenation = 774, Regrowth = 8936, Lifebloom = 33763,
         Germination = 155777, WildGrowth = 48438, SymbioticRelationship = 474754,
-        IronBark = 102342,
+        SymbioticBlooms = 439530, IronBark = 102342,
     },
     DisciplinePriest = {
         PowerWordShield = 17, Atonement = 194384,
@@ -338,6 +339,7 @@ DF.AuraDesigner.TrackableAuras = {
         { name = "Germination",            display = "Germination",            color = {0.77, 0.89, 0.42} },
         { name = "WildGrowth",             display = "Wild Growth",            color = {0.81, 0.58, 0.93} },
         { name = "SymbioticRelationship",  display = "Symbiotic Relationship", color = {0.40, 0.77, 0.74} },
+        { name = "SymbioticBlooms",        display = "Symbiotic Blooms",      color = {0.45, 0.82, 0.55} },
         { name = "IronBark",               display = "Ironbark",              color = {0.65, 0.47, 0.33}, secret = true },
     },
     DisciplinePriest = {

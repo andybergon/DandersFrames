@@ -878,7 +878,7 @@ function DF:UpdatePermanentMoverVisibility()
     if DF.permanentPartyMover then
         local db = DF:GetDB()
         -- Show if enabled and locked, but hide if raid test mode is active
-        local show = db.permanentMover and db.locked and not DF.raidTestMode
+        local show = db.permanentMover and db.locked and not DF.raidTestMode and not IsInRaid()
         DF:Debug("POSITION", "  Party mover: enabled=%s locked=%s show=%s",
             tostring(db.permanentMover), tostring(db.locked), tostring(show))
         if show then
