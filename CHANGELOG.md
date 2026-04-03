@@ -16,6 +16,7 @@
 * (Auto Layouts) Fix raid container drifting to wrong position after group sorting due to CENTER anchor resize
 * (Auto Layouts) Fix profile switch reading stale overlay settings during refresh
 * (Auto Layouts) Fix flat raid container not resizing immediately after layout settings change
+* (Auto Layouts) Add defensive refresh after auto-profile deactivation to prevent partially-configured frame state
 * (Resource Bar) Remove stale type guards that could prevent the resource bar from displaying power values
 * (Missing Buffs) Fix missing buff indicators not fading when a unit is dead or offline
 * (Aura Designer) Fix icon border appearing asymmetric at certain sizes by snapping to pixel boundaries
