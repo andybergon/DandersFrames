@@ -2873,7 +2873,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
     local pageHealthBar = CreateSubTab("bars", "bars_health", "Health Bar")
     BuildPage(pageHealthBar, function(self, db, Add, AddSpace, AddSyncPoint)
         -- Copy button at top
-        Add(CreateCopyButton(self.child, {"health", "classColor", "smoothBars", "background", "missingHealth"}, "Health Bar", "bars_health"), 25, 2)
+        Add(CreateCopyButton(self.child, {"healthColor", "healthOrientation", "healthTexture", "classColor", "smoothBars", "background", "missingHealth"}, "Health Bar", "bars_health"), 25, 2)
         
         local currentSection = nil
         local function AddToSection(widget, height, col)

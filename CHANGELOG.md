@@ -2,6 +2,9 @@
 
 ## [4.1.12] - 2026-04-02
 
+### New Features
+* (Resource Bar) Add "Use Class Color" option for resource bars — colors power bars by class instead of power type (thanks **sKullsen**)
+
 ### Improvements
 * (Frames) Add tooltip to resurrection icon showing cast status (green = incoming, yellow = pending accept)
 * (Frames) Status icons (summon, AFK, phased, resurrection) now stay fully visible when unit is out of range or dead
@@ -17,6 +20,8 @@
 * (Auto Layouts) Fix profile switch reading stale overlay settings during refresh
 * (Auto Layouts) Fix flat raid container not resizing immediately after layout settings change
 * (Auto Layouts) Add defensive refresh after auto-profile deactivation to prevent partially-configured frame state
+* (Health Text) Fix Abbreviate (K/M) not working in Deficit mode outside of Test Mode (thanks **andybergon**)
+* (Settings) Fix Health Bar section sync accidentally overwriting Health Text settings due to overly broad prefix matching
 * (Resource Bar) Remove stale type guards that could prevent the resource bar from displaying power values
 * (Missing Buffs) Fix missing buff indicators not fading when a unit is dead or offline
 * (Aura Designer) Fix icon border appearing asymmetric at certain sizes by snapping to pixel boundaries

@@ -143,6 +143,7 @@ DF.ExportCategories = {
         "powerBarHeight",
         
         -- Resource/Power Bar
+        "resourceBarClassColor",
         "resourceBarEnabled",
         "resourceBarAnchor",
         "resourceBarX",
