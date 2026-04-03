@@ -7,6 +7,7 @@
 * (Frames) Status icons (summon, AFK, phased, resurrection) now stay fully visible when unit is out of range or dead
 
 ### Bug Fixes
+* (Fonts) Fix client crash (ACCESS_VIOLATION) when SetFontObject receives an uninitialized font family during early login
 * (Auto Layouts) Fix frames using wrong positions or settings when switching between grouped and flat raid layouts
 * (Auto Layouts) Fix double frame refresh when switching between auto-profiles
 * (Auto Layouts) Fix race condition between auto-profile evaluation and roster update processing

@@ -618,51 +618,58 @@ function DF:SafeSetFont(fontString, fontNameOrPath, fontSize, outline)
     local fontFamilyName = GetOrCreateFontFamily(fontPath, actualOutline, useShadow)
 
     if fontFamilyName and _G[fontFamilyName] then
-        -- IMPORTANT: First reset to a font object to clear any direct SetFont() state
-        -- This makes the fontString receptive to SetFontObject() changes
-        -- (fontStrings created with SetFont() don't respond well to SetFontObject() otherwise)
-        fontString:SetFontObject(GameFontNormal)
-        
-        -- Now apply our font family
-        fontString:SetFontObject(_G[fontFamilyName])
-        
-        -- Use SetTextScale to achieve desired size (font family uses BASE_FONT_SIZE)
-        local scale = fontSize / BASE_FONT_SIZE
-        fontString:SetTextScale(scale)
-        
-        -- Force WoW to re-render the text with new font properties
-        -- This is needed because switching between font families with different outline flags
-        -- may not immediately update the rendered text without a text refresh
-        -- Note: Some fontStrings have "secret" text that cannot be read or compared,
-        -- so we wrap this in pcall to handle those cases safely
-        pcall(function()
-            local text = fontString:GetText()
-            if text and text ~= "" then
-                fontString:SetText("")
-                fontString:SetText(text)
-            end
+        -- Validate the font family object is usable before calling SetFontObject.
+        -- During early login, CreateFontFamily can succeed but the internal C++ font
+        -- data may not be initialized yet, causing an ACCESS_VIOLATION crash when
+        -- SetFontObject tries to read it.  Wrap in pcall to fall through to the
+        -- direct SetFont() path if the object is broken.
+        local ok = pcall(function()
+            fontString:SetFontObject(GameFontNormal)
+            fontString:SetFontObject(_G[fontFamilyName])
         end)
-        
-        -- Apply shadow directly to fontString (font family shadow is on the font object,
-        -- but we need to apply to each fontString for proper settings)
-        if useShadow then
-            local db
-            if DF.GetDB then
-                db = DF:GetDB()
-            elseif DF.db then
-                local mode = (DF.GUI and DF.GUI.SelectedMode) or "party"
-                db = DF.db[mode]
-            end
-            local shadowX = db and db.fontShadowOffsetX or 1
-            local shadowY = db and db.fontShadowOffsetY or -1
-            local shadowColor = db and db.fontShadowColor or {r = 0, g = 0, b = 0, a = 1}
-            fontString:SetShadowOffset(shadowX, shadowY)
-            fontString:SetShadowColor(shadowColor.r or 0, shadowColor.g or 0, shadowColor.b or 0, shadowColor.a or 1)
+        if not ok then
+            -- Evict the broken cache entry so it gets recreated later
+            local key = (fontPath or "default"):lower() .. "|" .. (actualOutline or "") .. "|" .. (useShadow and "shadow" or "noshadow")
+            fontFamilies[key] = nil
         else
-            fontString:SetShadowOffset(0, 0)
+            -- Use SetTextScale to achieve desired size (font family uses BASE_FONT_SIZE)
+            local scale = fontSize / BASE_FONT_SIZE
+            fontString:SetTextScale(scale)
+
+            -- Force WoW to re-render the text with new font properties
+            -- This is needed because switching between font families with different outline flags
+            -- may not immediately update the rendered text without a text refresh
+            -- Note: Some fontStrings have "secret" text that cannot be read or compared,
+            -- so we wrap this in pcall to handle those cases safely
+            pcall(function()
+                local text = fontString:GetText()
+                if text and text ~= "" then
+                    fontString:SetText("")
+                    fontString:SetText(text)
+                end
+            end)
+
+            -- Apply shadow directly to fontString (font family shadow is on the font object,
+            -- but we need to apply to each fontString for proper settings)
+            if useShadow then
+                local db
+                if DF.GetDB then
+                    db = DF:GetDB()
+                elseif DF.db then
+                    local mode = (DF.GUI and DF.GUI.SelectedMode) or "party"
+                    db = DF.db[mode]
+                end
+                local shadowX = db and db.fontShadowOffsetX or 1
+                local shadowY = db and db.fontShadowOffsetY or -1
+                local shadowColor = db and db.fontShadowColor or {r = 0, g = 0, b = 0, a = 1}
+                fontString:SetShadowOffset(shadowX, shadowY)
+                fontString:SetShadowColor(shadowColor.r or 0, shadowColor.g or 0, shadowColor.b or 0, shadowColor.a or 1)
+            else
+                fontString:SetShadowOffset(0, 0)
+            end
+
+            return true
         end
-        
-        return true
     end
     
     -- Fallback: Direct SetFont (no multi-alphabet support, or older WoW version)
