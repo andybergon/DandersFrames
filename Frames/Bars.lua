@@ -199,7 +199,11 @@ function DF:ApplyResourceBarLayout(frame)
             bar:SetValue(power)
             local pType, pToken, altR, altG, altB = UnitPowerType(unit)
             local info = DF:GetPowerColor(pToken, pType)
-            if info then
+            local _, classToken = UnitClass(unit)
+            local classColor = db.resourceBarClassColor and classToken and DF:GetClassColor(classToken)
+            if classColor then
+                bar:SetStatusBarColor(classColor.r, classColor.g, classColor.b, 1)
+            elseif info then
                 bar:SetStatusBarColor(info.r, info.g, info.b, 1)
             elseif altR then
                 bar:SetStatusBarColor(altR, altG, altB, 1)
@@ -246,8 +250,12 @@ function DF:UpdateResourceBar(frame)
         
         -- Get color from custom overrides or Blizzard defaults
         local info = DF:GetPowerColor(pToken, pType)
-        
-        if info then
+
+        local _, classToken = UnitClass(unit)
+        local classColor = db.resourceBarClassColor and classToken and DF:GetClassColor(classToken)
+        if classColor then
+            bar:SetStatusBarColor(classColor.r, classColor.g, classColor.b, 1)
+        elseif info then
             bar:SetStatusBarColor(info.r, info.g, info.b, 1)
         elseif altR then
             bar:SetStatusBarColor(altR, altG, altB, 1)

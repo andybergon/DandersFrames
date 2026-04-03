@@ -3185,6 +3185,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local colorGroup = GUI:CreateSettingsGroup(self.child, 280)
         colorGroup:AddWidget(GUI:CreateHeader(self.child, "Resource Colors"), 40)
         colorGroup:AddWidget(GUI:CreateLabel(self.child, "Customize resource bar colors per power type. Shared across party and raid frames.", 260), 40)
+        colorGroup:AddWidget(GUI:CreateCheckbox(self.child, "Use Class Color", db, "resourceBarClassColor", function() DF:RefreshAllVisibleFrames() end), 30)
         
         local powerColorsDB = DF.db.powerColors
         if not powerColorsDB then

@@ -3523,8 +3523,14 @@ function DF:UpdateTestPowerBar(frame, testData)
     else
         powerToken = "ENERGY"
     end
-    local powerColor = DF:GetPowerColor(powerToken)
-    bar:SetStatusBarColor(powerColor.r, powerColor.g, powerColor.b, 1)
+
+    local classColor = db.resourceBarClassColor and testData.class and DF:GetClassColor(testData.class)
+    if classColor then
+        bar:SetStatusBarColor(classColor.r, classColor.g, classColor.b, 1)
+    else
+        local powerColor = DF:GetPowerColor(powerToken)
+        bar:SetStatusBarColor(powerColor.r, powerColor.g, powerColor.b, 1)
+    end
     
     -- Background visibility and color
     if bar.bg then
