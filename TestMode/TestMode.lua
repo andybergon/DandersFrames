@@ -1,4 +1,5 @@
 local addonName, DF = ...
+local L = DF.L
 
 -- ============================================================
 -- FRAMES TEST MODE MODULE
@@ -3575,7 +3576,7 @@ end
 
 function DF:ShowTestFrames(silent)
     if InCombatLockdown() then
-        print("|cffff9900DandersFrames:|r Cannot enter test mode during combat.")
+        print("|cffff9900DandersFrames:|r " .. L["Cannot enter test mode during combat."])
         return
     end
     
@@ -3658,7 +3659,7 @@ function DF:ShowTestFrames(silent)
     end
     
     if not silent then
-        print("|cff00ff00DandersFrames:|r Test mode enabled.")
+        print("|cff00ff00DandersFrames:|r " .. L["Test mode enabled."])
     end
 
     -- Update permanent mover for party test mode
@@ -3985,7 +3986,7 @@ function DF:HideTestFrames(silent)
     end
     
     if not silent then
-        print("|cff00ff00DandersFrames:|r Test mode disabled.")
+        print("|cff00ff00DandersFrames:|r " .. L["Test mode disabled."])
     end
 
     -- Update permanent mover after exiting party test mode
@@ -3999,20 +4000,20 @@ end
 function DF:ToggleTestMode()
     -- Cannot toggle test mode during combat (secure frame restrictions)
     if InCombatLockdown() then
-        print("|cffff9900DandersFrames:|r Cannot toggle test mode during combat.")
+        print("|cffff9900DandersFrames:|r " .. L["Cannot toggle test mode during combat."])
         return
     end
-    
+
     local isRaidMode = DF.GUI and DF.GUI.SelectedMode == "raid"
-    
+
     if isRaidMode then
         local db = DF:GetRaidDB()
         -- Don't allow toggling test mode off while frames are unlocked
         if not db.raidLocked and DF.raidTestMode then
-            print("|cffff9900DandersFrames:|r Cannot disable test mode while frames are unlocked. Lock frames first.")
+            print("|cffff9900DandersFrames:|r " .. L["Cannot disable test mode while frames are unlocked. Lock frames first."])
             return
         end
-        
+
         -- Toggle raid test mode
         if DF.raidTestMode then
             DF:HideRaidTestFrames()
@@ -4023,7 +4024,7 @@ function DF:ToggleTestMode()
         local db = DF:GetDB()
         -- Don't allow toggling test mode off while frames are unlocked
         if not db.locked and DF.testMode then
-            print("|cffff9900DandersFrames:|r Cannot disable test mode while frames are unlocked. Lock frames first.")
+            print("|cffff9900DandersFrames:|r " .. L["Cannot disable test mode while frames are unlocked. Lock frames first."])
             return
         end
 
@@ -4039,7 +4040,7 @@ end
 -- Show raid test frames
 function DF:ShowRaidTestFrames()
     if InCombatLockdown() then
-        print("|cffff9900DandersFrames:|r Cannot enter test mode during combat.")
+        print("|cffff9900DandersFrames:|r " .. L["Cannot enter test mode during combat."])
         return
     end
     

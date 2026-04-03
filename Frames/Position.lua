@@ -1,4 +1,6 @@
 local addonName, DF = ...
+local L = DF.L
+local format = string.format
 
 -- ============================================================
 -- FRAMES POSITION MODULE
@@ -171,7 +173,7 @@ local PERM_MOVER_ACTIONS = {
         db.soloMode = not db.soloMode
         DF:UpdateAllFrames()
         if DF.UpdateDefaultPlayerFrame then DF:UpdateDefaultPlayerFrame() end
-        print("|cff00ff00DandersFrames:|r Solo mode " .. (db.soloMode and "enabled" or "disabled"))
+        print("|cff00ff00DandersFrames:|r " .. format(L["Solo mode %s"], db.soloMode and L["enabled"] or L["disabled"]))
     end },
     RELOAD_UI         = { label = "Reload UI",                    combatSafe = true,  fn = function() ReloadUI() end },
     RESET_POSITION    = { label = "Reset Position",               combatSafe = false, fn = function() DF:ResetPosition() end },
@@ -207,7 +209,7 @@ function DF:CycleNextCCProfile()
             local nextName = profiles[(i % #profiles) + 1]
             CC:SetActiveProfile(nextName)
             CC:ApplyBindings()
-            print("|cff00ff00DandersFrames:|r Click-cast profile: " .. nextName)
+            print("|cff00ff00DandersFrames:|r " .. format(L["Click-cast profile: %s"], nextName))
             return
         end
     end
@@ -364,7 +366,7 @@ function DF:ShowPermanentMoverCCProfilePopup(anchorFrame)
     popup:Populate("Click-Cast Profiles", profiles, current, function(name)
         CC:SetActiveProfile(name)
         CC:ApplyBindings()
-        print("|cff00ff00DandersFrames:|r Click-cast profile: " .. name)
+        print("|cff00ff00DandersFrames:|r " .. format(L["Click-cast profile: %s"], name))
     end, ar, ag, ab)
 
     popup:ClearAllPoints()
@@ -600,7 +602,7 @@ function DF:CreatePermanentMover(container, mode)
         local action = actionKey and DF.PERM_MOVER_ACTIONS[actionKey]
         if action and action.fn then
             if InCombatLockdown() and not action.combatSafe then
-                print("|cff00ff00DandersFrames:|r Cannot use this action in combat.")
+                print("|cff00ff00DandersFrames:|r " .. L["Cannot use this action in combat."])
                 return
             end
             action.fn(mode, self)
@@ -1815,9 +1817,9 @@ function DF:ResetPosition()
             db.raidAnchorY = DF.savedRaidPositionY
             DF:UpdateRaidContainerPosition()
             DF:UpdatePositionPanel()
-            print("|cff00ff00DandersFrames:|r Raid position reset.")
+            print("|cff00ff00DandersFrames:|r " .. L["Raid position reset."])
         else
-            print("|cffff0000DandersFrames:|r No saved position to reset to.")
+            print("|cffff0000DandersFrames:|r " .. L["No saved position to reset to."])
         end
     else
         if DF.savedPositionX and DF.savedPositionY then
@@ -1826,9 +1828,9 @@ function DF:ResetPosition()
             db.anchorY = DF.savedPositionY
             DF:UpdateContainerPosition()
             DF:UpdatePositionPanel()
-            print("|cff00ff00DandersFrames:|r Position reset.")
+            print("|cff00ff00DandersFrames:|r " .. L["Position reset."])
         else
-            print("|cffff0000DandersFrames:|r No saved position to reset to.")
+            print("|cffff0000DandersFrames:|r " .. L["No saved position to reset to."])
         end
     end
 end
@@ -1871,7 +1873,7 @@ function DF:CenterFrames()
         end
         DF:UpdateRaidContainerPosition()
         DF:UpdatePositionPanel()
-        print("|cff00ff00DandersFrames:|r Raid frames centered.")
+        print("|cff00ff00DandersFrames:|r " .. L["Raid frames centered."])
     else
         local db = DF:GetDB()
         local horizontal = db.growDirection == "HORIZONTAL"
@@ -1930,7 +1932,7 @@ function DF:CenterFrames()
         DF:UpdatePositionPanel()
         DF:UpdateAllFrames()
         
-        print("|cff00ff00DandersFrames:|r Frames centered on screen.")
+        print("|cff00ff00DandersFrames:|r " .. L["Frames centered on screen."])
     end
 end
 
@@ -1987,26 +1989,26 @@ end
 
 function DF:UnlockFrames()
     if InCombatLockdown() then
-        print("|cffff0000DandersFrames:|r Cannot unlock frames during combat.")
+        print("|cffff0000DandersFrames:|r " .. L["Cannot unlock frames during combat."])
         return
     end
-    
+
     local db = DF:GetDB()
-    
+
     -- Ensure container exists
     if not DF.container then
-        print("|cffff0000DandersFrames:|r Cannot unlock - container doesn't exist!")
+        print("|cffff0000DandersFrames:|r " .. L["Cannot unlock - container doesn't exist!"])
         return
     end
-    
+
     -- Ensure mover frame exists (create if needed)
     if not DF.moverFrame then
         DF:CreateMoverFrame()
     end
-    
+
     -- Safety check - if mover still doesn't exist, abort
     if not DF.moverFrame then
-        print("|cffff0000DandersFrames:|r Cannot unlock - failed to create mover frame!")
+        print("|cffff0000DandersFrames:|r " .. L["Cannot unlock - failed to create mover frame!"])
         return
     end
     
@@ -2104,22 +2106,22 @@ function DF:UnlockFrames()
     
     -- Update Display tab button if it exists
     if DF.displayLockButton and DF.displayLockButton.Text then
-        DF.displayLockButton.Text:SetText("Lock Frames")
+        DF.displayLockButton.Text:SetText(L["Lock Frames"])
     end
-    
+
     -- Enable test mode so user can position with full group visible
     DF:ShowTestFrames(true)
-    
+
     -- Sync GUI toolbar buttons
     if DF.GUI then
         if DF.GUI.UpdateLockButtonState then DF.GUI.UpdateLockButtonState() end
         if DF.GUI.UpdateTestButtonState then DF.GUI.UpdateTestButtonState() end
     end
-    
+
     -- Hide permanent mover while full overlay is active
     if DF.permanentPartyMover then DF.permanentPartyMover:Hide() end
 
-    print("|cff00ff00DandersFrames:|r Frames unlocked. Drag to move, right-click to lock.")
+    print("|cff00ff00DandersFrames:|r " .. L["Frames unlocked. Drag to move, right-click to lock."])
 end
 
 function DF:LockFrames()
@@ -2159,18 +2161,18 @@ function DF:LockFrames()
     
     -- Update Display tab button if it exists
     if DF.displayLockButton and DF.displayLockButton.Text then
-        DF.displayLockButton.Text:SetText("Unlock Frames")
+        DF.displayLockButton.Text:SetText(L["Unlock Frames"])
     end
-    
+
     -- Sync GUI toolbar buttons
     if DF.GUI then
         if DF.GUI.UpdateLockButtonState then DF.GUI.UpdateLockButtonState() end
         if DF.GUI.UpdateTestButtonState then DF.GUI.UpdateTestButtonState() end
     end
-    
+
     -- Disable test mode
     DF:HideTestFrames(true)
-    
-    print("|cff00ff00DandersFrames:|r Frames locked.")
+
+    print("|cff00ff00DandersFrames:|r " .. L["Frames locked."])
 end
 
