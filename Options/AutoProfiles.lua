@@ -7,6 +7,9 @@ local addonName, DF = ...
 local AutoProfilesUI = {}
 DF.AutoProfilesUI = AutoProfilesUI
 
+local L = DF.L
+local format = string.format
+
 -- Local references
 local C_RAID = {r = 1.0, g = 0.5, b = 0.2, a = 1}
 local C_WARNING = {r = 1.0, g = 0.67, b = 0.0, a = 1}
@@ -25,24 +28,24 @@ end
 local CONTENT_TYPES = {
     {
         key = "instanced",
-        title = "Instanced / PvP",
-        description = "Raids, battlegrounds (1-40)",
+        title = L["Instanced / PvP"],
+        description = L["Raids, battlegrounds (1-40)"],
         minRange = 1,
         maxRange = 40,
         isFixed = false,
     },
     {
-        key = "mythic", 
-        title = "Mythic",
-        description = "Fixed 20 players",
+        key = "mythic",
+        title = L["Mythic"],
+        description = L["Fixed 20 players"],
         minRange = 20,
         maxRange = 20,
         isFixed = true,
     },
     {
         key = "openWorld",
-        title = "Open World",
-        description = "World bosses, outdoor raids (1-40)",
+        title = L["Open World"],
+        description = L["World bosses, outdoor raids (1-40)"],
         minRange = 1,
         maxRange = 40,
         isFixed = false,
@@ -89,86 +92,86 @@ local PINNED_OVERRIDABLE = {
 -- ============================================================
 local OVERRIDE_TAB_MAP = {
     -- Display
-    {"soloMode",            "display_visibility",   "Visibility"},
-    {"showMinimapButton",   "display_visibility",   "Visibility"},
-    {"restedIndicator",     "display_visibility",   "Visibility"},
-    {"hidePlayerFrame",     "display_visibility",   "Visibility"},
-    {"hideDefaultPlayerFrame", "display_visibility", "Visibility"},
-    {"hideBlizzardPartyFrames", "display_visibility", "Visibility"},
-    {"hideBlizzardRaidFrames", "display_visibility", "Visibility"},
-    {"showBlizzardSideMenu", "display_visibility",  "Visibility"},
-    {"tooltip",             "display_tooltips",     "Tooltips"},
-    {"rangeFade",           "display_fading",       "Fading"},
-    {"oor",                 "display_fading",       "Fading"},
-    {"dead",                "display_fading",       "Fading"},
-    {"offline",             "display_fading",       "Fading"},
-    {"pet",                 "display_pets",         "Pet Frames"},
+    {"soloMode",            "display_visibility",   L["Visibility"]},
+    {"showMinimapButton",   "display_visibility",   L["Visibility"]},
+    {"restedIndicator",     "display_visibility",   L["Visibility"]},
+    {"hidePlayerFrame",     "display_visibility",   L["Visibility"]},
+    {"hideDefaultPlayerFrame", "display_visibility", L["Visibility"]},
+    {"hideBlizzardPartyFrames", "display_visibility", L["Visibility"]},
+    {"hideBlizzardRaidFrames", "display_visibility", L["Visibility"]},
+    {"showBlizzardSideMenu", "display_visibility",  L["Visibility"]},
+    {"tooltip",             "display_tooltips",     L["Tooltips"]},
+    {"rangeFade",           "display_fading",       L["Fading"]},
+    {"oor",                 "display_fading",       L["Fading"]},
+    {"dead",                "display_fading",       L["Fading"]},
+    {"offline",             "display_fading",       L["Fading"]},
+    {"pet",                 "display_pets",         L["Pet Frames"]},
     -- General (specific before generic)
-    {"fontShadow",          "general_fonts",        "Global Fonts"},
-    {"groupLabel",          "general_labels",       "Group Labels"},
-    {"raidTestFrameCount",  "general_frame",        "Frame"},
-    {"raidUseGroups",       "general_frame",        "Frame"},
-    {"raidGroupVisible",    "general_frame",        "Frame"},
-    {"raidPlayerPerRow",    "general_frame",        "Frame"},
-    {"raidFlat",            "general_frame",        "Frame"},
-    {"frame",               "general_frame",        "Frame"},
-    {"background",          "general_frame",        "Frame"},
-    {"missingHealth",       "general_frame",        "Frame"},
-    {"border",              "general_frame",        "Frame"},
-    {"anchor",              "general_frame",        "Frame"},
-    {"sort",                "general_sorting",      "Sorting"},
-    {"selfPosition",        "general_sorting",      "Sorting"},
-    {"rolePriority",        "general_sorting",      "Sorting"},
-    {"classPriority",       "general_sorting",      "Sorting"},
-    {"colorPickerOverride", "general_integrations", "Integrations"},
-    {"colorPickerGlobalOverride", "general_integrations", "Integrations"},
-    {"masqueBorderControl", "general_integrations", "Integrations"},
-    {"buffDisableMouse",    "general_integrations", "Integrations"},
-    {"debuffDisableMouse",  "general_integrations", "Integrations"},
-    {"defensiveIconDisableMouse", "general_integrations", "Integrations"},
-    {"targetedSpellDisableMouse", "general_integrations", "Integrations"},
+    {"fontShadow",          "general_fonts",        L["Global Fonts"]},
+    {"groupLabel",          "general_labels",       L["Group Labels"]},
+    {"raidTestFrameCount",  "general_frame",        L["Frame"]},
+    {"raidUseGroups",       "general_frame",        L["Frame"]},
+    {"raidGroupVisible",    "general_frame",        L["Frame"]},
+    {"raidPlayerPerRow",    "general_frame",        L["Frame"]},
+    {"raidFlat",            "general_frame",        L["Frame"]},
+    {"frame",               "general_frame",        L["Frame"]},
+    {"background",          "general_frame",        L["Frame"]},
+    {"missingHealth",       "general_frame",        L["Frame"]},
+    {"border",              "general_frame",        L["Frame"]},
+    {"anchor",              "general_frame",        L["Frame"]},
+    {"sort",                "general_sorting",      L["Sorting"]},
+    {"selfPosition",        "general_sorting",      L["Sorting"]},
+    {"rolePriority",        "general_sorting",      L["Sorting"]},
+    {"classPriority",       "general_sorting",      L["Sorting"]},
+    {"colorPickerOverride", "general_integrations", L["Integrations"]},
+    {"colorPickerGlobalOverride", "general_integrations", L["Integrations"]},
+    {"masqueBorderControl", "general_integrations", L["Integrations"]},
+    {"buffDisableMouse",    "general_integrations", L["Integrations"]},
+    {"debuffDisableMouse",  "general_integrations", L["Integrations"]},
+    {"defensiveIconDisableMouse", "general_integrations", L["Integrations"]},
+    {"targetedSpellDisableMouse", "general_integrations", L["Integrations"]},
     -- Bars (specific text keys before generic "health" prefix)
-    {"healthText",          "text_health",          "Health Text"},
-    {"healthFont",          "text_health",          "Health Text"},
-    {"health",              "bars_health",          "Health Bar"},
-    {"classColor",          "bars_health",          "Health Bar"},
-    {"smoothBars",          "bars_health",          "Health Bar"},
-    {"resourceBar",         "bars_resource",        "Resource Bar"},
-    {"absorbBar",           "bars_absorb",          "Absorbs"},
-    {"healAbsorb",          "bars_absorb",          "Absorbs"},
-    {"healPrediction",      "bars_healpred",        "Heal Prediction"},
+    {"healthText",          "text_health",          L["Health Text"]},
+    {"healthFont",          "text_health",          L["Health Text"]},
+    {"health",              "bars_health",          L["Health Bar"]},
+    {"classColor",          "bars_health",          L["Health Bar"]},
+    {"smoothBars",          "bars_health",          L["Health Bar"]},
+    {"resourceBar",         "bars_resource",        L["Resource Bar"]},
+    {"absorbBar",           "bars_absorb",          L["Absorbs"]},
+    {"healAbsorb",          "bars_absorb",          L["Absorbs"]},
+    {"healPrediction",      "bars_healpred",        L["Heal Prediction"]},
     -- Text
-    {"statusText",          "text_status",          "Status Text"},
-    {"name",                "text_name",            "Name Text"},
+    {"statusText",          "text_status",          L["Status Text"]},
+    {"name",                "text_name",            L["Name Text"]},
     -- Auras (specific before generic)
     -- myBuffIndicator removed — feature deprecated and hidden from UI
-    {"bossDebuff",          "auras_bossdebuffs",    "Boss Debuffs"},
-    {"missingBuff",         "auras_missingbuffs",   "Missing Buffs"},
-    {"defensiveIcon",       "auras_defensiveicon",  "Defensive Icon"},
-    {"debuff",              "auras_debuffs",        "Debuffs"},
-    {"buff",                "auras_buffs",          "Buffs"},
-    {"dispel",              "auras_dispel",         "Dispel Overlay"},
-    {"auraDesigner",        "auras_auradesigner",   "Aura Designer"},
+    {"bossDebuff",          "auras_bossdebuffs",    L["Boss Debuffs"]},
+    {"missingBuff",         "auras_missingbuffs",   L["Missing Buffs"]},
+    {"defensiveIcon",       "auras_defensiveicon",  L["Defensive Icon"]},
+    {"debuff",              "auras_debuffs",        L["Debuffs"]},
+    {"buff",                "auras_buffs",          L["Buffs"]},
+    {"dispel",              "auras_dispel",         L["Dispel Overlay"]},
+    {"auraDesigner",        "auras_auradesigner",   L["Aura Designer"]},
     -- Indicators (specific before generic)
-    {"personalTargeted",    "indicators_personal_targeted", "Personal Targeted"},
-    {"targetedSpell",       "indicators_targetedspells", "Targeted Spells"},
-    {"roleIcon",            "indicators_icons",     "Icons"},
-    {"leaderIcon",          "indicators_icons",     "Icons"},
-    {"raidTargetIcon",      "indicators_icons",     "Icons"},
-    {"readyCheckIcon",      "indicators_icons",     "Icons"},
-    {"summonIcon",          "indicators_icons",     "Icons"},
-    {"resurrectionIcon",    "indicators_icons",     "Icons"},
-    {"phasedIcon",          "indicators_icons",     "Icons"},
-    {"afkIcon",             "indicators_icons",     "Icons"},
-    {"vehicleIcon",         "indicators_icons",     "Icons"},
-    {"raidRoleIcon",        "indicators_icons",     "Icons"},
-    {"statusIconFont",      "indicators_icons",     "Icons"},
-    {"selectionHighlight",  "indicators_highlights", "Highlights"},
-    {"hoverHighlight",      "indicators_highlights", "Highlights"},
-    {"aggroHighlight",      "indicators_highlights", "Highlights"},
-    {"aggro",               "indicators_highlights", "Highlights"},
+    {"personalTargeted",    "indicators_personal_targeted", L["Personal Targeted"]},
+    {"targetedSpell",       "indicators_targetedspells", L["Targeted Spells"]},
+    {"roleIcon",            "indicators_icons",     L["Icons"]},
+    {"leaderIcon",          "indicators_icons",     L["Icons"]},
+    {"raidTargetIcon",      "indicators_icons",     L["Icons"]},
+    {"readyCheckIcon",      "indicators_icons",     L["Icons"]},
+    {"summonIcon",          "indicators_icons",     L["Icons"]},
+    {"resurrectionIcon",    "indicators_icons",     L["Icons"]},
+    {"phasedIcon",          "indicators_icons",     L["Icons"]},
+    {"afkIcon",             "indicators_icons",     L["Icons"]},
+    {"vehicleIcon",         "indicators_icons",     L["Icons"]},
+    {"raidRoleIcon",        "indicators_icons",     L["Icons"]},
+    {"statusIconFont",      "indicators_icons",     L["Icons"]},
+    {"selectionHighlight",  "indicators_highlights", L["Highlights"]},
+    {"hoverHighlight",      "indicators_highlights", L["Highlights"]},
+    {"aggroHighlight",      "indicators_highlights", L["Highlights"]},
+    {"aggro",               "indicators_highlights", L["Highlights"]},
     -- Pinned frames (prefix match for "pinned.N.setting" format)
-    {"pinned.",             "general_pinnedframes", "Pinned Frames"},
+    {"pinned.",             "general_pinnedframes", L["Pinned Frames"]},
 }
 
 -- Returns tabId, tabLabel for a given override key
@@ -361,14 +364,14 @@ function AutoProfilesUI:CreateProfile(contentKey, name, min, max)
     for _, p in ipairs(profiles) do
         if p.name:lower() == name:lower() then
             DF:DebugWarn("LAYOUT", "CreateProfile: name conflict with \"%s\"", name)
-            return false, "Name already exists"
+            return false, L["Name already exists"]
         end
     end
-    
+
     -- Check for range overlap
     local overlap = self:CheckRangeOverlap(contentKey, min, max)
     if overlap then
-        return false, "Overlaps with " .. overlap.name
+        return false, format(L["Overlaps with \"%s\""], overlap.name)
     end
     
     -- Create the profile
@@ -416,7 +419,7 @@ function AutoProfilesUI:DeleteProfile(contentKey, index)
         if DF.FullProfileRefresh then
             DF:FullProfileRefresh()
         end
-        print("|cff00ff00DandersFrames:|r Auto-profile deactivated (profile deleted)")
+        print("|cff00ff00DandersFrames:|r " .. L["Auto-profile deactivated (profile deleted)"])
     end
 
     return true
@@ -428,19 +431,19 @@ function AutoProfilesUI:UpdateProfileRange(contentKey, index, newMin, newMax)
     DF:Debug("LAYOUT", "UpdateProfileRange: %s index=%s newMin=%d newMax=%d", contentKey, tostring(index), newMin, newMax)
 
     if contentKey == "mythic" then
-        return false, "Mythic has fixed range"
+        return false, L["Mythic has fixed range"]
     end
 
     local profiles = DF.db.raidAutoProfiles[contentKey].profiles
     if not profiles[index] then
-        return false, "Profile not found"
+        return false, L["Profile not found"]
     end
 
     -- Check for overlap (excluding current profile)
     local overlap = self:CheckRangeOverlap(contentKey, newMin, newMax, index)
     if overlap then
         DF:DebugWarn("LAYOUT", "UpdateProfileRange: overlap with \"%s\" (%d-%d)", overlap.name, overlap.min, overlap.max)
-        return false, "Overlaps with " .. overlap.name
+        return false, format(L["Overlaps with \"%s\""], overlap.name)
     end
 
     local oldMin, oldMax = profiles[index].min, profiles[index].max
@@ -467,9 +470,9 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     
     -- Only show for Raid mode
     if GUI.SelectedMode ~= "raid" then
-        Add(GUI:CreateHeader(pageFrame.child, "Raid Auto Layouts"), 40, "both")
+        Add(GUI:CreateHeader(pageFrame.child, L["Raid Auto Layouts"]), 40, "both")
         Add(GUI:CreateLabel(pageFrame.child,
-            "Auto Layouts is a Raid-only feature. Switch to Raid mode to configure automatic layout switching based on content type and group size.",
+            L["Auto Layouts is a Raid-only feature. Switch to Raid mode to configure automatic layout switching based on content type and group size."],
             500, {r = 0.6, g = 0.6, b = 0.6}), 60, "both")
         return
     end
@@ -477,7 +480,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     -- =============================================
     -- Enable Checkbox
     -- =============================================
-    local enableCheck = GUI:CreateCheckbox(pageFrame.child, "Enable Raid Auto-Switching Layouts",
+    local enableCheck = GUI:CreateCheckbox(pageFrame.child, L["Enable Raid Auto-Switching Layouts"],
         nil, nil,  -- dbTable, dbKey (not used)
         function() pageFrame:Refresh() end,  -- callback
         function() return autoDb.enabled end,  -- customGet
@@ -509,7 +512,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     
     local statusTitle = statusContainer:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     statusTitle:SetPoint("TOPLEFT", 10, -8)
-    statusTitle:SetText("CURRENT STATUS")
+    statusTitle:SetText(L["CURRENT STATUS"])
     statusTitle:SetTextColor(0.5, 0.5, 0.5)
     
     local statusLine1 = statusContainer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -520,26 +523,26 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     
     -- Update status display
     if not autoDb.enabled then
-        statusLine1:SetText("|cff666666Auto-switching disabled|r")
+        statusLine1:SetText("|cff666666" .. L["Auto-switching disabled"] .. "|r")
         statusLine2:SetText("")
     elseif not IsInRaid() then
-        statusLine1:SetText("|cff999999Not in a raid group|r")
+        statusLine1:SetText("|cff999999" .. L["Not in a raid group"] .. "|r")
         statusLine2:SetText("")
     else
         -- Live detection
         local contentType = DF:GetContentType()
         local raidSize = GetNumGroupMembers()
-        
+
         -- Map content type to display name
         local contentNames = {
-            mythic = "Mythic",
-            instanced = "Instanced / PvP",
-            battleground = "Instanced / PvP",
-            openWorld = "Open World",
-            arena = "Arena",
+            mythic = L["Mythic"],
+            instanced = L["Instanced / PvP"],
+            battleground = L["Instanced / PvP"],
+            openWorld = L["Open World"],
+            arena = L["Arena"],
         }
-        local contentDisplay = contentNames[contentType] or "Unknown"
-        
+        local contentDisplay = contentNames[contentType] or L["Unknown"]
+
         -- Get instance name if available
         local instanceName = select(1, GetInstanceInfo())
         local difficultyName = select(4, GetInstanceInfo())
@@ -551,15 +554,15 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
             end
             contentDetail = contentDetail .. "|r"
         end
-        
-        statusLine1:SetText("|cff66ff66Content:|r |cffffffff" .. contentDisplay .. "|r" .. contentDetail .. "  |cff666666(" .. raidSize .. " players)|r")
-        
+
+        statusLine1:SetText("|cff66ff66" .. L["Content:"] .. "|r |cffffffff" .. contentDisplay .. "|r" .. contentDetail .. "  |cff666666(" .. format(L["%d players"], raidSize) .. ")|r")
+
         -- Show active profile
         local profile, profileKey = self:GetActiveProfile()
         if profile then
             local rangeText = ""
             if profileKey == "mythic" then
-                rangeText = "20 fixed"
+                rangeText = L["20 fixed"]
             elseif profile.min and profile.max then
                 rangeText = profile.min .. "-" .. profile.max
             end
@@ -567,9 +570,9 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
             if profile.overrides then
                 for _ in pairs(profile.overrides) do overrideCount = overrideCount + 1 end
             end
-            statusLine2:SetText("|cff66ff66Layout:|r |cffffffff\"" .. (profile.name or "Unnamed") .. "\"|r |cff666666— " .. rangeText .. " · " .. overrideCount .. " override" .. (overrideCount ~= 1 and "s" or "") .. "|r")
+            statusLine2:SetText("|cff66ff66" .. L["Layout:"] .. "|r |cffffffff\"" .. (profile.name or L["Unnamed"]) .. "\"|r |cff666666— " .. rangeText .. " · " .. format(overrideCount ~= 1 and L["%d overrides"] or L["%d override"], overrideCount) .. "|r")
         else
-            statusLine2:SetText("|cff66ff66Layout:|r |cff999999None active (using global settings)|r")
+            statusLine2:SetText("|cff66ff66" .. L["Layout:"] .. "|r |cff999999" .. L["None active (using global settings)"] .. "|r")
         end
     end
     
@@ -608,7 +611,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     
     local howTitle = infoHeader:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     howTitle:SetPoint("LEFT", 28, 0)
-    howTitle:SetText("How it works")
+    howTitle:SetText(L["How it works"])
     howTitle:SetTextColor(1, 1, 1)
     
     infoHeader:SetScript("OnEnter", function() infoArrow:SetVertexColor(1, 0.8, 0.2) end)
@@ -642,7 +645,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     step1:SetPoint("TOPLEFT", 10, yOff)
     step1:SetPoint("RIGHT", infoBody, "RIGHT", -10, 0)
     step1:SetJustifyH("LEFT")
-    step1:SetText("|cffff8020" .. "1.|r Create layouts below for different player ranges within each content type. Layouts only store settings that |cffffffffdiffer|r from your global settings — everything else is inherited automatically.")
+    step1:SetText("|cffff8020" .. "1.|r " .. L["Create layouts below for different player ranges within each content type. Layouts only store settings that |cffffffffdiffer|r from your global settings — everything else is inherited automatically."])
     step1:SetTextColor(0.65, 0.65, 0.65)
     yOff = yOff - 30
     
@@ -651,7 +654,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     step2:SetPoint("TOPLEFT", 10, yOff)
     step2:SetPoint("RIGHT", infoBody, "RIGHT", -10, 0)
     step2:SetJustifyH("LEFT")
-    step2:SetText("|cffff8020" .. "2.|r Click |cffffffffEdit Settings|r on a profile to customise it. This takes you to the settings tabs with an editing banner at the top. While editing, any setting you change is stored as an override for that profile only.")
+    step2:SetText("|cffff8020" .. "2.|r " .. L["Click |cffffffffEdit Settings|r on a profile to customise it. This takes you to the settings tabs with an editing banner at the top. While editing, any setting you change is stored as an override for that profile only."])
     step2:SetTextColor(0.65, 0.65, 0.65)
     yOff = yOff - 30
     
@@ -660,7 +663,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     step3:SetPoint("TOPLEFT", 10, yOff)
     step3:SetPoint("RIGHT", infoBody, "RIGHT", -10, 0)
     step3:SetJustifyH("LEFT")
-    step3:SetText("|cffff8020" .. "3.|r While editing, each setting shows its override status:")
+    step3:SetText("|cffff8020" .. "3.|r " .. L["While editing, each setting shows its override status:"])
     step3:SetTextColor(0.65, 0.65, 0.65)
     yOff = yOff - 16
     
@@ -677,7 +680,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     
     local ex1Text = exRow1:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     ex1Text:SetPoint("LEFT", ex1Check, "RIGHT", 4, 0)
-    ex1Text:SetText("|cff4db84dGlobal: 80|r |cff666666— Setting matches global, no override stored|r")
+    ex1Text:SetText(L["|cff4db84dGlobal: 80|r |cff666666— Setting matches global, no override stored|r"])
     yOff = yOff - 18
     
     -- Visual example row 2: Overridden (star + reset)
@@ -704,7 +707,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     
     local ex2Text = exRow2:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     ex2Text:SetPoint("LEFT", ex2ResetBg, "RIGHT", 6, 0)
-    ex2Text:SetText("|cffe6cc80" .. "Modified|r |cff666666— Setting differs from global. Click|r |cffffffffreset|r |cff666666to revert.|r")
+    ex2Text:SetText(L["|cffe6cc80Modified|r |cff666666— Setting differs from global. Click|r |cffffffffreset|r |cff666666to revert.|r"])
     yOff = yOff - 22
     
     -- Step 4
@@ -712,7 +715,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     step4:SetPoint("TOPLEFT", 10, yOff)
     step4:SetPoint("RIGHT", infoBody, "RIGHT", -10, 0)
     step4:SetJustifyH("LEFT")
-    step4:SetText("|cffff8020" .. "4.|r Click |cffffffffExit Editing|r when done. Your overrides are saved to the profile. If you change a setting back to match global, the override is automatically removed.")
+    step4:SetText("|cffff8020" .. "4.|r " .. L["Click |cffffffffExit Editing|r when done. Your overrides are saved to the profile. If you change a setting back to match global, the override is automatically removed."])
     step4:SetTextColor(0.65, 0.65, 0.65)
     yOff = yOff - 30
     
@@ -721,7 +724,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
     step5:SetPoint("TOPLEFT", 10, yOff)
     step5:SetPoint("RIGHT", infoBody, "RIGHT", -10, 0)
     step5:SetJustifyH("LEFT")
-    step5:SetText("|cffff8020" .. "5.|r When you enter matching content, the layout's overrides are applied on top of your global settings. If no layout matches, global settings are used as-is.")
+    step5:SetText("|cffff8020" .. "5.|r " .. L["When you enter matching content, the layout's overrides are applied on top of your global settings. If no layout matches, global settings are used as-is."])
     step5:SetTextColor(0.65, 0.65, 0.65)
     
     Add(infoContainer, infoHeaderHeight + (infoCollapsed and 0 or infoBodyHeight), "both")
@@ -846,7 +849,7 @@ function AutoProfilesUI:CreateContentTypeSection(GUI, pageFrame, contentType)
     if contentType.key == "mythic" and numProfiles == 0 then
         local emptyText = section.body:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         emptyText:SetPoint("TOP", 0, -10)
-        emptyText:SetText("|cff666666No layout set. Using global settings.|r")
+        emptyText:SetText("|cff666666" .. L["No layout set. Using global settings."] .. "|r")
         
         -- Add button for mythic (centered, full width)
         local addBtn = self:CreateAddButton(GUI, pageFrame, section.body, contentType)
@@ -877,7 +880,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
     -- Profile name
     local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     nameText:SetPoint("LEFT", 10, 0)
-    nameText:SetText(profile.name or "Unnamed")
+    nameText:SetText(profile.name or L["Unnamed"])
     nameText:SetWidth(100)
     nameText:SetJustifyH("LEFT")
     
@@ -897,7 +900,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
     rangeText:SetPoint("CENTER")
     
     if contentType.isFixed then
-        rangeText:SetText("20 (fixed)")
+        rangeText:SetText(L["20 (fixed)"])
         rangeText:SetTextColor(0.5, 0.5, 0.5)
     else
         rangeText:SetText((profile.min or 1) .. " - " .. (profile.max or 40))
@@ -908,7 +911,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
             self:SetBackdropBorderColor(1, 0.5, 0.2, 1)
             rangeText:SetTextColor(1, 1, 1)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText("Click to edit range")
+            GameTooltip:SetText(L["Click to edit range"])
             GameTooltip:Show()
         end)
         rangeBadge:SetScript("OnLeave", function(self)
@@ -935,7 +938,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
     local overrideText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     overrideText:SetPoint("LEFT", 190, 0)
     if overrideCount > 0 then
-        overrideText:SetText("|cffffaa00*|r " .. overrideCount .. " override" .. (overrideCount > 1 and "s" or ""))
+        overrideText:SetText("|cffffaa00*|r " .. format(overrideCount > 1 and L["%d overrides"] or L["%d override"], overrideCount))
         overrideText:SetTextColor(1, 0.67, 0)
     else
         overrideText:SetText("")
@@ -952,7 +955,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
         overrideBtn:SetScript("OnEnter", function(self)
             overrideText:SetTextColor(1, 0.8, 0.2)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText("Override Details", 1, 0.67, 0)
+            GameTooltip:SetText(L["Override Details"], 1, 0.67, 0)
             GameTooltip:AddLine(" ")
 
             local groups, unknownKeys = GroupOverridesByTab(profile.overrides)
@@ -983,7 +986,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
             end
 
             if #unknownKeys > 0 then
-                GameTooltip:AddLine("Other (" .. #unknownKeys .. ")", 0.5, 0.5, 0.5)
+                GameTooltip:AddLine(format(L["Other (%d)"], #unknownKeys), 0.5, 0.5, 0.5)
                 table.sort(unknownKeys)
                 for _, key in ipairs(unknownKeys) do
                     GameTooltip:AddDoubleLine("  " .. key, tostring(profile.overrides[key]), 0.5, 0.5, 0.5, 0.7, 0.7, 0.7)
@@ -991,7 +994,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
             end
 
             GameTooltip:AddLine(" ")
-            GameTooltip:AddLine("Use /df overrides for full details in chat", 0.4, 0.4, 0.4)
+            GameTooltip:AddLine(L["Use /df overrides for full details in chat"], 0.4, 0.4, 0.4)
             GameTooltip:Show()
         end)
 
@@ -1015,7 +1018,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
 
     local copyText = copyBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     copyText:SetPoint("CENTER")
-    copyText:SetText("Copy To")
+    copyText:SetText(L["Copy To"])
     copyText:SetTextColor(1, 0.5, 0.2)
 
     copyBtn:SetScript("OnEnter", function(self)
@@ -1044,7 +1047,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
     
     local editText = editBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     editText:SetPoint("CENTER")
-    editText:SetText("Edit Settings")
+    editText:SetText(L["Edit Settings"])
     editText:SetTextColor(1, 0.5, 0.2)
     
     editBtn:SetScript("OnEnter", function(self)
@@ -1066,8 +1069,8 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
         editBtn:SetBackdropBorderColor(0.2, 0.2, 0.2, 0.5)
         editBtn:SetScript("OnEnter", function(btn)
             GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
-            GameTooltip:SetText("Cannot Edit", 1, 0.3, 0.3)
-            GameTooltip:AddLine("Only the active layout can be edited\nwhile auto layouts are running.", 0.7, 0.7, 0.7, true)
+            GameTooltip:SetText(L["Cannot Edit"], 1, 0.3, 0.3)
+            GameTooltip:AddLine(L["Only the active layout can be edited\nwhile auto layouts are running."], 0.7, 0.7, 0.7, true)
             GameTooltip:Show()
         end)
         editBtn:SetScript("OnLeave", function()
@@ -1099,7 +1102,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
         self:SetBackdropBorderColor(0.8, 0.2, 0.2, 1)
         deleteIcon:SetVertexColor(1, 0.3, 0.3)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Delete Layout")
+        GameTooltip:SetText(L["Delete Layout"])
         GameTooltip:Show()
     end)
     deleteBtn:SetScript("OnLeave", function(self)
@@ -1111,9 +1114,9 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
     deleteBtn:SetScript("OnClick", function()
         -- Confirm deletion
         StaticPopupDialogs["DANDERSFRAMES_DELETE_AUTOPROFILE"] = {
-            text = "Delete profile \"" .. profile.name .. "\"?",
-            button1 = "Delete",
-            button2 = "Cancel",
+            text = format(L["Delete layout \"%s\"?"], profile.name),
+            button1 = L["Delete"],
+            button2 = L["Cancel"],
             OnAccept = function()
                 AutoProfilesUI:DeleteProfile(contentType.key, index)
                 if pageFrame.Refresh then pageFrame:Refresh() end
@@ -1145,7 +1148,7 @@ function AutoProfilesUI:CreateAddButton(GUI, pageFrame, parent, contentType)
     -- Centered text
     local btnText = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     btnText:SetPoint("CENTER", 0, 0)
-    btnText:SetText("+ Add Layout")
+    btnText:SetText(L["+ Add Layout"])
     btnText:SetTextColor(0.5, 0.5, 0.5)
     
     btn:SetScript("OnEnter", function(self)
@@ -1239,10 +1242,10 @@ function AutoProfilesUI:CreateProfileDialog()
     -- =============================================
     local nameLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     nameLabel:SetPoint("TOPLEFT", 12, -40)
-    nameLabel:SetText("Layout Name")
+    nameLabel:SetText(L["Layout Name"])
     nameLabel:SetTextColor(0.6, 0.6, 0.6)
     dialog.nameLabel = nameLabel
-    
+
     local nameInput = CreateFrame("EditBox", nil, dialog, "BackdropTemplate")
     nameInput:SetSize(336, 26)
     nameInput:SetPoint("TOPLEFT", 12, -56)
@@ -1269,10 +1272,10 @@ function AutoProfilesUI:CreateProfileDialog()
     -- =============================================
     local rangeLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     rangeLabel:SetPoint("TOPLEFT", 12, -92)
-    rangeLabel:SetText("Player Range")
+    rangeLabel:SetText(L["Player Range"])
     rangeLabel:SetTextColor(0.6, 0.6, 0.6)
     dialog.rangeLabel = rangeLabel
-    
+
     -- Range display
     local rangeDisplay = dialog:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     rangeDisplay:SetPoint("TOPRIGHT", -12, -92)
@@ -1362,11 +1365,11 @@ function AutoProfilesUI:CreateProfileDialog()
         
         -- Update display
         if minVal == maxVal then
-            rangeDisplay:SetText(minVal .. " players")
+            rangeDisplay:SetText(format(L["%d players"], minVal))
         else
-            rangeDisplay:SetText(minVal .. " - " .. maxVal .. " players")
+            rangeDisplay:SetText(format(L["%d - %d players"], minVal, maxVal))
         end
-        
+
         AutoProfilesUI:ValidateDialog()
     end
     dialog.UpdateSliderVisuals = UpdateSliderVisuals
@@ -1503,9 +1506,9 @@ function AutoProfilesUI:CreateProfileDialog()
     
     local cancelText = cancelBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     cancelText:SetPoint("CENTER")
-    cancelText:SetText("Cancel")
+    cancelText:SetText(L["Cancel"])
     cancelText:SetTextColor(0.6, 0.6, 0.6)
-    
+
     cancelBtn:SetScript("OnEnter", function(self)
         self:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
         cancelText:SetTextColor(0.9, 0.9, 0.9)
@@ -1517,7 +1520,7 @@ function AutoProfilesUI:CreateProfileDialog()
     cancelBtn:SetScript("OnClick", function()
         dialog:Hide()
     end)
-    
+
     local createBtn = CreateFrame("Button", nil, dialog, "BackdropTemplate")
     createBtn:SetSize(100, 26)
     createBtn:SetPoint("BOTTOMRIGHT", -12, 12)
@@ -1528,13 +1531,13 @@ function AutoProfilesUI:CreateProfileDialog()
     })
     createBtn:SetBackdropColor(0.15, 0.08, 0.03, 1)
     createBtn:SetBackdropBorderColor(1, 0.5, 0.2, 1)
-    
+
     local createText = createBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     createText:SetPoint("CENTER")
-    createText:SetText("Create Layout")
+    createText:SetText(L["Create Layout"])
     createText:SetTextColor(1, 0.5, 0.2)
     dialog.createBtnText = createText
-    
+
     createBtn:SetScript("OnEnter", function(self)
         if self.enabled then
             self:SetBackdropColor(0.22, 0.12, 0.05, 1)
@@ -1551,7 +1554,7 @@ function AutoProfilesUI:CreateProfileDialog()
         end
     end)
     dialog.createBtn = createBtn
-    
+
     profileDialog = dialog
     return dialog
 end
@@ -1574,8 +1577,8 @@ function AutoProfilesUI:ShowProfileDialog(contentType, profile, profileIndex, pa
     
     -- Set title
     if dialog.isEditMode then
-        dialog.title:SetText("Edit Layout Range")
-        dialog.createBtnText:SetText("Save Changes")
+        dialog.title:SetText(L["Edit Layout Range"])
+        dialog.createBtnText:SetText(L["Save Changes"])
         dialog.nameLabel:Hide()
         dialog.nameInput:Hide()
         -- Shift elements up (52px offset from hidden name section)
@@ -1587,8 +1590,8 @@ function AutoProfilesUI:ShowProfileDialog(contentType, profile, profileIndex, pa
         dialog.validationIcon:SetPoint("TOPLEFT", 12, -100)
         dialog:SetHeight(175)
     else
-        dialog.title:SetText("Add Layout")
-        dialog.createBtnText:SetText("Create Layout")
+        dialog.title:SetText(L["Add Layout"])
+        dialog.createBtnText:SetText(L["Create Layout"])
         dialog.nameLabel:Show()
         dialog.nameInput:Show()
         -- Reset positions to default
@@ -1666,34 +1669,34 @@ function AutoProfilesUI:ValidateDialog()
     if not dialog.isEditMode then
         if name == "" then
             isValid = false
-            errorMsg = "Enter a profile name"
+            errorMsg = L["Enter a profile name"]
         else
             local profiles = self:GetProfiles(contentType.key)
             for _, p in ipairs(profiles) do
                 if p.name:lower() == name:lower() then
                     isValid = false
-                    errorMsg = "A profile with this name already exists"
+                    errorMsg = L["A profile with this name already exists"]
                     break
                 end
             end
         end
     end
-    
+
     -- Validate range
     if isValid then
         local excludeIndex = dialog.isEditMode and dialog.profileIndex or nil
         local overlap = self:CheckRangeOverlap(contentType.key, minVal, maxVal, excludeIndex)
         if overlap then
             isValid = false
-            errorMsg = "Overlaps with \"" .. overlap.name .. "\" (" .. overlap.min .. "-" .. overlap.max .. ")"
+            errorMsg = format(L["Overlaps with \"%s\" (%d-%d)"], overlap.name, overlap.min, overlap.max)
         end
     end
-    
+
     -- Update validation display
     if isValid then
         dialog.validationIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\check")
         dialog.validationIcon:SetVertexColor(0.3, 0.85, 0.3)
-        dialog.validationMsg:SetText("Valid range")
+        dialog.validationMsg:SetText(L["Valid range"])
         dialog.validationMsg:SetTextColor(0.3, 0.85, 0.3)
     elseif errorMsg then
         dialog.validationIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\close")
@@ -1747,7 +1750,7 @@ function AutoProfilesUI:SubmitDialog()
     else
         dialog.validationIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\close")
         dialog.validationIcon:SetVertexColor(0.85, 0.3, 0.3)
-        dialog.validationMsg:SetText(err or "Unknown error")
+        dialog.validationMsg:SetText(err or L["Unknown error"])
         dialog.validationMsg:SetTextColor(0.85, 0.3, 0.3)
     end
 end
@@ -1783,7 +1786,7 @@ function AutoProfilesUI:CreateCopyDialog()
     -- Title
     local title = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOPLEFT", 12, -12)
-    title:SetText("Copy Layout")
+    title:SetText(L["Copy Layout"])
     title:SetTextColor(0.9, 0.9, 0.9)
     dialog.title = title
 
@@ -1820,7 +1823,7 @@ function AutoProfilesUI:CreateCopyDialog()
     -- =============================================
     local nameLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     nameLabel:SetPoint("TOPLEFT", 12, -40)
-    nameLabel:SetText("Layout Name")
+    nameLabel:SetText(L["Layout Name"])
     nameLabel:SetTextColor(0.6, 0.6, 0.6)
 
     local nameInput = CreateFrame("EditBox", nil, dialog, "BackdropTemplate")
@@ -1849,7 +1852,7 @@ function AutoProfilesUI:CreateCopyDialog()
     -- =============================================
     local destLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     destLabel:SetPoint("TOPLEFT", 12, -92)
-    destLabel:SetText("Copy To")
+    destLabel:SetText(L["Copy To"])
     destLabel:SetTextColor(0.6, 0.6, 0.6)
 
     local destButtons = {}
@@ -1894,8 +1897,8 @@ function AutoProfilesUI:CreateCopyDialog()
                 local mythicProfile = DF.db.raidAutoProfiles.mythic.profile
                 if mythicProfile then
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:SetText("Will replace existing Mythic layout", 1, 0.67, 0)
-                    GameTooltip:AddLine("\"" .. mythicProfile.name .. "\" will be overwritten.", 0.7, 0.7, 0.7, true)
+                    GameTooltip:SetText(L["Will replace existing Mythic layout"], 1, 0.67, 0)
+                    GameTooltip:AddLine(format(L["\"%s\" will be overwritten."], mythicProfile.name), 0.7, 0.7, 0.7, true)
                     GameTooltip:Show()
                 end
             end
@@ -1918,7 +1921,7 @@ function AutoProfilesUI:CreateCopyDialog()
     -- =============================================
     local rangeLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     rangeLabel:SetPoint("TOPLEFT", 12, -144)
-    rangeLabel:SetText("Player Range")
+    rangeLabel:SetText(L["Player Range"])
     rangeLabel:SetTextColor(0.6, 0.6, 0.6)
     dialog.rangeLabel = rangeLabel
 
@@ -1996,9 +1999,9 @@ function AutoProfilesUI:CreateCopyDialog()
         rangeFill:SetWidth(math.max(maxPos - minPos, 2))
 
         if minVal == maxVal then
-            rangeDisplay:SetText(minVal .. " players")
+            rangeDisplay:SetText(format(L["%d players"], minVal))
         else
-            rangeDisplay:SetText(minVal .. " - " .. maxVal .. " players")
+            rangeDisplay:SetText(format(L["%d - %d players"], minVal, maxVal))
         end
 
         AutoProfilesUI:ValidateCopyDialog()
@@ -2086,7 +2089,7 @@ function AutoProfilesUI:CreateCopyDialog()
     -- Mythic fixed label (shown when mythic is selected destination)
     local mythicFixedLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     mythicFixedLabel:SetPoint("TOPLEFT", 12, -155)
-    mythicFixedLabel:SetText("Fixed at 20 players (Mythic)")
+    mythicFixedLabel:SetText(L["Fixed at 20 players (Mythic)"])
     mythicFixedLabel:SetTextColor(0.5, 0.5, 0.5)
     mythicFixedLabel:Hide()
     dialog.mythicFixedLabel = mythicFixedLabel
@@ -2121,7 +2124,7 @@ function AutoProfilesUI:CreateCopyDialog()
 
     local cancelText = cancelBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     cancelText:SetPoint("CENTER")
-    cancelText:SetText("Cancel")
+    cancelText:SetText(L["Cancel"])
     cancelText:SetTextColor(0.6, 0.6, 0.6)
 
     cancelBtn:SetScript("OnEnter", function(self)
@@ -2149,7 +2152,7 @@ function AutoProfilesUI:CreateCopyDialog()
 
     local createText = createBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     createText:SetPoint("CENTER")
-    createText:SetText("Copy Layout")
+    createText:SetText(L["Copy Layout"])
     createText:SetTextColor(1, 0.5, 0.2)
     dialog.createBtnText = createText
 
@@ -2235,7 +2238,7 @@ function AutoProfilesUI:ShowCopyDialog(contentType, profile, index, pageFrame)
     dialog.pageFrame = pageFrame
 
     -- Pre-fill name
-    dialog.nameInput:SetText((profile.name or "Unnamed") .. " (Copy)")
+    dialog.nameInput:SetText(format(L["%s (Copy)"], profile.name or L["Unnamed"]))
 
     -- Default destination to the same content type (same-section copy is common)
     dialog.selectedDest = contentType.key
@@ -2269,10 +2272,10 @@ function AutoProfilesUI:ValidateCopyDialog()
 
     if not destKey then
         isValid = false
-        errorMsg = "Select a destination"
+        errorMsg = L["Select a destination"]
     elseif name == "" then
         isValid = false
-        errorMsg = "Enter a layout name"
+        errorMsg = L["Enter a layout name"]
     else
         -- Check name conflict in destination
         local profiles = self:GetProfiles(destKey)
@@ -2283,7 +2286,7 @@ function AutoProfilesUI:ValidateCopyDialog()
                     break
                 end
                 isValid = false
-                errorMsg = "A layout with this name already exists in " .. destKey
+                errorMsg = format(L["A layout with this name already exists in %s"], destKey)
                 break
             end
         end
@@ -2295,7 +2298,7 @@ function AutoProfilesUI:ValidateCopyDialog()
             local overlap = self:CheckRangeOverlap(destKey, minVal, maxVal)
             if overlap then
                 isValid = false
-                errorMsg = "Overlaps with \"" .. overlap.name .. "\" (" .. overlap.min .. "-" .. overlap.max .. ")"
+                errorMsg = format(L["Overlaps with \"%s\" (%d-%d)"], overlap.name, overlap.min, overlap.max)
             end
         end
     end
@@ -2305,10 +2308,10 @@ function AutoProfilesUI:ValidateCopyDialog()
         dialog.validationIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\check")
         dialog.validationIcon:SetVertexColor(0.3, 0.85, 0.3)
         if destKey == "mythic" and DF.db.raidAutoProfiles.mythic.profile then
-            dialog.validationMsg:SetText("Will replace existing Mythic layout")
+            dialog.validationMsg:SetText(L["Will replace existing Mythic layout"])
             dialog.validationMsg:SetTextColor(1, 0.67, 0)
         else
-            dialog.validationMsg:SetText("Ready to copy")
+            dialog.validationMsg:SetText(L["Ready to copy"])
             dialog.validationMsg:SetTextColor(0.3, 0.85, 0.3)
         end
     elseif errorMsg then
@@ -2368,7 +2371,7 @@ function AutoProfilesUI:SubmitCopyDialog()
         if not success then
             dialog.validationIcon:SetTexture("Interface\\AddOns\\DandersFrames\\Media\\Icons\\close")
             dialog.validationIcon:SetVertexColor(0.85, 0.3, 0.3)
-            dialog.validationMsg:SetText(err or "Unknown error")
+            dialog.validationMsg:SetText(err or L["Unknown error"])
             dialog.validationMsg:SetTextColor(0.85, 0.3, 0.3)
             return
         end
@@ -2676,9 +2679,9 @@ function AutoProfilesUI:GetEditingInfo()
     -- Get range display
     local rangeText
     if contentType == "mythic" then
-        rangeText = "20 players (fixed)"
+        rangeText = L["20 players (fixed)"]
     else
-        rangeText = profile.min .. "-" .. profile.max .. " players"
+        rangeText = format(L["%d-%d players"], profile.min, profile.max)
     end
     
     -- Count overrides
@@ -2690,7 +2693,7 @@ function AutoProfilesUI:GetEditingInfo()
     end
     
     return {
-        name = profile.name or "Unnamed",
+        name = profile.name or L["Unnamed"],
         contentType = contentType,
         contentName = contentName,
         rangeText = rangeText,
@@ -2729,7 +2732,7 @@ function AutoProfilesUI:CreateEditingBanner(parent)
     -- "Editing:" label
     local editLabel = banner:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     editLabel:SetPoint("LEFT", icon, "RIGHT", 8, 6)
-    editLabel:SetText("Editing:")
+    editLabel:SetText(L["Editing:"])
     editLabel:SetTextColor(0.7, 0.7, 0.7)
     
     -- Profile name and content type
@@ -2758,7 +2761,7 @@ function AutoProfilesUI:CreateEditingBanner(parent)
 
     local exitText = exitBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     exitText:SetPoint("CENTER")
-    exitText:SetText("Exit Editing")
+    exitText:SetText(L["Exit Editing"])
     exitText:SetTextColor(0.8, 0.8, 0.8)
 
     exitBtn:SetScript("OnEnter", function(self)
@@ -2787,15 +2790,15 @@ function AutoProfilesUI:CreateEditingBanner(parent)
 
     local resetADText = resetADBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     resetADText:SetPoint("CENTER")
-    resetADText:SetText("Reset to Global")
+    resetADText:SetText(L["Reset to Global"])
     resetADText:SetTextColor(1, 0.5, 0.5)
 
     resetADBtn:SetScript("OnEnter", function(self)
         self:SetBackdropBorderColor(0.8, 0.2, 0.2, 1)
         resetADText:SetTextColor(1, 1, 1)
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-        GameTooltip:SetText("Reset Aura Designer to Global")
-        GameTooltip:AddLine("Removes all Aura Designer overrides from this\nauto layout, restoring it to match your global profile.", 1, 1, 1, true)
+        GameTooltip:SetText(L["Reset Aura Designer to Global"])
+        GameTooltip:AddLine(L["Removes all Aura Designer overrides from this auto layout, restoring it to match your global profile."], 1, 1, 1, true)
         GameTooltip:Show()
     end)
     resetADBtn:SetScript("OnLeave", function(self)
@@ -2824,9 +2827,9 @@ function AutoProfilesUI:UpdateEditingBanner()
         local GUI = DF.GUI
         local isAuraDesignerPage = GUI and GUI.CurrentPageName == "auras_auradesigner"
         if isAuraDesignerPage then
-            editingBanner.infoText:SetText(info.rangeText .. " · |cffff6666Per-setting reset is not available for Aura Designer|r")
+            editingBanner.infoText:SetText(info.rangeText .. " · |cffff6666" .. L["Per-setting reset is not available for Aura Designer"] .. "|r")
         else
-            editingBanner.infoText:SetText(info.rangeText .. " · Only changed settings will be saved")
+            editingBanner.infoText:SetText(info.rangeText .. " · " .. L["Only changed settings will be saved"])
         end
 
         -- Show/hide the Reset Aura Designer button
@@ -2965,7 +2968,7 @@ function AutoProfilesUI:SetupEditingBanner()
     hintText:SetPoint("CENTER", hintBg, "CENTER", 0, 0)
     hintText:SetWidth(140)
     hintText:SetJustifyH("CENTER")
-    hintText:SetText("|cffff8020Select any tab|r to customise\nthis profile's settings")
+    hintText:SetText("|cffff8020" .. L["Select any tab"] .. "|r " .. L["to customise\nthis profile's settings"])
     hintText:SetTextColor(0.75, 0.75, 0.75)
 
     -- Subtle pulse animation on the border
@@ -3399,9 +3402,7 @@ function AutoProfilesUI:ApplyRuntimeProfile(profile, contentKey)
     -- Chat notification
     local raidSize = GetNumGroupMembers()
     local contentName = GetContentDisplayName(contentKey)
-    print("|cff00ff00DandersFrames:|r Auto-profile |cffffffff\""
-        .. (profile.name or "Unnamed") .. "\"|r activated ("
-        .. contentName .. ", " .. raidSize .. " players)")
+    print("|cff00ff00DandersFrames:|r " .. format(L["Auto-profile \"%s\" activated (%s, %d players)"], profile.name or L["Unnamed"], contentName, raidSize))
 
     -- Update tab override stars
     self:RefreshTabOverrideStars()
@@ -3425,7 +3426,7 @@ function AutoProfilesUI:RemoveRuntimeProfile()
         DF:FullProfileRefresh()
     end
 
-    print("|cff00ff00DandersFrames:|r Auto-profile deactivated, using global settings")
+    print("|cff00ff00DandersFrames:|r " .. L["Auto-profile deactivated, using global settings"])
     self:RefreshTabOverrideStars()
 end
 
@@ -3635,25 +3636,25 @@ function AutoProfilesUI:PrintOverrides()
     local profile, source
     if self:IsEditing() then
         profile = self.editingProfile
-        source = "Editing"
+        source = L["Editing"]
     elseif self.activeRuntimeProfile then
         profile = self.activeRuntimeProfile
-        source = "Runtime"
+        source = L["Runtime"]
     else
         local activeProfile = self:GetActiveProfile()
         if activeProfile then
             profile = activeProfile
-            source = "Matched (not applied)"
+            source = L["Matched (not applied)"]
         end
     end
 
     if not profile then
-        print("|cffff8020DandersFrames:|r No auto-profile is currently active or being edited.")
+        print("|cffff8020DandersFrames:|r " .. L["No auto-profile is currently active or being edited."])
         return
     end
 
     if not profile.overrides or not next(profile.overrides) then
-        print("|cffff8020DandersFrames:|r Profile \"" .. (profile.name or "Unnamed") .. "\" has no overrides.")
+        print("|cffff8020DandersFrames:|r " .. format(L["Profile \"%s\" has no overrides."], profile.name or L["Unnamed"]))
         return
     end
 
@@ -3661,9 +3662,9 @@ function AutoProfilesUI:PrintOverrides()
     local total = 0
     for _ in pairs(profile.overrides) do total = total + 1 end
 
-    print("|cffff8020DandersFrames Auto-Profile Overrides:|r")
-    print("  Profile: |cffffffff\"" .. (profile.name or "Unnamed") .. "\"|r (" .. source .. ")")
-    print("  Total: |cffffffff" .. total .. " override" .. (total > 1 and "s" or "") .. "|r")
+    print("|cffff8020" .. L["DandersFrames Auto-Profile Overrides:"] .. "|r")
+    print("  " .. L["Profile:"] .. " |cffffffff\"" .. (profile.name or L["Unnamed"]) .. "\"|r (" .. source .. ")")
+    print("  " .. L["Total:"] .. " |cffffffff" .. format(total > 1 and L["%d overrides"] or L["%d override"], total) .. "|r")
 
     -- Group by tab
     local groups, unknownKeys = GroupOverridesByTab(profile.overrides)
@@ -3698,7 +3699,7 @@ function AutoProfilesUI:PrintOverrides()
     end
 
     if #unknownKeys > 0 then
-        print("  |cff999999Other|r (" .. #unknownKeys .. "):")
+        print("  |cff999999" .. L["Other"] .. "|r (" .. #unknownKeys .. "):")
         table.sort(unknownKeys)
         for _, key in ipairs(unknownKeys) do
             print("    " .. key .. " = " .. tostring(profile.overrides[key]))
