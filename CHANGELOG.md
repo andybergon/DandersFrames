@@ -1,6 +1,6 @@
 # DandersFrames Changelog
 
-## [4.1.12] - 2026-04-02
+## [4.2.0] - 2026-04-04
 
 ### New Features
 * (Resource Bar) Add "Use Class Color" option for resource bars — colors power bars by class instead of power type (thanks **sKullsen**)
