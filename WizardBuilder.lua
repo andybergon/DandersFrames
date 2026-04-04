@@ -1045,7 +1045,7 @@ function RenderBuilderStep()
     -- Description
     local dLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     dLabel:SetPoint("TOPLEFT", BUILDER_PADDING, y)
-    dLabel:SetText(L["Description (optional):"])
+    dLabel:SetText(L["Description (optional)"])
     dLabel:SetTextColor(BC.textDim.r, BC.textDim.g, BC.textDim.b)
     y = y - 18
 
@@ -2105,7 +2105,7 @@ WB:RegisterBuiltinWizard({
                     description = L["• Having trouble seeing certain buffs or debuffs?\n• This wizard helps you pick the right aura settings"],
                     type = "single",
                     options = {
-                        { label = L["Yes, let's set it up"], value = "yes" },
+                        { label = L["Yes, set it up"], value = "yes" },
                         { label = L["No thanks"], value = "no" },
                     },
                     branches = {

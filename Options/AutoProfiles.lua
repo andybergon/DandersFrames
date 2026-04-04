@@ -37,7 +37,7 @@ local CONTENT_TYPES = {
     {
         key = "mythic",
         title = L["Mythic"],
-        description = L["Fixed 20 players"],
+        description = L["20 players (fixed)"],
         minRange = 20,
         maxRange = 20,
         isFixed = true,
@@ -562,7 +562,7 @@ function AutoProfilesUI:BuildPage(GUI, pageFrame, db, Add, AddSpace)
         if profile then
             local rangeText = ""
             if profileKey == "mythic" then
-                rangeText = L["20 fixed"]
+                rangeText = L["20 players (fixed)"]
             elseif profile.min and profile.max then
                 rangeText = profile.min .. "-" .. profile.max
             end
@@ -900,7 +900,7 @@ function AutoProfilesUI:CreateProfileRow(GUI, pageFrame, parent, contentType, pr
     rangeText:SetPoint("CENTER")
     
     if contentType.isFixed then
-        rangeText:SetText(L["20 (fixed)"])
+        rangeText:SetText(L["20 players (fixed)"])
         rangeText:SetTextColor(0.5, 0.5, 0.5)
     else
         rangeText:SetText((profile.min or 1) .. " - " .. (profile.max or 40))

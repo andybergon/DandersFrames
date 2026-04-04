@@ -360,10 +360,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local frameAnchorPos = frameTooltipGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor Position"], anchorPositionValues, db, "tooltipFrameAnchorPos", function() end), 55)
         frameAnchorPos.disableOn = function(d) return d.tooltipFrameAnchor == "DEFAULT" end
         
-        local frameOffsetX = frameTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["X Offset"], -100, 100, 1, db, "tooltipFrameX", function() end), 55)
+        local frameOffsetX = frameTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -100, 100, 1, db, "tooltipFrameX", function() end), 55)
         frameOffsetX.disableOn = function(d) return d.tooltipFrameAnchor ~= "FRAME" end
         
-        local frameOffsetY = frameTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Y Offset"], -100, 100, 1, db, "tooltipFrameY", function() end), 55)
+        local frameOffsetY = frameTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -100, 100, 1, db, "tooltipFrameY", function() end), 55)
         frameOffsetY.disableOn = function(d) return d.tooltipFrameAnchor ~= "FRAME" end
         
         Add(frameTooltipGroup, nil, 1)
@@ -384,10 +384,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local buffAnchorPos = buffTooltipGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor Position"], anchorPositionValues, db, "tooltipBuffAnchorPos", function() end), 55)
         buffAnchorPos.disableOn = function(d) return d.tooltipBuffAnchor == "DEFAULT" end
         
-        local buffOffsetX = buffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["X Offset"], -100, 100, 1, db, "tooltipBuffX", function() end), 55)
+        local buffOffsetX = buffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -100, 100, 1, db, "tooltipBuffX", function() end), 55)
         buffOffsetX.disableOn = function(d) return d.tooltipBuffAnchor ~= "FRAME" end
         
-        local buffOffsetY = buffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Y Offset"], -100, 100, 1, db, "tooltipBuffY", function() end), 55)
+        local buffOffsetY = buffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -100, 100, 1, db, "tooltipBuffY", function() end), 55)
         buffOffsetY.disableOn = function(d) return d.tooltipBuffAnchor ~= "FRAME" end
         
         Add(buffTooltipGroup, nil, 2)
@@ -413,10 +413,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local debuffAnchorPos = debuffTooltipGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor Position"], anchorPositionValues, db, "tooltipDebuffAnchorPos", function() end), 55)
         debuffAnchorPos.disableOn = function(d) return d.tooltipDebuffAnchor == "DEFAULT" end
         
-        local debuffOffsetX = debuffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["X Offset"], -100, 100, 1, db, "tooltipDebuffX", function() end), 55)
+        local debuffOffsetX = debuffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -100, 100, 1, db, "tooltipDebuffX", function() end), 55)
         debuffOffsetX.disableOn = function(d) return d.tooltipDebuffAnchor ~= "FRAME" end
         
-        local debuffOffsetY = debuffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Y Offset"], -100, 100, 1, db, "tooltipDebuffY", function() end), 55)
+        local debuffOffsetY = debuffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -100, 100, 1, db, "tooltipDebuffY", function() end), 55)
         debuffOffsetY.disableOn = function(d) return d.tooltipDebuffAnchor ~= "FRAME" end
         
         Add(debuffTooltipGroup, nil, 1)
@@ -437,10 +437,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local defAnchorPos = defTooltipGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor Position"], anchorPositionValues, db, "tooltipDefensiveAnchorPos", function() end), 55)
         defAnchorPos.disableOn = function(d) return d.tooltipDefensiveAnchor == "DEFAULT" end
         
-        local defOffsetX = defTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["X Offset"], -100, 100, 1, db, "tooltipDefensiveX", function() end), 55)
+        local defOffsetX = defTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -100, 100, 1, db, "tooltipDefensiveX", function() end), 55)
         defOffsetX.disableOn = function(d) return d.tooltipDefensiveAnchor ~= "FRAME" end
         
-        local defOffsetY = defTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Y Offset"], -100, 100, 1, db, "tooltipDefensiveY", function() end), 55)
+        local defOffsetY = defTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -100, 100, 1, db, "tooltipDefensiveY", function() end), 55)
         defOffsetY.disableOn = function(d) return d.tooltipDefensiveAnchor ~= "FRAME" end
         
         Add(defTooltipGroup, nil, 2)
@@ -472,10 +472,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local bindAnchorPos = bindTooltipGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor Position"], anchorPositionValues, db, "tooltipBindingAnchorPos", function() end), 55)
         bindAnchorPos.disableOn = function(d) return d.tooltipBindingAnchor == "DEFAULT" end
 
-        local bindOffsetX = bindTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["X Offset"], -100, 100, 1, db, "tooltipBindingX", function() end), 55)
+        local bindOffsetX = bindTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -100, 100, 1, db, "tooltipBindingX", function() end), 55)
         bindOffsetX.disableOn = function(d) return d.tooltipBindingAnchor ~= "FRAME" end
 
-        local bindOffsetY = bindTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Y Offset"], -100, 100, 1, db, "tooltipBindingY", function() end), 55)
+        local bindOffsetY = bindTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -100, 100, 1, db, "tooltipBindingY", function() end), 55)
         bindOffsetY.disableOn = function(d) return d.tooltipBindingAnchor ~= "FRAME" end
 
         Add(bindTooltipGroup, nil, 1)
@@ -979,10 +979,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             positionGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor Position"], anchorValues, db, "petAnchor", function()
                 if DF.UpdateAllPetFramePositions then DF:UpdateAllPetFramePositions() end
             end), 55)
-            positionGroup:AddWidget(GUI:CreateSlider(self.child, L["X Offset"], -50, 50, 1, db, "petOffsetX", function()
+            positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -50, 50, 1, db, "petOffsetX", function()
                 if DF.UpdateAllPetFramePositions then DF:UpdateAllPetFramePositions() end
             end, function() if DF.UpdateAllPetFramePositions then DF:UpdateAllPetFramePositions() end end, true), 55)
-            positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Y Offset"], -50, 50, 1, db, "petOffsetY", function()
+            positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -50, 50, 1, db, "petOffsetY", function()
                 if DF.UpdateAllPetFramePositions then DF:UpdateAllPetFramePositions() end
             end, function() if DF.UpdateAllPetFramePositions then DF:UpdateAllPetFramePositions() end end, true), 55)
             
@@ -1292,15 +1292,15 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local playersPerLabel = db.growDirection == "VERTICAL" and L["Players Per Column"] or L["Players Per Row"]
         playersPerRowSlider = flatGridGroup:AddWidget(GUI:CreateSlider(self.child, playersPerLabel, 1, 40, 1, db, "raidPlayersPerRow", UpdateFlatLayoutFull, UpdateFlatLayoutFull, true), 55)
         
-        local growthAnchorOptions = { START= L["Start"], CENTER= L["Centre"], END= L["End"] }
+        local growthAnchorOptions = { START= L["Start"], CENTER= L["Center"], END= L["End"] }
         flatGridGroup:AddWidget(GUI:CreateDropdown(self.child, L["Frames Grow From"], growthAnchorOptions, db, "raidFlatGrowthAnchor", UpdateFrames), 55)
         
-        local columnAnchorOptions = { START= L["Start (Top/Left)"], END= L["End (Bottom/Right)"] }
+        local columnAnchorOptions = { START= L["Start (Left/Top)"], END= L["End (Right/Bottom)"] }
         flatGridGroup:AddWidget(GUI:CreateDropdown(self.child, L["Columns Grow From"], columnAnchorOptions, db, "raidFlatColumnAnchor", UpdateFrames), 55)
         
         flatGridGroup:AddWidget(GUI:CreateCheckbox(self.child, L["Reverse Order"], db, "raidFlatFrameAnchor", UpdateFrames, 
             function() return db.raidFlatFrameAnchor == "END" end,
-            function(val) db.raidFlatFrameAnchor = val and L["END"] or L["START"] end
+            function(val) db.raidFlatFrameAnchor = val and "END" or "START" end
         ), 30)
         
         flatGridGroup:AddWidget(GUI:CreateSlider(self.child, L["Horizontal Spacing"], -5, 100, 1, db, "raidFlatHorizontalSpacing", UpdateFrames, function() DF:LightweightUpdateFrameSize() end, true), 55)
@@ -5047,12 +5047,12 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local durPosGroup = GUI:CreateSettingsGroup(self.child, 280)
         durPosGroup:AddWidget(GUI:CreateHeader(self.child, L["Duration Position"]), 40)
         
-        local diDurX = durPosGroup:AddWidget(GUI:CreateSlider(self.child, L["Duration X Offset"], -20, 20, 1, db, "defensiveIconDurationX", function()
+        local diDurX = durPosGroup:AddWidget(GUI:CreateSlider(self.child, L["Duration Offset X"], -20, 20, 1, db, "defensiveIconDurationX", function()
             if DF.UpdateAllDefensiveBars then DF:UpdateAllDefensiveBars() end
         end, function() DF:LightweightUpdateDefensiveIcons() end, true), 55)
         diDurX.hideOn = HideDefensiveDurationOptions
         
-        local diDurY = durPosGroup:AddWidget(GUI:CreateSlider(self.child, L["Duration Y Offset"], -20, 20, 1, db, "defensiveIconDurationY", function()
+        local diDurY = durPosGroup:AddWidget(GUI:CreateSlider(self.child, L["Duration Offset Y"], -20, 20, 1, db, "defensiveIconDurationY", function()
             if DF.UpdateAllDefensiveBars then DF:UpdateAllDefensiveBars() end
         end, function() DF:LightweightUpdateDefensiveIcons() end, true), 55)
         diDurY.hideOn = HideDefensiveDurationOptions
@@ -5271,9 +5271,9 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         tsDurScale.disableOn = HideTargetedDurationOptions
         local tsDurOutline = durationGroup:AddWidget(GUI:CreateDropdown(self.child, L["Outline"], outlineOptions, db, "targetedSpellDurationOutline", FullUpdate), 55)
         tsDurOutline.disableOn = HideTargetedDurationOptions
-        local tsDurX = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["X Offset"], -20, 20, 1, db, "targetedSpellDurationX", FullUpdate, TargetedSpellLightweightUpdate, true), 55)
+        local tsDurX = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -20, 20, 1, db, "targetedSpellDurationX", FullUpdate, TargetedSpellLightweightUpdate, true), 55)
         tsDurX.disableOn = HideTargetedDurationOptions
-        local tsDurY = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Y Offset"], -20, 20, 1, db, "targetedSpellDurationY", FullUpdate, TargetedSpellLightweightUpdate, true), 55)
+        local tsDurY = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -20, 20, 1, db, "targetedSpellDurationY", FullUpdate, TargetedSpellLightweightUpdate, true), 55)
         tsDurY.disableOn = HideTargetedDurationOptions
         local tsDurColor = durationGroup:AddWidget(GUI:CreateColorPicker(self.child, L["Color"], db, "targetedSpellDurationColor", false, FullUpdate), 35)
         tsDurColor.disableOn = HideTargetedDurationOptions
@@ -5485,9 +5485,9 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         ptsDurScale.disableOn = HidePersonalDurationOptions
         local ptsDurOutline = durationGroup:AddWidget(GUI:CreateDropdown(self.child, L["Outline"], outlineOptions, db, "personalTargetedSpellDurationOutline", PersonalTargetedUpdate), 55)
         ptsDurOutline.disableOn = HidePersonalDurationOptions
-        local ptsDurX = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["X Offset"], -20, 20, 1, db, "personalTargetedSpellDurationX", PersonalTargetedUpdate, PersonalTargetedUpdate, true), 55)
+        local ptsDurX = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -20, 20, 1, db, "personalTargetedSpellDurationX", PersonalTargetedUpdate, PersonalTargetedUpdate, true), 55)
         ptsDurX.disableOn = HidePersonalDurationOptions
-        local ptsDurY = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Y Offset"], -20, 20, 1, db, "personalTargetedSpellDurationY", PersonalTargetedUpdate, PersonalTargetedUpdate, true), 55)
+        local ptsDurY = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -20, 20, 1, db, "personalTargetedSpellDurationY", PersonalTargetedUpdate, PersonalTargetedUpdate, true), 55)
         ptsDurY.disableOn = HidePersonalDurationOptions
         local ptsDurColor = durationGroup:AddWidget(GUI:CreateColorPicker(self.child, L["Color"], db, "personalTargetedSpellDurationColor", false, PersonalTargetedUpdate), 35)
         ptsDurColor.disableOn = HidePersonalDurationOptions
@@ -6536,7 +6536,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         -- Register delete confirmation popup
         if not StaticPopupDialogs["DANDERSFRAMES_DELETE_PROFILE_CONFIRM"] then
             StaticPopupDialogs["DANDERSFRAMES_DELETE_PROFILE_CONFIRM"] = {
-                text = L["Delete profile '%s'?\nThis cannot be undone."],
+                text = L["Delete profile '%s'?\n\nThis cannot be undone."],
                 button1 = L["Delete"],
                 button2 = L["Cancel"],
                 OnAccept = function(self, data)

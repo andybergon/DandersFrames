@@ -2119,13 +2119,13 @@ local function CreateExpiringThresholdRow(parent, proxy, width)
     -- Slider: range depends on mode
     local label, minV, maxV, step
     if isSeconds then
-        label = L["Expiring Threshold (s)"]
+        label = L["Expiring Threshold (seconds)"]
         minV, maxV, step = 1, 60, 1
         -- Clamp value to seconds range if switching from percent
         local cur = proxy.expiringThreshold
         if cur and cur > 60 then proxy.expiringThreshold = 10 end
     else
-        label = L["Expiring Threshold %"]
+        label = L["Expiring Threshold (%)"]
         minV, maxV, step = 5, 100, 5
         -- Clamp value to percent range if switching from seconds
         local cur = proxy.expiringThreshold
@@ -2515,7 +2515,7 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
             g:AddWidget(GUI:CreateCheckbox(parent, L["Expiring Color Override"], proxy, "expiringEnabled"), 28)
             g:AddWidget(CreateExpiringThresholdRow(parent, proxy, contentWidth - 10), 54)
             g:AddWidget(GUI:CreateColorPicker(parent, L["Expiring Color"], proxy, "expiringColor", true, RPL, RPL, true), 28)
-            g:AddWidget(GUI:CreateCheckbox(parent, L["Border Pulsate"], proxy, "expiringPulsate"), 28)
+            g:AddWidget(GUI:CreateCheckbox(parent, L["Pulsate Border"], proxy, "expiringPulsate"), 28)
             g:AddWidget(GUI:CreateCheckbox(parent, L["Whole Alpha Pulse"], proxy, "expiringWholeAlphaPulse"), 28)
             g:AddWidget(GUI:CreateCheckbox(parent, L["Bounce"], proxy, "expiringBounce"), 28)
         end)
@@ -2839,12 +2839,12 @@ local function BuildTypeContent(parent, typeKey, auraName, width, optProxy, yOff
 
             local thLabel, thMin, thMax, thStep
             if isSeconds then
-                thLabel = L["Expire Threshold (s)"]
+                thLabel = L["Expiring Threshold (seconds)"]
                 thMin, thMax, thStep = 1, 60, 1
                 local cur = proxy.expireThreshold
                 if cur and cur > 60 then proxy.expireThreshold = 5 end
             else
-                thLabel = L["Expire Threshold %"]
+                thLabel = L["Expiring Threshold (%)"]
                 thMin, thMax, thStep = 5, 100, 5
                 local cur = proxy.expireThreshold
                 if cur and cur < 5 then proxy.expireThreshold = 30 end
@@ -2969,7 +2969,7 @@ local function BuildGlobalView(parent)
         g:AddWidget(GUI:CreateSlider(parent, L["Default Frame Level"], -10, 30, 1, defaults, "indicatorFrameLevel"), 50)
         g:AddWidget(GUI:CreateDropdown(parent, L["Default Frame Strata"], FRAME_STRATA_OPTIONS, defaults, "indicatorFrameStrata"), 50)
         g:AddWidget(GUI:CreateCheckbox(parent, L["Show Duration"], defaults, "showDuration"), 24)
-        g:AddWidget(GUI:CreateCheckbox(parent, L["Show Stack Count"], defaults, "showStacks"), 24)
+        g:AddWidget(GUI:CreateCheckbox(parent, L["Show Stacks"], defaults, "showStacks"), 24)
         g:AddWidget(GUI:CreateCheckbox(parent, L["Hide Cooldown Swipe"], defaults, "hideSwipe"), 24)
         g:AddWidget(GUI:CreateCheckbox(parent, L["Hide Icon (Text Only)"], defaults, "hideIcon"), 24)
     end)
@@ -3016,7 +3016,7 @@ local function BuildGlobalView(parent)
         local compatItems = {
             {true,  L["Icon size, scale & border"]},
             {true,  L["Duration & stack display"]},
-            {true,  L["Font settings"]},
+            {true,  L["Font Settings"]},
             {false, L["Position & anchors"]},
             {false, L["Per-aura overrides"]},
         }
@@ -4848,7 +4848,7 @@ BuildEffectsTab = function()
         local spec = ResolveSpec()
         local specAuras = spec and Adapter:GetTrackableAuras(spec)
         if not spec or not specAuras or #specAuras == 0 then
-            empty:SetText(L["Aura Designer supports healer specs\nand Augmentation Evoker.\n\nSelect a spec using the dropdown above\nto configure indicators in advance."])
+            empty:SetText(L["Aura Designer supports healer specs and Augmentation Evoker.\n\nYou can manually select a spec using the dropdown above to configure indicators in advance."])
         elseif activeFilter == "all" then
             empty:SetText(L["No effects configured yet.\nClick '+ Add Indicator' to get started."])
         else

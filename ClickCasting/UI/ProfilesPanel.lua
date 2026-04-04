@@ -179,7 +179,7 @@ function CC:CreateProfilesPanelContent()
     -- Import/Export section
     local ioLabel = leftCol:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     ioLabel:SetPoint("TOPLEFT", btnRow2, "BOTTOMLEFT", 0, -12)
-    ioLabel:SetText(L["IMPORT / EXPORT"])
+    ioLabel:SetText(L["Import/Export"])
     ioLabel:SetTextColor(C.textDim.r, C.textDim.g, C.textDim.b)
     
     local ioRow = CreateFrame("Frame", nil, leftCol)
