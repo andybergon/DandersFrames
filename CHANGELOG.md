@@ -2,6 +2,10 @@
 
 ## [4.1.13] - 2026-04-04
 
+### New Features
+* (Localization) Add full localization infrastructure using AceLocale-3.0 and CurseForge translation system — community translators can now contribute translations via the CurseForge web UI without touching code
+* (Localization) Add locale stubs for 11 languages: English, German, Spanish (EU/LATAM), French, Italian, Korean, Portuguese (BR), Russian, Chinese (Simplified/Traditional)
+
 ### Bug Fixes
 * (Raid Frames) Fix groups overlapping after auto-profile switch when layout direction and spacing are unchanged between profiles
 * (Raid Frames) Fix CENTER-aligned groups landing in wrong positions when the first person joins a previously empty group
