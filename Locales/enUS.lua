@@ -14,7 +14,7 @@ if not L then return end
 -- 3. CurseForge discovers it on next build
 -- ============================================================
 
---@localization(locale="enUS", format="lua_additive_table", same-key-is-true=true, namespace="DandersFrames")@
+--@localization(locale="enUS", format="lua_additive_table", same-key-is-true=true)@
 
 -- Development fallback: these strings are used when running
 -- from source (not a packaged build). Keep in sync with usage.

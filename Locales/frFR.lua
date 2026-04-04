@@ -1,3 +1,3 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("DandersFrames", "frFR")
 if not L then return end
---@localization(locale="frFR", format="lua_additive_table", handle-unlocalized="comment", namespace="DandersFrames")@
+--@localization(locale="frFR", format="lua_additive_table", handle-unlocalized="comment")@
