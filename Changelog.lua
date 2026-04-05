@@ -6,6 +6,9 @@ DF.CHANGELOG_TEXT = [===[
 
 ## [4.2.2] - 2026-04-05
 
+### Improvements
+* (Auras) Increase all buff, debuff, boss debuff, and missing buff offset slider ranges from ±20–100 to ±150 for consistency with Aura Designer
+
 ### Bug Fixes
 * (Dispel Overlay) Fix "All Dispellable" mode only showing debuffs the player can personally dispel — now correctly highlights any dispellable debuff (Magic, Curse, Disease, Poison) regardless of class
 * (Dispel Overlay) Fix swapped dropdown labels for "All Dispellable" and "Dispellable By Me" options

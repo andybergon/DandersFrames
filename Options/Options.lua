@@ -384,10 +384,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local buffAnchorPos = buffTooltipGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor Position"], anchorPositionValues, db, "tooltipBuffAnchorPos", function() end), 55)
         buffAnchorPos.disableOn = function(d) return d.tooltipBuffAnchor == "DEFAULT" end
         
-        local buffOffsetX = buffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -100, 100, 1, db, "tooltipBuffX", function() end), 55)
+        local buffOffsetX = buffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "tooltipBuffX", function() end), 55)
         buffOffsetX.disableOn = function(d) return d.tooltipBuffAnchor ~= "FRAME" end
         
-        local buffOffsetY = buffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -100, 100, 1, db, "tooltipBuffY", function() end), 55)
+        local buffOffsetY = buffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "tooltipBuffY", function() end), 55)
         buffOffsetY.disableOn = function(d) return d.tooltipBuffAnchor ~= "FRAME" end
         
         Add(buffTooltipGroup, nil, 2)
@@ -413,10 +413,10 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local debuffAnchorPos = debuffTooltipGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor Position"], anchorPositionValues, db, "tooltipDebuffAnchorPos", function() end), 55)
         debuffAnchorPos.disableOn = function(d) return d.tooltipDebuffAnchor == "DEFAULT" end
         
-        local debuffOffsetX = debuffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -100, 100, 1, db, "tooltipDebuffX", function() end), 55)
+        local debuffOffsetX = debuffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "tooltipDebuffX", function() end), 55)
         debuffOffsetX.disableOn = function(d) return d.tooltipDebuffAnchor ~= "FRAME" end
         
-        local debuffOffsetY = debuffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -100, 100, 1, db, "tooltipDebuffY", function() end), 55)
+        local debuffOffsetY = debuffTooltipGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "tooltipDebuffY", function() end), 55)
         debuffOffsetY.disableOn = function(d) return d.tooltipDebuffAnchor ~= "FRAME" end
         
         Add(debuffTooltipGroup, nil, 1)
@@ -4195,9 +4195,9 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         buffAnchor.disableOn = function(d) return not d.showBuffs end
         local buffGrowth = positionGroup:AddWidget(GUI:CreateGrowthControl(self.child, db, "buffGrowth", nil), 155)
         buffGrowth.disableOn = function(d) return not d.showBuffs end
-        local buffOffsetX = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -50, 50, 1, db, "buffOffsetX", nil, function() DF:LightweightUpdateAuraPosition("buff") end, true), 55)
+        local buffOffsetX = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "buffOffsetX", nil, function() DF:LightweightUpdateAuraPosition("buff") end, true), 55)
         buffOffsetX.disableOn = function(d) return not d.showBuffs end
-        local buffOffsetY = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -50, 50, 1, db, "buffOffsetY", nil, function() DF:LightweightUpdateAuraPosition("buff") end, true), 55)
+        local buffOffsetY = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "buffOffsetY", nil, function() DF:LightweightUpdateAuraPosition("buff") end, true), 55)
         buffOffsetY.disableOn = function(d) return not d.showBuffs end
         AddToSection(positionGroup, nil, 2)
         
@@ -4247,8 +4247,8 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Scale"], 0.5, 2.0, 0.05, db, "buffStackScale", nil, function() DF:LightweightUpdateAuraStackText("buff") end, true), 55)
         stackCountGroup:AddWidget(GUI:CreateDropdown(self.child, L["Outline"], outlineOptions, db, "buffStackOutline", function() DF:LightweightUpdateAuraStackText("buff") end), 55)
         stackCountGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor"], anchorOptions, db, "buffStackAnchor", function() DF:LightweightUpdateAuraStackText("buff") end), 55)
-        stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -20, 20, 1, db, "buffStackX", nil, function() DF:LightweightUpdateAuraStackText("buff") end, true), 55)
-        stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -20, 20, 1, db, "buffStackY", nil, function() DF:LightweightUpdateAuraStackText("buff") end, true), 55)
+        stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "buffStackX", nil, function() DF:LightweightUpdateAuraStackText("buff") end, true), 55)
+        stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "buffStackY", nil, function() DF:LightweightUpdateAuraStackText("buff") end, true), 55)
         stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Min Stacks to Show"], 1, 10, 1, db, "buffStackMinimum", nil), 55)
         AddToSection(stackCountGroup, nil, 1)
         
@@ -4267,9 +4267,9 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         durOutline.disableOn = function(d) return not d.buffShowDuration end
         local durAnchor = durationGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor"], anchorOptions, db, "buffDurationAnchor", function() DF:LightweightUpdateAuraDurationText("buff") end), 55)
         durAnchor.disableOn = function(d) return not d.buffShowDuration end
-        local durX = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -20, 20, 1, db, "buffDurationX", nil, function() DF:LightweightUpdateAuraDurationText("buff") end, true), 55)
+        local durX = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "buffDurationX", nil, function() DF:LightweightUpdateAuraDurationText("buff") end, true), 55)
         durX.disableOn = function(d) return not d.buffShowDuration end
-        local durY = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -20, 20, 1, db, "buffDurationY", nil, function() DF:LightweightUpdateAuraDurationText("buff") end, true), 55)
+        local durY = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "buffDurationY", nil, function() DF:LightweightUpdateAuraDurationText("buff") end, true), 55)
         durY.disableOn = function(d) return not d.buffShowDuration end
         local durColor = durationGroup:AddWidget(GUI:CreateCheckbox(self.child, L["Color by Time Remaining"], db, "buffDurationColorByTime", function() DF:RefreshDurationColorSettings() end), 30)
         durColor.disableOn = function(d) return not d.buffShowDuration end
@@ -4402,9 +4402,9 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         debuffAnchor.disableOn = function(d) return not d.showDebuffs end
         local debuffGrowth = positionGroup:AddWidget(GUI:CreateGrowthControl(self.child, db, "debuffGrowth", nil), 155)
         debuffGrowth.disableOn = function(d) return not d.showDebuffs end
-        local debuffOffsetX = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -50, 50, 1, db, "debuffOffsetX", nil, function() DF:LightweightUpdateAuraPosition("debuff") end, true), 55)
+        local debuffOffsetX = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "debuffOffsetX", nil, function() DF:LightweightUpdateAuraPosition("debuff") end, true), 55)
         debuffOffsetX.disableOn = function(d) return not d.showDebuffs end
-        local debuffOffsetY = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -50, 50, 1, db, "debuffOffsetY", nil, function() DF:LightweightUpdateAuraPosition("debuff") end, true), 55)
+        local debuffOffsetY = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "debuffOffsetY", nil, function() DF:LightweightUpdateAuraPosition("debuff") end, true), 55)
         debuffOffsetY.disableOn = function(d) return not d.showDebuffs end
         AddToSection(positionGroup, nil, 2)
         
@@ -4491,8 +4491,8 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Scale"], 0.5, 2.0, 0.05, db, "debuffStackScale", nil, function() DF:LightweightUpdateAuraStackText("debuff") end, true), 55)
         stackCountGroup:AddWidget(GUI:CreateDropdown(self.child, L["Outline"], outlineOptions, db, "debuffStackOutline", function() DF:LightweightUpdateAuraStackText("debuff") end), 55)
         stackCountGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor"], anchorOptions, db, "debuffStackAnchor", function() DF:LightweightUpdateAuraStackText("debuff") end), 55)
-        stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -20, 20, 1, db, "debuffStackX", nil, function() DF:LightweightUpdateAuraStackText("debuff") end, true), 55)
-        stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -20, 20, 1, db, "debuffStackY", nil, function() DF:LightweightUpdateAuraStackText("debuff") end, true), 55)
+        stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "debuffStackX", nil, function() DF:LightweightUpdateAuraStackText("debuff") end, true), 55)
+        stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "debuffStackY", nil, function() DF:LightweightUpdateAuraStackText("debuff") end, true), 55)
         stackCountGroup:AddWidget(GUI:CreateSlider(self.child, L["Min Stacks to Show"], 1, 10, 1, db, "debuffStackMinimum", nil), 55)
         AddToSection(stackCountGroup, nil, 1)
         
@@ -4511,9 +4511,9 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         durOutline.disableOn = function(d) return not d.debuffShowDuration end
         local durAnchor = durationGroup:AddWidget(GUI:CreateDropdown(self.child, L["Anchor"], anchorOptions, db, "debuffDurationAnchor", function() DF:LightweightUpdateAuraDurationText("debuff") end), 55)
         durAnchor.disableOn = function(d) return not d.debuffShowDuration end
-        local durX = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -20, 20, 1, db, "debuffDurationX", nil, function() DF:LightweightUpdateAuraDurationText("debuff") end, true), 55)
+        local durX = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "debuffDurationX", nil, function() DF:LightweightUpdateAuraDurationText("debuff") end, true), 55)
         durX.disableOn = function(d) return not d.debuffShowDuration end
-        local durY = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -20, 20, 1, db, "debuffDurationY", nil, function() DF:LightweightUpdateAuraDurationText("debuff") end, true), 55)
+        local durY = durationGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "debuffDurationY", nil, function() DF:LightweightUpdateAuraDurationText("debuff") end, true), 55)
         durY.disableOn = function(d) return not d.debuffShowDuration end
         local durColor = durationGroup:AddWidget(GUI:CreateCheckbox(self.child, L["Color by Time Remaining"], db, "debuffDurationColorByTime", function() DF:RefreshDurationColorSettings() end), 30)
         durColor.disableOn = function(d) return not d.debuffShowDuration end
@@ -4605,12 +4605,12 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             if DF.UpdateAllTestBossDebuffs then DF:UpdateAllTestBossDebuffs() end
         end), 55)
         growth.hideOn = HideBossDebuffOptions
-        local offsetX = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -100, 100, 1, db, "bossDebuffsOffsetX", nil, function()
+        local offsetX = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "bossDebuffsOffsetX", nil, function()
             if DF.UpdateAllPrivateAuraPositions then DF:UpdateAllPrivateAuraPositions() end
             if DF.UpdateAllTestBossDebuffs then DF:UpdateAllTestBossDebuffs() end
         end, true), 55)
         offsetX.hideOn = HideBossDebuffOptions
-        local offsetY = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -100, 100, 1, db, "bossDebuffsOffsetY", nil, function()
+        local offsetY = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "bossDebuffsOffsetY", nil, function()
             if DF.UpdateAllPrivateAuraPositions then DF:UpdateAllPrivateAuraPositions() end
             if DF.UpdateAllTestBossDebuffs then DF:UpdateAllTestBossDebuffs() end
         end, true), 55)
@@ -4872,11 +4872,11 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             if DF.UpdateAllMissingBuffIcons then DF:UpdateAllMissingBuffIcons() end
         end), 55)
         mbAnchor.hideOn = HideMissingBuffOptions
-        local mbX = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -50, 50, 1, db, "missingBuffIconX", function()
+        local mbX = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset X"], -150, 150, 1, db, "missingBuffIconX", function()
             if DF.UpdateAllMissingBuffIcons then DF:UpdateAllMissingBuffIcons() end
         end, function() DF:LightweightUpdateMissingBuff() end, true), 55)
         mbX.hideOn = HideMissingBuffOptions
-        local mbY = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -50, 50, 1, db, "missingBuffIconY", function()
+        local mbY = positionGroup:AddWidget(GUI:CreateSlider(self.child, L["Offset Y"], -150, 150, 1, db, "missingBuffIconY", function()
             if DF.UpdateAllMissingBuffIcons then DF:UpdateAllMissingBuffIcons() end
         end, function() DF:LightweightUpdateMissingBuff() end, true), 55)
         mbY.hideOn = HideMissingBuffOptions
