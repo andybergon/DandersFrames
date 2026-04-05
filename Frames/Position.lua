@@ -158,27 +158,27 @@ local InCombatLockdown = InCombatLockdown
 
 -- Quick action dispatch table
 local PERM_MOVER_ACTIONS = {
-    NONE              = { label = "None",                         combatSafe = true },
-    OPEN_SETTINGS     = { label = "Open Settings",                combatSafe = true,  fn = function() DF:ToggleGUI() end },
-    UNLOCK_FRAMES     = { label = "Unlock Frames",                combatSafe = false, fn = function(mode)
+    NONE              = { label = L["None"],                       combatSafe = true },
+    OPEN_SETTINGS     = { label = L["Open Settings"],              combatSafe = true,  fn = function() DF:ToggleGUI() end },
+    UNLOCK_FRAMES     = { label = L["Unlock Frames"],              combatSafe = false, fn = function(mode)
         if mode == "raid" then DF:UnlockRaidFrames() else DF:UnlockFrames() end
     end },
-    TOGGLE_TEST       = { label = "Toggle Test Mode",             combatSafe = false, fn = function() if DF.ToggleTestMode then DF:ToggleTestMode() end end },
-    SWITCH_PROFILE    = { label = "Quick Switch Profile",         combatSafe = false, fn = function(mode, handle) DF:ShowPermanentMoverProfilePopup(handle) end },
-    SWITCH_CC_PROFILE = { label = "Quick Switch CC Profile",      combatSafe = false, fn = function(mode, handle) DF:ShowPermanentMoverCCProfilePopup(handle) end },
-    CYCLE_PROFILE     = { label = "Cycle Next Profile",           combatSafe = false, fn = function() DF:CycleNextProfile() end },
-    CYCLE_CC_PROFILE  = { label = "Cycle Next CC Profile",        combatSafe = false, fn = function() DF:CycleNextCCProfile() end },
-    TOGGLE_SOLO       = { label = "Toggle Solo Mode",             combatSafe = false, fn = function()
+    TOGGLE_TEST       = { label = L["Toggle Test Mode"],           combatSafe = false, fn = function() if DF.ToggleTestMode then DF:ToggleTestMode() end end },
+    SWITCH_PROFILE    = { label = L["Quick Switch Profile"],       combatSafe = false, fn = function(mode, handle) DF:ShowPermanentMoverProfilePopup(handle) end },
+    SWITCH_CC_PROFILE = { label = L["Quick Switch CC Profile"],    combatSafe = false, fn = function(mode, handle) DF:ShowPermanentMoverCCProfilePopup(handle) end },
+    CYCLE_PROFILE     = { label = L["Cycle Next Profile"],         combatSafe = false, fn = function() DF:CycleNextProfile() end },
+    CYCLE_CC_PROFILE  = { label = L["Cycle Next CC Profile"],      combatSafe = false, fn = function() DF:CycleNextCCProfile() end },
+    TOGGLE_SOLO       = { label = L["Toggle Solo Mode"],           combatSafe = false, fn = function()
         local db = DF:GetDB()
         db.soloMode = not db.soloMode
         DF:UpdateAllFrames()
         if DF.UpdateDefaultPlayerFrame then DF:UpdateDefaultPlayerFrame() end
         print("|cff00ff00DandersFrames:|r " .. format(L["Solo mode %s"], db.soloMode and L["enabled"] or L["disabled"]))
     end },
-    RELOAD_UI         = { label = "Reload UI",                    combatSafe = true,  fn = function() ReloadUI() end },
-    RESET_POSITION    = { label = "Reset Position",               combatSafe = false, fn = function() DF:ResetPosition() end },
-    READY_CHECK       = { label = "Ready Check",                  combatSafe = true,  fn = function() DoReadyCheck() end },
-    PULL_TIMER        = { label = "Pull Timer",                   combatSafe = true,  fn = function()
+    RELOAD_UI         = { label = L["Reload UI"],                  combatSafe = true,  fn = function() ReloadUI() end },
+    RESET_POSITION    = { label = L["Reset Position"],             combatSafe = false, fn = function() DF:ResetPosition() end },
+    READY_CHECK       = { label = L["Ready Check"],                combatSafe = true,  fn = function() DoReadyCheck() end },
+    PULL_TIMER        = { label = L["Pull Timer"],                 combatSafe = true,  fn = function()
         local db = DF:GetDB()
         C_PartyInfo.DoCountdown(db.permanentMoverPullTimerDuration or 10)
     end },

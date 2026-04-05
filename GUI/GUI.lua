@@ -3180,11 +3180,11 @@ function GUI:CreateRoleOrderList(parent, dbTable, dbKey, callback, separateMelee
     
     -- Role display info with colors
     local ROLE_INFO = {
-        TANK = { name = "Tank", color = {0.53, 0.77, 0.84}, coords = {0, 19/64, 22/64, 41/64} },
-        HEALER = { name = "Healer", color = {0.25, 0.78, 0.25}, coords = {20/64, 39/64, 1/64, 20/64} },
-        MELEE = { name = "Melee DPS", color = {0.82, 0.65, 0.47}, coords = {20/64, 39/64, 22/64, 41/64} },
-        RANGED = { name = "Ranged DPS", color = {1.0, 0.49, 0.04}, coords = {20/64, 39/64, 22/64, 41/64} },
-        DAMAGER = { name = "DPS", color = {0.82, 0.65, 0.47}, coords = {20/64, 39/64, 22/64, 41/64} },
+        TANK = { name = L["Tank"], color = {0.53, 0.77, 0.84}, coords = {0, 19/64, 22/64, 41/64} },
+        HEALER = { name = L["Healer"], color = {0.25, 0.78, 0.25}, coords = {20/64, 39/64, 1/64, 20/64} },
+        MELEE = { name = L["Melee DPS"], color = {0.82, 0.65, 0.47}, coords = {20/64, 39/64, 22/64, 41/64} },
+        RANGED = { name = L["Ranged DPS"], color = {1.0, 0.49, 0.04}, coords = {20/64, 39/64, 22/64, 41/64} },
+        DAMAGER = { name = L["DPS"], color = {0.82, 0.65, 0.47}, coords = {20/64, 39/64, 22/64, 41/64} },
     }
     
     local roleItems = {}
@@ -3527,19 +3527,19 @@ function GUI:CreateClassOrderList(parent, dbTable, dbKey, callback)
     
     -- Class display info with colors (using Blizzard class colors)
     local CLASS_INFO = {
-        DEATHKNIGHT = { name = "Death Knight", color = {0.77, 0.12, 0.23} },
-        DEMONHUNTER = { name = "Demon Hunter", color = {0.64, 0.19, 0.79} },
-        DRUID = { name = "Druid", color = {1.0, 0.49, 0.04} },
-        EVOKER = { name = "Evoker", color = {0.20, 0.58, 0.50} },
-        HUNTER = { name = "Hunter", color = {0.67, 0.83, 0.45} },
-        MAGE = { name = "Mage", color = {0.25, 0.78, 0.92} },
-        MONK = { name = "Monk", color = {0.0, 1.0, 0.59} },
-        PALADIN = { name = "Paladin", color = {0.96, 0.55, 0.73} },
-        PRIEST = { name = "Priest", color = {1.0, 1.0, 1.0} },
-        ROGUE = { name = "Rogue", color = {1.0, 0.96, 0.41} },
-        SHAMAN = { name = "Shaman", color = {0.0, 0.44, 0.87} },
-        WARLOCK = { name = "Warlock", color = {0.53, 0.53, 0.93} },
-        WARRIOR = { name = "Warrior", color = {0.78, 0.61, 0.43} },
+        DEATHKNIGHT = { name = L["Death Knight"], color = {0.77, 0.12, 0.23} },
+        DEMONHUNTER = { name = L["Demon Hunter"], color = {0.64, 0.19, 0.79} },
+        DRUID = { name = L["Druid"], color = {1.0, 0.49, 0.04} },
+        EVOKER = { name = L["Evoker"], color = {0.20, 0.58, 0.50} },
+        HUNTER = { name = L["Hunter"], color = {0.67, 0.83, 0.45} },
+        MAGE = { name = L["Mage"], color = {0.25, 0.78, 0.92} },
+        MONK = { name = L["Monk"], color = {0.0, 1.0, 0.59} },
+        PALADIN = { name = L["Paladin"], color = {0.96, 0.55, 0.73} },
+        PRIEST = { name = L["Priest"], color = {1.0, 1.0, 1.0} },
+        ROGUE = { name = L["Rogue"], color = {1.0, 0.96, 0.41} },
+        SHAMAN = { name = L["Shaman"], color = {0.0, 0.44, 0.87} },
+        WARLOCK = { name = L["Warlock"], color = {0.53, 0.53, 0.93} },
+        WARRIOR = { name = L["Warrior"], color = {0.78, 0.61, 0.43} },
     }
     
     local ALL_CLASSES = {
