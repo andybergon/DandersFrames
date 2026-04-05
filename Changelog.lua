@@ -8,7 +8,6 @@ DF.CHANGELOG_TEXT = [===[
 
 ### Improvements
 * (Auras) Increase all buff, debuff, boss debuff, and missing buff offset slider ranges from ±20–100 to ±150 for consistency with Aura Designer
-* (Localization) Localize missing role/class drag-sort labels and permanent mover action labels
 
 ### Bug Fixes
 * (Click Casting) Fix click casting not working on pinned frames
