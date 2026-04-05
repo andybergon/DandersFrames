@@ -154,6 +154,16 @@ fi
 # Update CHANGELOG.md in working directory so the packager picks up changes
 echo "$CHANGELOG_CONTENT" > "$CHANGELOG_FILE"
 
+# Sync TOC version if it doesn't already match (avoids double-bump when manually updated)
+TOC_FILE="DandersFrames.toc"
+CURRENT_TOC_VERSION=$(grep '^## Version:' "$TOC_FILE" | sed 's/^## Version: //')
+if [ "$CURRENT_TOC_VERSION" != "$VERSION" ]; then
+    sed -i "s/^## Version: .*/## Version: ${VERSION}/" "$TOC_FILE"
+    echo "Updated TOC version: ${CURRENT_TOC_VERSION} -> ${VERSION}"
+else
+    echo "TOC version already matches: ${VERSION}"
+fi
+
 # Write Changelog.lua
 cat > "$OUTPUT_FILE" << LUAEOF
 local addonName, DF = ...
