@@ -434,6 +434,7 @@ L["Combat"] = true
 L["Combat Color"] = true
 L["Combat Limitation: All groups will not update with new players that join mid-combat."] = true
 L["Combat Limitation: Your group will not update with new players that join mid-combat."] = true
+L["Console"] = true
 L["Container"] = true
 L["Content type filters configured in Party tab."] = true
 L["Content Types"] = true

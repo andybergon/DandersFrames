@@ -7353,178 +7353,87 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
     -- ========================================
     CreateCategory("debug", L["Debug"])
 
-    -- Shared proxy table for debug settings (dropdown/slider don't support customGet/customSet)
-    local debugProxy = setmetatable({}, {
-        __index = function(_, k)
-            return DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug[k]
-        end,
-        __newindex = function(_, k, v)
-            if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
-                DandersFramesDB_v2.debug[k] = v
+    -- Single page containing four collapsible sections in workflow order:
+    -- Settings -> Categories -> Live Log -> Script Runner.
+    -- All sections are collapsible and start expanded.
+    local pageDebugConsole = CreateSubTab("debug", "debug_console", L["Console"])
+    BuildPage(pageDebugConsole, function(self, db, Add, AddSpace, AddSyncPoint)
+
+        -- Proxy for dropdown/slider keys (they don't support customGet/customSet)
+        local debugProxy = setmetatable({}, {
+            __index = function(_, k)
+                return DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug[k]
+            end,
+            __newindex = function(_, k, v)
+                if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
+                    DandersFramesDB_v2.debug[k] = v
+                end
+            end,
+        })
+
+        -- Tracks the currently-open collapsible section so AddToSection() can
+        -- automatically register subsequent widgets as its children.
+        local currentSection = nil
+
+        local function AddToSection(widget, height, col)
+            Add(widget, height, col)
+            if currentSection then
+                currentSection:RegisterChild(widget)
             end
-        end,
-    })
-
-    -- ========================================
-    -- Debug > Settings
-    -- ========================================
-    local pageDebugSettings = CreateSubTab("debug", "debug_settings", L["Settings"])
-    BuildPage(pageDebugSettings, function(self, db, Add, AddSpace, AddSyncPoint)
-
-        local function AddToSection(widget, col, colNum)
-            widget.layoutCol = colNum or col
-            table.insert(self.children, widget)
+            return widget
         end
 
-        -- Settings Group: Debug Console
-        local consoleSettingsGroup = GUI:CreateSettingsGroup(self.child, 280)
-        consoleSettingsGroup:AddWidget(GUI:CreateHeader(self.child, L["Debug Console"]), 40)
+        -- ============================================================
+        -- 1) SETTINGS SECTION
+        -- ============================================================
+        local settingsSection = Add(GUI:CreateCollapsibleSection(self.child, L["Settings"], true), 36, "both")
+        currentSection = settingsSection
 
-        -- Enable Debug Logging checkbox
-        consoleSettingsGroup:AddWidget(GUI:CreateCheckbox(self.child, L["Enable Debug Logging"], nil, nil, function()
-            if DF.DebugConsole then
-                DF.DebugConsole:RefreshDisplay()
-            end
+        AddToSection(GUI:CreateCheckbox(self.child, L["Enable Debug Logging"], nil, nil, function()
+            if DF.DebugConsole then DF.DebugConsole:RefreshDisplay() end
         end, function()
-            -- customGet
             return DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.enabled or false
         end, function(val)
-            -- customSet
             if DF.DebugConsole then
                 DF.DebugConsole:SetEnabled(val)
             elseif DandersFramesDB_v2 and DandersFramesDB_v2.debug then
                 DandersFramesDB_v2.debug.enabled = val
             end
-        end), 28)
+        end), 28, "both")
 
-        -- Echo to Chat checkbox
-        consoleSettingsGroup:AddWidget(GUI:CreateCheckbox(self.child, L["Echo to Chat"], nil, nil, nil, function()
-            -- customGet
+        AddToSection(GUI:CreateCheckbox(self.child, L["Echo to Chat"], nil, nil, nil, function()
             return DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.chatEcho or false
         end, function(val)
-            -- customSet
             if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
                 DandersFramesDB_v2.debug.chatEcho = val
             end
-        end), 28)
+        end), 28, "both")
 
-        -- Minimum Log Level dropdown
         local logLevelOptions = {
-            ["INFO"] = L["Info (All)"],
-            ["WARN"] = L["Warnings + Errors"],
+            ["INFO"]  = L["Info (All)"],
+            ["WARN"]  = L["Warnings + Errors"],
             ["ERROR"] = L["Errors Only"],
         }
-        local logLevelDropdown = GUI:CreateDropdown(self.child, L["Minimum Log Level"], logLevelOptions, debugProxy, "logLevel", function()
-            if DF.DebugConsole then
-                DF.DebugConsole:RefreshDisplay()
-            end
-        end)
-        consoleSettingsGroup:AddWidget(logLevelDropdown, 55)
+        AddToSection(GUI:CreateDropdown(self.child, L["Minimum Log Level"], logLevelOptions, debugProxy, "logLevel", function()
+            if DF.DebugConsole then DF.DebugConsole:RefreshDisplay() end
+        end), 55, 1)
 
-        -- Max Log Entries slider
-        local maxLinesSlider = GUI:CreateSlider(self.child, L["Max Log Entries"], 100, 10000, 100, debugProxy, "maxLines", function()
+        AddToSection(GUI:CreateSlider(self.child, L["Max Log Entries"], 100, 10000, 100, debugProxy, "maxLines", function()
             if DF.DebugConsole then
                 DF.DebugConsole:PruneLog()
                 DF.DebugConsole:RefreshDisplay()
             end
-        end)
-        consoleSettingsGroup:AddWidget(maxLinesSlider, 55)
+        end), 55, 2)
 
-        AddToSection(consoleSettingsGroup, nil, 1)
+        AddSyncPoint()
 
-        -- Settings Group: Script Runner
-        local scriptGroup = GUI:CreateSettingsGroup(self.child, 280)
-        scriptGroup:AddWidget(GUI:CreateHeader(self.child, L["Script Runner"]), 40)
+        -- ============================================================
+        -- 2) LOGGED CATEGORIES SECTION
+        -- ============================================================
+        local categoriesSection = Add(GUI:CreateCollapsibleSection(self.child, L["Logged Categories"], true), 36, "both")
+        currentSection = categoriesSection
 
-        -- Scrollable multiline EditBox for Lua input
-        local scriptScrollContainer = CreateFrame("Frame", nil, self.child, "BackdropTemplate")
-        scriptScrollContainer:SetSize(260, 120)
-        scriptScrollContainer:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Buttons\\WHITE8x8",
-            edgeSize = 1,
-        })
-        scriptScrollContainer:SetBackdropColor(0.05, 0.05, 0.05, 0.9)
-        scriptScrollContainer:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
-
-        local scriptScroll = CreateFrame("ScrollFrame", nil, scriptScrollContainer, "UIPanelScrollFrameTemplate")
-        scriptScroll:SetPoint("TOPLEFT", 4, -4)
-        scriptScroll:SetPoint("BOTTOMRIGHT", -22, 4)
-
-        local scriptEditBox = CreateFrame("EditBox", nil, scriptScroll)
-        scriptEditBox:SetMultiLine(true)
-        scriptEditBox:SetFontObject(GameFontHighlightSmall)
-        scriptEditBox:SetWidth(230)
-        scriptEditBox:SetHeight(112)
-        scriptEditBox:SetAutoFocus(false)
-        scriptEditBox:SetScript("OnEscapePressed", function(s) s:ClearFocus() end)
-        scriptEditBox:SetScript("OnTextChanged", function(s, userInput)
-            if userInput and DandersFramesDB_v2 and DandersFramesDB_v2.debug then
-                DandersFramesDB_v2.debug.lastScript = s:GetText()
-            end
-        end)
-        scriptScroll:SetScrollChild(scriptEditBox)
-
-        -- Restore last script from saved variables
-        if DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.lastScript then
-            scriptEditBox:SetText(DandersFramesDB_v2.debug.lastScript)
-        end
-
-        scriptScrollContainer:EnableMouse(true)
-        scriptScrollContainer:SetScript("OnMouseDown", function() scriptEditBox:SetFocus() end)
-        scriptScroll:EnableMouse(true)
-        scriptScroll:SetScript("OnMouseDown", function() scriptEditBox:SetFocus() end)
-
-        scriptGroup:AddWidget(scriptScrollContainer, 125)
-
-        -- Status label (shows result or error)
-        local scriptStatusLabel = GUI:CreateLabel(self.child, "", 260)
-        scriptGroup:AddWidget(scriptStatusLabel, 20)
-
-        -- Run button
-        scriptGroup:AddWidget(GUI:CreateButton(self.child, L["Run Script"], 260, 26, function()
-            local code = scriptEditBox:GetText()
-            if not code or code == "" then
-                scriptStatusLabel:SetText("|cff666666No script to run.|r")
-                return
-            end
-            local fn, err = loadstring(code)
-            if not fn then
-                scriptStatusLabel:SetText("|cffff6666Error: " .. tostring(err) .. "|r")
-                DF:DebugError("SCRIPT", "Compile error: %s", tostring(err))
-                return
-            end
-            local ok, result = pcall(fn)
-            if ok then
-                if result ~= nil then
-                    scriptStatusLabel:SetText("|cff88ccffResult: " .. tostring(result) .. "|r")
-                else
-                    scriptStatusLabel:SetText("|cff88ff88Script executed successfully.|r")
-                end
-            else
-                scriptStatusLabel:SetText("|cffff6666Runtime: " .. tostring(result) .. "|r")
-                DF:DebugError("SCRIPT", "Runtime error: %s", tostring(result))
-            end
-        end), 32)
-
-        AddToSection(scriptGroup, nil, 1)
-    end)
-
-    -- ========================================
-    -- Debug > Categories
-    -- ========================================
-    local pageDebugCategories = CreateSubTab("debug", "debug_categories", L["Categories"])
-    BuildPage(pageDebugCategories, function(self, db, Add, AddSpace, AddSyncPoint)
-
-        local function AddToSection(widget, col, colNum)
-            widget.layoutCol = colNum or col
-            table.insert(self.children, widget)
-        end
-
-        -- Full-width settings group spanning both columns
-        local filterGroup = GUI:CreateSettingsGroup(self.child, 540)
-        filterGroup:AddWidget(GUI:CreateHeader(self.child, L["Logged Categories"]), 40)
-        filterGroup:AddWidget(GUI:CreateLabel(self.child, "|cff888888" .. L["Unchecked categories are not logged at all. Disable noisy categories before reproducing a bug to keep the buffer focused."] .. "|r", 540), 36)
+        AddToSection(GUI:CreateLabel(self.child, "|cff888888" .. L["Unchecked categories are not logged at all. Disable noisy categories before reproducing a bug to keep the buffer focused."] .. "|r", 540), 36, "both")
 
         -- All / None buttons row
         local filterBtnRow = CreateFrame("Frame", nil, self.child)
@@ -7533,8 +7442,8 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local function CollectAllCategories()
             local set = {}
             if DF.DebugConsole then
-                for _, group in ipairs(DF.DebugConsole:GetCategoryGroups()) do
-                    for _, cat in ipairs(group.categories) do
+                for _, g in ipairs(DF.DebugConsole:GetCategoryGroups()) do
+                    for _, cat in ipairs(g.categories) do
                         set[cat.key] = true
                     end
                 end
@@ -7545,7 +7454,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             return set
         end
 
-        -- Track all created rows so All/None can refresh their checkbox state
+        -- Track all created rows so All/None can refresh their visual state
         self.filterRows = {}
         local function RefreshAllRows()
             for _, row in pairs(self.filterRows) do
@@ -7576,19 +7485,17 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         end)
         btnNone:SetPoint("LEFT", btnAll, "RIGHT", 6, 0)
 
-        filterGroup:AddWidget(filterBtnRow, 28)
+        AddToSection(filterBtnRow, 28, "both")
 
         if DF.DebugConsole then
-            -- Render declared groups in the order defined in DebugConsole.lua
             local groups = DF.DebugConsole:GetCategoryGroups()
             for _, group in ipairs(groups) do
                 local groupLabel = L[group.name] or group.name
-                local subHeader = GUI:CreateLabel(self.child, "|cffeda55f" .. groupLabel .. "|r", 540)
-                filterGroup:AddWidget(subHeader, 22)
+                AddToSection(GUI:CreateLabel(self.child, "|cffeda55f" .. groupLabel .. "|r", 540), 22, "both")
                 for _, cat in ipairs(group.categories) do
                     local row = GUI:CreateDebugCategoryRow(self.child, cat.key, cat.desc, 540)
                     self.filterRows[cat.key] = row
-                    filterGroup:AddWidget(row, 28)
+                    AddToSection(row, 28, "both")
                 end
             end
 
@@ -7603,34 +7510,22 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             end
             if #extras > 0 then
                 table.sort(extras)
-                local extrasHeader = GUI:CreateLabel(self.child, "|cffeda55f" .. L["Discovered"] .. "|r", 540)
-                filterGroup:AddWidget(extrasHeader, 22)
+                AddToSection(GUI:CreateLabel(self.child, "|cffeda55f" .. L["Discovered"] .. "|r", 540), 22, "both")
                 for _, cat in ipairs(extras) do
                     local row = GUI:CreateDebugCategoryRow(self.child, cat, nil, 540)
                     self.filterRows[cat] = row
-                    filterGroup:AddWidget(row, 28)
+                    AddToSection(row, 28, "both")
                 end
             end
         end
 
-        AddToSection(filterGroup, nil, "both")
-    end)
+        AddSyncPoint()
 
-    -- ========================================
-    -- Debug > Live Log
-    -- This sub-tab keeps the "debug_console" name so the existing
-    -- /df console slash command still resolves to it.
-    -- ========================================
-    local pageDebugLog = CreateSubTab("debug", "debug_console", L["Live Log"])
-    BuildPage(pageDebugLog, function(self, db, Add, AddSpace, AddSyncPoint)
-
-        local function AddToSection(widget, col, colNum)
-            widget.layoutCol = colNum or col
-            table.insert(self.children, widget)
-        end
-
-        local logViewerGroup = GUI:CreateSettingsGroup(self.child, 540)
-        logViewerGroup:AddWidget(GUI:CreateHeader(self.child, L["Live Log"]), 40)
+        -- ============================================================
+        -- 3) LIVE LOG SECTION
+        -- ============================================================
+        local logSection = Add(GUI:CreateCollapsibleSection(self.child, L["Live Log"], true), 36, "both")
+        currentSection = logSection
 
         -- Entry count label
         local entryCountLabel = GUI:CreateLabel(self.child, "", 540)
@@ -7639,9 +7534,9 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             entryCountLabel:SetText("|cff888888" .. format(L["Log entries: %d"], count) .. "|r")
         end
         UpdateEntryCount()
-        logViewerGroup:AddWidget(entryCountLabel, 20)
+        AddToSection(entryCountLabel, 20, "both")
 
-        -- Action buttons row
+        -- Action buttons row (Refresh / Clear Log / Copy to Clipboard)
         local actionRow = CreateFrame("Frame", nil, self.child)
         actionRow:SetSize(540, 28)
 
@@ -7665,7 +7560,6 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
             if not DF.DebugConsole then return end
             local text = DF.DebugConsole:GetExportText()
 
-            -- Export popup
             local popup = CreateFrame("Frame", "DFDebugExportPopup", UIParent, "BackdropTemplate")
             popup:SetSize(500, 350)
             popup:SetPoint("CENTER")
@@ -7731,7 +7625,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         end)
         copyBtn:SetPoint("LEFT", clearBtn, "RIGHT", 6, 0)
 
-        logViewerGroup:AddWidget(actionRow, 32)
+        AddToSection(actionRow, 32, "both")
 
         -- Full-width log viewer
         local logScrollContainer = CreateFrame("Frame", nil, self.child, "BackdropTemplate")
@@ -7755,7 +7649,6 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         logEditBox:SetHeight(470)
         logEditBox:SetAutoFocus(false)
         logEditBox:SetScript("OnEscapePressed", function(s) s:ClearFocus() end)
-        -- Make read-only by reverting any typed text via display refresh
         logEditBox:SetScript("OnTextChanged", function(s, userInput)
             if userInput and DF.DebugConsole then
                 DF.DebugConsole:RefreshDisplay()
@@ -7768,9 +7661,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         logScroll:EnableMouse(true)
         logScroll:SetScript("OnMouseDown", function() logEditBox:SetFocus() end)
 
-        logViewerGroup:AddWidget(logScrollContainer, 485)
-
-        AddToSection(logViewerGroup, nil, "both")
+        AddToSection(logScrollContainer, 485, "both")
 
         -- Register live EditBox with DebugConsole
         if DF.DebugConsole then
@@ -7785,6 +7676,83 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
                 DF.DebugConsole:SetLiveEditBox(nil)
             end
         end)
+
+        AddSyncPoint()
+
+        -- ============================================================
+        -- 4) SCRIPT RUNNER SECTION (developer-only utility, unrelated)
+        -- ============================================================
+        local scriptSection = Add(GUI:CreateCollapsibleSection(self.child, L["Script Runner"], true), 36, "both")
+        currentSection = scriptSection
+
+        local scriptScrollContainer = CreateFrame("Frame", nil, self.child, "BackdropTemplate")
+        scriptScrollContainer:SetSize(540, 120)
+        scriptScrollContainer:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        scriptScrollContainer:SetBackdropColor(0.05, 0.05, 0.05, 0.9)
+        scriptScrollContainer:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+
+        local scriptScroll = CreateFrame("ScrollFrame", nil, scriptScrollContainer, "UIPanelScrollFrameTemplate")
+        scriptScroll:SetPoint("TOPLEFT", 4, -4)
+        scriptScroll:SetPoint("BOTTOMRIGHT", -22, 4)
+
+        local scriptEditBox = CreateFrame("EditBox", nil, scriptScroll)
+        scriptEditBox:SetMultiLine(true)
+        scriptEditBox:SetFontObject(GameFontHighlightSmall)
+        scriptEditBox:SetWidth(510)
+        scriptEditBox:SetHeight(112)
+        scriptEditBox:SetAutoFocus(false)
+        scriptEditBox:SetScript("OnEscapePressed", function(s) s:ClearFocus() end)
+        scriptEditBox:SetScript("OnTextChanged", function(s, userInput)
+            if userInput and DandersFramesDB_v2 and DandersFramesDB_v2.debug then
+                DandersFramesDB_v2.debug.lastScript = s:GetText()
+            end
+        end)
+        scriptScroll:SetScrollChild(scriptEditBox)
+
+        if DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.lastScript then
+            scriptEditBox:SetText(DandersFramesDB_v2.debug.lastScript)
+        end
+
+        scriptScrollContainer:EnableMouse(true)
+        scriptScrollContainer:SetScript("OnMouseDown", function() scriptEditBox:SetFocus() end)
+        scriptScroll:EnableMouse(true)
+        scriptScroll:SetScript("OnMouseDown", function() scriptEditBox:SetFocus() end)
+
+        AddToSection(scriptScrollContainer, 125, "both")
+
+        local scriptStatusLabel = GUI:CreateLabel(self.child, "", 540)
+        AddToSection(scriptStatusLabel, 20, "both")
+
+        AddToSection(GUI:CreateButton(self.child, L["Run Script"], 540, 26, function()
+            local code = scriptEditBox:GetText()
+            if not code or code == "" then
+                scriptStatusLabel:SetText("|cff666666No script to run.|r")
+                return
+            end
+            local fn, err = loadstring(code)
+            if not fn then
+                scriptStatusLabel:SetText("|cffff6666Error: " .. tostring(err) .. "|r")
+                DF:DebugError("SCRIPT", "Compile error: %s", tostring(err))
+                return
+            end
+            local ok, result = pcall(fn)
+            if ok then
+                if result ~= nil then
+                    scriptStatusLabel:SetText("|cff88ccffResult: " .. tostring(result) .. "|r")
+                else
+                    scriptStatusLabel:SetText("|cff88ff88Script executed successfully.|r")
+                end
+            else
+                scriptStatusLabel:SetText("|cffff6666Runtime: " .. tostring(result) .. "|r")
+                DF:DebugError("SCRIPT", "Runtime error: %s", tostring(result))
+            end
+        end), 32, "both")
+
+        currentSection = nil
     end)
 
 end
