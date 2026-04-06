@@ -7353,31 +7353,28 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
     -- ========================================
     CreateCategory("debug", L["Debug"])
 
-    -- Debug > Console
-    local pageDebugConsole = CreateSubTab("debug", "debug_console", L["Console"])
-    BuildPage(pageDebugConsole, function(self, db, Add, AddSpace, AddSyncPoint)
+    -- Shared proxy table for debug settings (dropdown/slider don't support customGet/customSet)
+    local debugProxy = setmetatable({}, {
+        __index = function(_, k)
+            return DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug[k]
+        end,
+        __newindex = function(_, k, v)
+            if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
+                DandersFramesDB_v2.debug[k] = v
+            end
+        end,
+    })
 
-        -- Proxy table for debug settings (dropdown/slider don't support customGet/customSet)
-        local debugProxy = setmetatable({}, {
-            __index = function(_, k)
-                return DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug[k]
-            end,
-            __newindex = function(_, k, v)
-                if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
-                    DandersFramesDB_v2.debug[k] = v
-                end
-            end,
-        })
+    -- ========================================
+    -- Debug > Settings
+    -- ========================================
+    local pageDebugSettings = CreateSubTab("debug", "debug_settings", L["Settings"])
+    BuildPage(pageDebugSettings, function(self, db, Add, AddSpace, AddSyncPoint)
 
-        -- Helper to add to section (for explicit column control)
         local function AddToSection(widget, col, colNum)
             widget.layoutCol = colNum or col
             table.insert(self.children, widget)
         end
-
-        -- ========================================
-        -- COLUMN 1: CONTROLS
-        -- ========================================
 
         -- Settings Group: Debug Console
         local consoleSettingsGroup = GUI:CreateSettingsGroup(self.child, 280)
@@ -7433,230 +7430,7 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         end)
         consoleSettingsGroup:AddWidget(maxLinesSlider, 55)
 
-        -- Entry count label
-        local entryCountLabel = GUI:CreateLabel(self.child, "", 260)
-        local function UpdateEntryCount()
-            local count = DF.DebugConsole and DF.DebugConsole:GetLogEntryCount() or 0
-            entryCountLabel:SetText("|cff888888Log entries: " .. count .. "|r")
-        end
-        UpdateEntryCount()
-        consoleSettingsGroup:AddWidget(entryCountLabel, 20)
-
         AddToSection(consoleSettingsGroup, nil, 1)
-
-        -- Settings Group: Logged Categories
-        -- Unchecking a category stops it from being logged at the source — useful
-        -- for keeping the maxLines buffer focused on the category you're debugging.
-        local filterGroup = GUI:CreateSettingsGroup(self.child, 280)
-        filterGroup:AddWidget(GUI:CreateHeader(self.child, L["Logged Categories"]), 40)
-        filterGroup:AddWidget(GUI:CreateLabel(self.child, "|cff888888" .. L["Unchecked categories are not logged at all. Disable noisy categories before reproducing a bug to keep the buffer focused."] .. "|r", 260), 36)
-
-        -- All / None buttons row
-        local filterBtnRow = CreateFrame("Frame", nil, self.child)
-        filterBtnRow:SetSize(260, 24)
-
-        -- Helper: union of declared registry + auto-discovered categories
-        local function CollectAllCategories()
-            local set = {}
-            if DF.DebugConsole then
-                for _, group in ipairs(DF.DebugConsole:GetCategoryGroups()) do
-                    for _, cat in ipairs(group.categories) do
-                        set[cat.key] = true
-                    end
-                end
-                for cat in pairs(DF.DebugConsole:GetKnownCategories()) do
-                    set[cat] = true
-                end
-            end
-            return set
-        end
-
-        local btnAll = GUI:CreateButton(filterBtnRow, L["All"], 60, 22, function()
-            if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
-                local filters = DandersFramesDB_v2.debug.filters
-                for cat in pairs(CollectAllCategories()) do
-                    filters[cat] = true
-                end
-            end
-            -- Refresh filter checkboxes and display
-            if self.filterCheckboxes then
-                for _, cb in pairs(self.filterCheckboxes) do
-                    if cb.SetChecked then cb:SetChecked(true) end
-                end
-            end
-            if DF.DebugConsole then DF.DebugConsole:RefreshDisplay() end
-        end)
-        btnAll:SetPoint("LEFT", 0, 0)
-
-        local btnNone = GUI:CreateButton(filterBtnRow, L["None"], 60, 22, function()
-            if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
-                local filters = DandersFramesDB_v2.debug.filters
-                for cat in pairs(CollectAllCategories()) do
-                    filters[cat] = false
-                end
-            end
-            -- Refresh filter checkboxes and display
-            if self.filterCheckboxes then
-                for _, cb in pairs(self.filterCheckboxes) do
-                    if cb.SetChecked then cb:SetChecked(false) end
-                end
-            end
-            if DF.DebugConsole then DF.DebugConsole:RefreshDisplay() end
-        end)
-        btnNone:SetPoint("LEFT", btnAll, "RIGHT", 6, 0)
-
-        filterGroup:AddWidget(filterBtnRow, 28)
-
-        -- Grouped category checkboxes — declared categories always visible,
-        -- auto-discovered extras appear under a dynamic "Other" group.
-        self.filterCheckboxes = {}
-
-        local function CreateCategoryCheckbox(catKey, catDesc)
-            local label = catKey
-            if catDesc and catDesc ~= "" then
-                label = catKey .. "  |cff888888" .. catDesc .. "|r"
-            end
-            local cb = GUI:CreateCheckbox(self.child, label, nil, nil, function()
-                if DF.DebugConsole then DF.DebugConsole:RefreshDisplay() end
-            end, function()
-                -- customGet: absent = visible (true), explicit false = hidden
-                local filters = DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.filters
-                if not filters then return true end
-                return filters[catKey] ~= false
-            end, function(val)
-                -- customSet
-                if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
-                    DandersFramesDB_v2.debug.filters[catKey] = val
-                end
-            end)
-            self.filterCheckboxes[catKey] = cb
-            return cb
-        end
-
-        if DF.DebugConsole then
-            -- Render declared groups in the order defined in DebugConsole.lua
-            local groups = DF.DebugConsole:GetCategoryGroups()
-            for _, group in ipairs(groups) do
-                local groupLabel = L[group.name] or group.name
-                local subHeader = GUI:CreateLabel(self.child, "|cffeda55f" .. groupLabel .. "|r", 260)
-                filterGroup:AddWidget(subHeader, 22)
-                for _, cat in ipairs(group.categories) do
-                    filterGroup:AddWidget(CreateCategoryCheckbox(cat.key, cat.desc), 22)
-                end
-            end
-
-            -- Append auto-discovered categories that aren't in the registry
-            local registered = DF.DebugConsole:GetRegisteredCategorySet()
-            local known = DF.DebugConsole:GetKnownCategories()
-            local extras = {}
-            for cat in pairs(known) do
-                if not registered[cat] then
-                    tinsert(extras, cat)
-                end
-            end
-            if #extras > 0 then
-                table.sort(extras)
-                local extrasHeader = GUI:CreateLabel(self.child, "|cffeda55f" .. L["Discovered"] .. "|r", 260)
-                filterGroup:AddWidget(extrasHeader, 22)
-                for _, cat in ipairs(extras) do
-                    filterGroup:AddWidget(CreateCategoryCheckbox(cat, nil), 22)
-                end
-            end
-        end
-
-        AddToSection(filterGroup, nil, 1)
-
-        -- Settings Group: Actions
-        local actionsGroup = GUI:CreateSettingsGroup(self.child, 280)
-        actionsGroup:AddWidget(GUI:CreateHeader(self.child, L["Actions"]), 40)
-
-        -- Clear Log button
-        actionsGroup:AddWidget(GUI:CreateButton(self.child, L["Clear Log"], 260, 26, function()
-            if DF.DebugConsole then
-                DF.DebugConsole:ClearLog()
-                UpdateEntryCount()
-            end
-        end), 32)
-
-        -- Copy Filtered to Clipboard button
-        actionsGroup:AddWidget(GUI:CreateButton(self.child, L["Copy to Clipboard"], 260, 26, function()
-            if not DF.DebugConsole then return end
-            local text = DF.DebugConsole:GetExportText()
-
-            -- Create export popup
-            local popup = CreateFrame("Frame", "DFDebugExportPopup", UIParent, "BackdropTemplate")
-            popup:SetSize(500, 350)
-            popup:SetPoint("CENTER")
-            popup:SetFrameStrata("DIALOG")
-            popup:SetFrameLevel(200)
-            if not popup.SetBackdrop then Mixin(popup, BackdropTemplateMixin) end
-            popup:SetBackdrop({
-                bgFile = "Interface\\Buttons\\WHITE8x8",
-                edgeFile = "Interface\\Buttons\\WHITE8x8",
-                edgeSize = 1,
-            })
-            popup:SetBackdropColor(0.1, 0.1, 0.1, 0.95)
-            popup:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
-            popup:EnableMouse(true)
-            popup:SetMovable(true)
-            popup:RegisterForDrag("LeftButton")
-            popup:SetScript("OnDragStart", popup.StartMoving)
-            popup:SetScript("OnDragStop", popup.StopMovingOrSizing)
-
-            -- Title
-            local title = popup:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-            title:SetPoint("TOP", 0, -10)
-            title:SetText(L["Debug Log Export (Filtered)"])
-            title:SetTextColor(0.9, 0.9, 0.9)
-
-            -- Instructions
-            local instructions = popup:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            instructions:SetPoint("TOP", title, "BOTTOM", 0, -4)
-            instructions:SetText(L["Press Ctrl+A to select all, then Ctrl+C to copy"])
-            instructions:SetTextColor(0.6, 0.6, 0.6)
-
-            -- Scroll container
-            local scrollContainer = CreateFrame("Frame", nil, popup, "BackdropTemplate")
-            scrollContainer:SetPoint("TOPLEFT", 12, -45)
-            scrollContainer:SetPoint("BOTTOMRIGHT", -12, 40)
-            scrollContainer:SetBackdrop({
-                bgFile = "Interface\\Buttons\\WHITE8x8",
-                edgeFile = "Interface\\Buttons\\WHITE8x8",
-                edgeSize = 1,
-            })
-            scrollContainer:SetBackdropColor(0.05, 0.05, 0.05, 0.9)
-            scrollContainer:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
-
-            local scroll = CreateFrame("ScrollFrame", nil, scrollContainer, "UIPanelScrollFrameTemplate")
-            scroll:SetPoint("TOPLEFT", 4, -4)
-            scroll:SetPoint("BOTTOMRIGHT", -22, 4)
-
-            local editBox = CreateFrame("EditBox", nil, scroll)
-            editBox:SetMultiLine(true)
-            editBox:SetFontObject(GameFontHighlightSmall)
-            editBox:SetWidth(440)
-            editBox:SetAutoFocus(true)
-            editBox:SetScript("OnEscapePressed", function()
-                popup:Hide()
-            end)
-            scroll:SetScrollChild(editBox)
-
-            editBox:SetText(text)
-            editBox:HighlightText()
-
-            -- Close button
-            local closeBtn = GUI:CreateButton(popup, L["Close"], 80, 24, function()
-                popup:Hide()
-            end)
-            closeBtn:SetPoint("BOTTOM", 0, 10)
-
-            popup:SetScript("OnHide", function(self)
-                self:SetParent(nil)
-                self:ClearAllPoints()
-            end)
-        end), 32)
-
-        AddToSection(actionsGroup, nil, 1)
 
         -- Settings Group: Script Runner
         local scriptGroup = GUI:CreateSettingsGroup(self.child, 280)
@@ -7734,17 +7508,234 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         end), 32)
 
         AddToSection(scriptGroup, nil, 1)
+    end)
 
-        -- ========================================
-        -- COLUMN 2: LOG VIEWER
-        -- ========================================
+    -- ========================================
+    -- Debug > Categories
+    -- ========================================
+    local pageDebugCategories = CreateSubTab("debug", "debug_categories", L["Categories"])
+    BuildPage(pageDebugCategories, function(self, db, Add, AddSpace, AddSyncPoint)
 
-        local logViewerGroup = GUI:CreateSettingsGroup(self.child, 340)
-        logViewerGroup:AddWidget(GUI:CreateHeader(self.child, L["Log Viewer"]), 40)
+        local function AddToSection(widget, col, colNum)
+            widget.layoutCol = colNum or col
+            table.insert(self.children, widget)
+        end
 
-        -- Scrollable read-only EditBox for log display
+        -- Full-width settings group spanning both columns
+        local filterGroup = GUI:CreateSettingsGroup(self.child, 540)
+        filterGroup:AddWidget(GUI:CreateHeader(self.child, L["Logged Categories"]), 40)
+        filterGroup:AddWidget(GUI:CreateLabel(self.child, "|cff888888" .. L["Unchecked categories are not logged at all. Disable noisy categories before reproducing a bug to keep the buffer focused."] .. "|r", 540), 36)
+
+        -- All / None buttons row
+        local filterBtnRow = CreateFrame("Frame", nil, self.child)
+        filterBtnRow:SetSize(540, 24)
+
+        local function CollectAllCategories()
+            local set = {}
+            if DF.DebugConsole then
+                for _, group in ipairs(DF.DebugConsole:GetCategoryGroups()) do
+                    for _, cat in ipairs(group.categories) do
+                        set[cat.key] = true
+                    end
+                end
+                for cat in pairs(DF.DebugConsole:GetKnownCategories()) do
+                    set[cat] = true
+                end
+            end
+            return set
+        end
+
+        -- Track all created rows so All/None can refresh their checkbox state
+        self.filterRows = {}
+        local function RefreshAllRows()
+            for _, row in pairs(self.filterRows) do
+                if row.RefreshState then row:RefreshState() end
+            end
+            if DF.DebugConsole then DF.DebugConsole:RefreshDisplay() end
+        end
+
+        local btnAll = GUI:CreateButton(filterBtnRow, L["All"], 60, 22, function()
+            if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
+                local filters = DandersFramesDB_v2.debug.filters
+                for cat in pairs(CollectAllCategories()) do
+                    filters[cat] = true
+                end
+            end
+            RefreshAllRows()
+        end)
+        btnAll:SetPoint("LEFT", 0, 0)
+
+        local btnNone = GUI:CreateButton(filterBtnRow, L["None"], 60, 22, function()
+            if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
+                local filters = DandersFramesDB_v2.debug.filters
+                for cat in pairs(CollectAllCategories()) do
+                    filters[cat] = false
+                end
+            end
+            RefreshAllRows()
+        end)
+        btnNone:SetPoint("LEFT", btnAll, "RIGHT", 6, 0)
+
+        filterGroup:AddWidget(filterBtnRow, 28)
+
+        if DF.DebugConsole then
+            -- Render declared groups in the order defined in DebugConsole.lua
+            local groups = DF.DebugConsole:GetCategoryGroups()
+            for _, group in ipairs(groups) do
+                local groupLabel = L[group.name] or group.name
+                local subHeader = GUI:CreateLabel(self.child, "|cffeda55f" .. groupLabel .. "|r", 540)
+                filterGroup:AddWidget(subHeader, 22)
+                for _, cat in ipairs(group.categories) do
+                    local row = GUI:CreateDebugCategoryRow(self.child, cat.key, cat.desc, 540)
+                    self.filterRows[cat.key] = row
+                    filterGroup:AddWidget(row, 28)
+                end
+            end
+
+            -- Append auto-discovered categories that aren't in the registry
+            local registered = DF.DebugConsole:GetRegisteredCategorySet()
+            local known = DF.DebugConsole:GetKnownCategories()
+            local extras = {}
+            for cat in pairs(known) do
+                if not registered[cat] then
+                    tinsert(extras, cat)
+                end
+            end
+            if #extras > 0 then
+                table.sort(extras)
+                local extrasHeader = GUI:CreateLabel(self.child, "|cffeda55f" .. L["Discovered"] .. "|r", 540)
+                filterGroup:AddWidget(extrasHeader, 22)
+                for _, cat in ipairs(extras) do
+                    local row = GUI:CreateDebugCategoryRow(self.child, cat, nil, 540)
+                    self.filterRows[cat] = row
+                    filterGroup:AddWidget(row, 28)
+                end
+            end
+        end
+
+        AddToSection(filterGroup, nil, "both")
+    end)
+
+    -- ========================================
+    -- Debug > Live Log
+    -- This sub-tab keeps the "debug_console" name so the existing
+    -- /df console slash command still resolves to it.
+    -- ========================================
+    local pageDebugLog = CreateSubTab("debug", "debug_console", L["Live Log"])
+    BuildPage(pageDebugLog, function(self, db, Add, AddSpace, AddSyncPoint)
+
+        local function AddToSection(widget, col, colNum)
+            widget.layoutCol = colNum or col
+            table.insert(self.children, widget)
+        end
+
+        local logViewerGroup = GUI:CreateSettingsGroup(self.child, 540)
+        logViewerGroup:AddWidget(GUI:CreateHeader(self.child, L["Live Log"]), 40)
+
+        -- Entry count label
+        local entryCountLabel = GUI:CreateLabel(self.child, "", 540)
+        local function UpdateEntryCount()
+            local count = DF.DebugConsole and DF.DebugConsole:GetLogEntryCount() or 0
+            entryCountLabel:SetText("|cff888888" .. format(L["Log entries: %d"], count) .. "|r")
+        end
+        UpdateEntryCount()
+        logViewerGroup:AddWidget(entryCountLabel, 20)
+
+        -- Action buttons row
+        local actionRow = CreateFrame("Frame", nil, self.child)
+        actionRow:SetSize(540, 28)
+
+        local refreshBtn = GUI:CreateButton(actionRow, L["Refresh"], 100, 24, function()
+            if DF.DebugConsole then
+                DF.DebugConsole:RefreshDisplay()
+                UpdateEntryCount()
+            end
+        end)
+        refreshBtn:SetPoint("LEFT", 0, 0)
+
+        local clearBtn = GUI:CreateButton(actionRow, L["Clear Log"], 100, 24, function()
+            if DF.DebugConsole then
+                DF.DebugConsole:ClearLog()
+                UpdateEntryCount()
+            end
+        end)
+        clearBtn:SetPoint("LEFT", refreshBtn, "RIGHT", 6, 0)
+
+        local copyBtn = GUI:CreateButton(actionRow, L["Copy to Clipboard"], 140, 24, function()
+            if not DF.DebugConsole then return end
+            local text = DF.DebugConsole:GetExportText()
+
+            -- Export popup
+            local popup = CreateFrame("Frame", "DFDebugExportPopup", UIParent, "BackdropTemplate")
+            popup:SetSize(500, 350)
+            popup:SetPoint("CENTER")
+            popup:SetFrameStrata("DIALOG")
+            popup:SetFrameLevel(200)
+            if not popup.SetBackdrop then Mixin(popup, BackdropTemplateMixin) end
+            popup:SetBackdrop({
+                bgFile = "Interface\\Buttons\\WHITE8x8",
+                edgeFile = "Interface\\Buttons\\WHITE8x8",
+                edgeSize = 1,
+            })
+            popup:SetBackdropColor(0.1, 0.1, 0.1, 0.95)
+            popup:SetBackdropBorderColor(0.3, 0.3, 0.3, 1)
+            popup:EnableMouse(true)
+            popup:SetMovable(true)
+            popup:RegisterForDrag("LeftButton")
+            popup:SetScript("OnDragStart", popup.StartMoving)
+            popup:SetScript("OnDragStop", popup.StopMovingOrSizing)
+
+            local title = popup:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+            title:SetPoint("TOP", 0, -10)
+            title:SetText(L["Debug Log Export (Filtered)"])
+            title:SetTextColor(0.9, 0.9, 0.9)
+
+            local instructions = popup:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            instructions:SetPoint("TOP", title, "BOTTOM", 0, -4)
+            instructions:SetText(L["Press Ctrl+A to select all, then Ctrl+C to copy"])
+            instructions:SetTextColor(0.6, 0.6, 0.6)
+
+            local scrollContainer = CreateFrame("Frame", nil, popup, "BackdropTemplate")
+            scrollContainer:SetPoint("TOPLEFT", 12, -45)
+            scrollContainer:SetPoint("BOTTOMRIGHT", -12, 40)
+            scrollContainer:SetBackdrop({
+                bgFile = "Interface\\Buttons\\WHITE8x8",
+                edgeFile = "Interface\\Buttons\\WHITE8x8",
+                edgeSize = 1,
+            })
+            scrollContainer:SetBackdropColor(0.05, 0.05, 0.05, 0.9)
+            scrollContainer:SetBackdropBorderColor(0.2, 0.2, 0.2, 1)
+
+            local scroll = CreateFrame("ScrollFrame", nil, scrollContainer, "UIPanelScrollFrameTemplate")
+            scroll:SetPoint("TOPLEFT", 4, -4)
+            scroll:SetPoint("BOTTOMRIGHT", -22, 4)
+
+            local editBox = CreateFrame("EditBox", nil, scroll)
+            editBox:SetMultiLine(true)
+            editBox:SetFontObject(GameFontHighlightSmall)
+            editBox:SetWidth(440)
+            editBox:SetAutoFocus(true)
+            editBox:SetScript("OnEscapePressed", function() popup:Hide() end)
+            scroll:SetScrollChild(editBox)
+
+            editBox:SetText(text)
+            editBox:HighlightText()
+
+            local closeBtn = GUI:CreateButton(popup, L["Close"], 80, 24, function() popup:Hide() end)
+            closeBtn:SetPoint("BOTTOM", 0, 10)
+
+            popup:SetScript("OnHide", function(s)
+                s:SetParent(nil)
+                s:ClearAllPoints()
+            end)
+        end)
+        copyBtn:SetPoint("LEFT", clearBtn, "RIGHT", 6, 0)
+
+        logViewerGroup:AddWidget(actionRow, 32)
+
+        -- Full-width log viewer
         local logScrollContainer = CreateFrame("Frame", nil, self.child, "BackdropTemplate")
-        logScrollContainer:SetSize(320, 400)
+        logScrollContainer:SetSize(540, 480)
         logScrollContainer:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
             edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -7760,11 +7751,11 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local logEditBox = CreateFrame("EditBox", nil, logScroll)
         logEditBox:SetMultiLine(true)
         logEditBox:SetFontObject(GameFontHighlightSmall)
-        logEditBox:SetWidth(290)
-        logEditBox:SetHeight(390)
+        logEditBox:SetWidth(510)
+        logEditBox:SetHeight(470)
         logEditBox:SetAutoFocus(false)
         logEditBox:SetScript("OnEscapePressed", function(s) s:ClearFocus() end)
-        -- Make read-only by reverting any typed text
+        -- Make read-only by reverting any typed text via display refresh
         logEditBox:SetScript("OnTextChanged", function(s, userInput)
             if userInput and DF.DebugConsole then
                 DF.DebugConsole:RefreshDisplay()
@@ -7777,23 +7768,13 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         logScroll:EnableMouse(true)
         logScroll:SetScript("OnMouseDown", function() logEditBox:SetFocus() end)
 
-        logViewerGroup:AddWidget(logScrollContainer, 405)
+        logViewerGroup:AddWidget(logScrollContainer, 485)
 
-        -- Refresh count label when page shows
-        local refreshBtn = GUI:CreateButton(self.child, L["Refresh"], 320, 24, function()
-            if DF.DebugConsole then
-                DF.DebugConsole:RefreshDisplay()
-                UpdateEntryCount()
-            end
-        end)
-        logViewerGroup:AddWidget(refreshBtn, 28)
-
-        AddToSection(logViewerGroup, nil, 2)
+        AddToSection(logViewerGroup, nil, "both")
 
         -- Register live EditBox with DebugConsole
         if DF.DebugConsole then
             DF.DebugConsole:SetLiveEditBox(logEditBox)
-            -- Initial refresh
             DF.DebugConsole:RefreshDisplay()
             UpdateEntryCount()
         end
@@ -7804,7 +7785,6 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
                 DF.DebugConsole:SetLiveEditBox(nil)
             end
         end)
-
     end)
 
 end

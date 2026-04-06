@@ -5,6 +5,7 @@
 ### Improvements
 * (Debug Console) Per-category checkboxes now control whether each category is **logged at all**, not just whether it's displayed. Unchecking a category drops it at the source so noisy categories cannot evict the relevant trace under the max-lines cap. Useful when capturing a specific bug during high-volume events like joining a large raid.
 * (Debug Console) Category checkboxes are now grouped by feature (Frames & Layout, Profiles, Auras, Other) and shown at all times — even before any logs exist — so testers can pre-disable noisy categories before triggering the bug they want to capture. Each category shows a short description next to its checkbox.
+* (Debug Console) Page redesigned into three sub-tabs: **Settings** (enable, log level, max entries, script runner), **Categories** (full-width grouped checkboxes with hover tooltips), and **Live Log** (full-width log viewer with refresh, clear, and copy buttons). Descriptions no longer overflow the panel and the log viewer has much more reading room. The `/df console` slash command continues to open the Live Log tab.
 
 ### Diagnostics
 * (Raid Frames) Add targeted diagnostic logging for the long-standing "raid frames jump on roster change and stay stuck" bug. If you experience this issue, please enable `/df debug`, reproduce the bug, then open `/df console`, filter to the `RAIDPOS` category, and copy/paste the log to a bug report. Logging is account-wide and persists across `/reload`.

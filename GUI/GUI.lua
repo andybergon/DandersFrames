@@ -1291,6 +1291,113 @@ function GUI:CreateCheckbox(parent, label, dbTable, dbKey, callback, customGet, 
     return container
 end
 
+-- ============================================================
+-- DEBUG CATEGORY ROW
+-- A wide row with checkbox + bold category name + description.
+-- The whole row is clickable, hover shows a background highlight,
+-- and the description is also surfaced as a tooltip on hover so it
+-- remains accessible even if it gets visually truncated.
+--
+-- Used by the Debug > Categories sub-tab. The categoryKey writes
+-- directly to DandersFramesDB_v2.debug.filters.
+-- ============================================================
+function GUI:CreateDebugCategoryRow(parent, categoryKey, description, width)
+    local row = CreateFrame("Frame", nil, parent)
+    row:SetSize(width or 520, 28)
+    row:EnableMouse(true)
+
+    -- Hover background
+    row.hoverBg = row:CreateTexture(nil, "BACKGROUND")
+    row.hoverBg:SetAllPoints()
+    row.hoverBg:SetColorTexture(1, 1, 1, 0.05)
+    row.hoverBg:Hide()
+
+    -- Checkbox
+    local cb = CreateFrame("CheckButton", nil, row, "BackdropTemplate")
+    cb:SetSize(16, 16)
+    cb:SetPoint("LEFT", 4, 0)
+    CreateElementBackdrop(cb)
+    cb.Check = cb:CreateTexture(nil, "OVERLAY")
+    cb.Check:SetTexture("Interface\\Buttons\\WHITE8x8")
+    local c = GetThemeColor()
+    cb.Check:SetVertexColor(c.r, c.g, c.b)
+    cb.Check:SetPoint("CENTER")
+    cb.Check:SetSize(9, 9)
+    cb:SetCheckedTexture(cb.Check)
+    cb:EnableMouse(false)  -- forward clicks to the row
+
+    -- Theme listener so the checkmark colour stays in sync
+    cb.UpdateTheme = function()
+        local nc = GetThemeColor()
+        cb.Check:SetVertexColor(nc.r, nc.g, nc.b)
+    end
+    if not parent.ThemeListeners then parent.ThemeListeners = {} end
+    table.insert(parent.ThemeListeners, cb)
+
+    -- Category name (bold, full opacity)
+    local nameTxt = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    nameTxt:SetPoint("LEFT", cb, "RIGHT", 8, 0)
+    nameTxt:SetWidth(86)
+    nameTxt:SetJustifyH("LEFT")
+    nameTxt:SetText(categoryKey)
+    nameTxt:SetTextColor(C_TEXT.r, C_TEXT.g, C_TEXT.b)
+
+    -- Description (dim, fills remaining space, wraps if too long)
+    if description and description ~= "" then
+        local descTxt = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        descTxt:SetPoint("LEFT", nameTxt, "RIGHT", 12, 0)
+        descTxt:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+        descTxt:SetJustifyH("LEFT")
+        descTxt:SetText(description)
+        descTxt:SetTextColor(C_TEXT_DIM.r, C_TEXT_DIM.g, C_TEXT_DIM.b)
+        row.descTxt = descTxt
+    end
+
+    -- State helpers — read/write filters[categoryKey]
+    -- Absent or true = logged, explicit false = not logged
+    row.RefreshState = function()
+        local filters = DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.filters
+        local checked = (not filters) or filters[categoryKey] ~= false
+        cb:SetChecked(checked)
+    end
+
+    local function ToggleState()
+        local filters = DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.filters
+        if not filters then return end
+        -- Toggle: false -> true, anything else -> false
+        if filters[categoryKey] == false then
+            filters[categoryKey] = true
+        else
+            filters[categoryKey] = false
+        end
+        row.RefreshState()
+        if DF.DebugConsole then DF.DebugConsole:RefreshDisplay() end
+    end
+
+    row:SetScript("OnMouseUp", function(_, button)
+        if button == "LeftButton" then ToggleState() end
+    end)
+
+    row:SetScript("OnEnter", function(self)
+        self.hoverBg:Show()
+        if description and description ~= "" then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(categoryKey, 1, 1, 1)
+            GameTooltip:AddLine(description, 0.8, 0.8, 0.8, true)
+            GameTooltip:Show()
+        end
+    end)
+    row:SetScript("OnLeave", function(self)
+        self.hoverBg:Hide()
+        GameTooltip:Hide()
+    end)
+
+    row:SetScript("OnShow", row.RefreshState)
+    row.RefreshState()
+
+    return row
+end
+
 function GUI:CreateInput(parent, label, width)
     local frame = CreateFrame("Frame", nil, parent)
     frame:SetSize(width or 180, 44)
