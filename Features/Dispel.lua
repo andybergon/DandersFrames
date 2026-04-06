@@ -1470,23 +1470,19 @@ function DF:UpdateDispelOverlay(frame)
             end
         end
     else
-        -- "All Dispellable": iterate ALL debuffs on the unit — GetAuraDispelTypeColor + the curve
-        -- will naturally return nil for non-dispellable types (dispelType 0), so the overlay
-        -- only lights up for types 1-4 (Magic/Curse/Disease/Poison).
-        -- We use a test curve to find the first debuff with a valid dispel color.
+        -- "All Dispellable": iterate ALL debuffs on the unit and nil-check aura.dispelName.
+        -- dispelName is nil for non-dispellable debuffs and a string for Magic/Curse/Disease/Poison.
+        -- Nil checks on secret values are safe in combat (verified) — they don't taint or compare.
         if cache and cache.debuffs then
-            local testCurve = GetBorderCurve(db)
-            if testCurve then
-                for auraInstanceID in pairs(cache.debuffs) do
-                    local color = C_UnitAuras.GetAuraDispelTypeColor(unit, auraInstanceID, testCurve)
-                    if color then
-                        foundDispellable = true
-                        lastDispellableID = auraInstanceID
-                        if debugMode then
-                            print("|cff00ff00DF Dispel:|r Found all-dispellable via curve: " .. tostring(auraInstanceID))
-                        end
-                        break
+            for auraInstanceID in pairs(cache.debuffs) do
+                local aura = C_UnitAuras.GetAuraDataByAuraInstanceID(unit, auraInstanceID)
+                if aura and aura.dispelName ~= nil then
+                    foundDispellable = true
+                    lastDispellableID = auraInstanceID
+                    if debugMode then
+                        print("|cff00ff00DF Dispel:|r Found all-dispellable: " .. tostring(auraInstanceID))
                     end
+                    break
                 end
             end
         end
