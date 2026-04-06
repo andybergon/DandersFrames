@@ -27,6 +27,57 @@ local SEVERITY = {
 
 local SEVERITY_ORDER = { "INFO", "WARN", "ERROR" }
 
+-- ============================================================
+-- DECLARED CATEGORY REGISTRY
+-- All categories used by DF:Debug calls anywhere in the addon are
+-- declared here so the Debug Console can show them BEFORE any logs
+-- exist. The user can pre-disable noisy categories before triggering
+-- the bug they're trying to capture, ensuring the relevant trace
+-- never gets evicted by the maxLines cap.
+--
+-- New categories that aren't in this registry are still auto-
+-- discovered the first time they log, and appear under "Other".
+-- Order within each group is preserved as written.
+-- ============================================================
+
+local CATEGORY_GROUPS = {
+    {
+        name = "Frames & Layout",
+        categories = {
+            { key = "ROSTER",     desc = "Group composition changes, throttling, sorting decisions" },
+            { key = "RAIDPOS",    desc = "Raid container position writes (jumping/stuck-position bug)" },
+            { key = "POSITION",   desc = "Secure position handler trigger and snippet runs" },
+            { key = "LAYOUT",     desc = "Frame size, spacing, growth direction, container resize" },
+            { key = "VISIBILITY", desc = "Header show/hide and state-driver changes" },
+            { key = "FLATRAID",   desc = "Flat raid layout and sorting" },
+            { key = "FRAMESORT",  desc = "FrameSort addon integration" },
+        },
+    },
+    {
+        name = "Profiles",
+        categories = {
+            { key = "PROFILE",     desc = "Profile load, save, switch, full refresh" },
+            { key = "AUTOPROFILE", desc = "Auto-profile evaluation and runtime overlay" },
+        },
+    },
+    {
+        name = "Auras",
+        categories = {
+            { key = "AD",       desc = "Aura Designer" },
+            { key = "BLIZAURA", desc = "Blizzard aura source pipeline" },
+        },
+    },
+    {
+        name = "Other",
+        categories = {
+            { key = "CLICK",  desc = "Click-casting binding apply, hover, PreClick state" },
+            { key = "PET",    desc = "Pet frame lifecycle and visibility" },
+            { key = "SCRIPT", desc = "Lua script errors and pcall failures" },
+            { key = "SYSTEM", desc = "Reload separators and init confirmation" },
+        },
+    },
+}
+
 local DEFAULTS = {
     enabled = false,
     logLevel = "INFO",
@@ -295,6 +346,25 @@ end
 
 function DebugConsole:GetKnownCategories()
     return knownCategories
+end
+
+-- Returns the declared category groups (ordered list of {name, categories}).
+-- Used by the settings UI to render checkboxes grouped by feature.
+function DebugConsole:GetCategoryGroups()
+    return CATEGORY_GROUPS
+end
+
+-- Returns a set of every category declared in the registry.
+-- Used to figure out which auto-discovered categories should appear under
+-- the dynamic "Other" group (those not already in the registry).
+function DebugConsole:GetRegisteredCategorySet()
+    local set = {}
+    for _, group in ipairs(CATEGORY_GROUPS) do
+        for _, cat in ipairs(group.categories) do
+            set[cat.key] = true
+        end
+    end
+    return set
 end
 
 function DebugConsole:GetLogEntryCount()

@@ -7449,19 +7449,33 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         -- for keeping the maxLines buffer focused on the category you're debugging.
         local filterGroup = GUI:CreateSettingsGroup(self.child, 280)
         filterGroup:AddWidget(GUI:CreateHeader(self.child, L["Logged Categories"]), 40)
-        filterGroup:AddWidget(GUI:CreateLabel(self.child, "|cff888888" .. L["Unchecked categories are not logged. New categories auto-appear here."] .. "|r", 260), 28)
+        filterGroup:AddWidget(GUI:CreateLabel(self.child, "|cff888888" .. L["Unchecked categories are not logged at all. Disable noisy categories before reproducing a bug to keep the buffer focused."] .. "|r", 260), 36)
 
         -- All / None buttons row
         local filterBtnRow = CreateFrame("Frame", nil, self.child)
         filterBtnRow:SetSize(260, 24)
 
+        -- Helper: union of declared registry + auto-discovered categories
+        local function CollectAllCategories()
+            local set = {}
+            if DF.DebugConsole then
+                for _, group in ipairs(DF.DebugConsole:GetCategoryGroups()) do
+                    for _, cat in ipairs(group.categories) do
+                        set[cat.key] = true
+                    end
+                end
+                for cat in pairs(DF.DebugConsole:GetKnownCategories()) do
+                    set[cat] = true
+                end
+            end
+            return set
+        end
+
         local btnAll = GUI:CreateButton(filterBtnRow, L["All"], 60, 22, function()
             if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
                 local filters = DandersFramesDB_v2.debug.filters
-                if DF.DebugConsole then
-                    for cat in pairs(DF.DebugConsole:GetKnownCategories()) do
-                        filters[cat] = true
-                    end
+                for cat in pairs(CollectAllCategories()) do
+                    filters[cat] = true
                 end
             end
             -- Refresh filter checkboxes and display
@@ -7477,10 +7491,8 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
         local btnNone = GUI:CreateButton(filterBtnRow, L["None"], 60, 22, function()
             if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
                 local filters = DandersFramesDB_v2.debug.filters
-                if DF.DebugConsole then
-                    for cat in pairs(DF.DebugConsole:GetKnownCategories()) do
-                        filters[cat] = false
-                    end
+                for cat in pairs(CollectAllCategories()) do
+                    filters[cat] = false
                 end
             end
             -- Refresh filter checkboxes and display
@@ -7495,39 +7507,61 @@ function DF:SetupGUIPages(GUI, CreateCategory, CreateSubTab, BuildPage)
 
         filterGroup:AddWidget(filterBtnRow, 28)
 
-        -- Dynamic category filter checkboxes
+        -- Grouped category checkboxes — declared categories always visible,
+        -- auto-discovered extras appear under a dynamic "Other" group.
         self.filterCheckboxes = {}
-        if DF.DebugConsole then
-            local categories = DF.DebugConsole:GetKnownCategories()
-            local sortedCats = {}
-            for cat in pairs(categories) do
-                tinsert(sortedCats, cat)
-            end
-            table.sort(sortedCats)
 
-            for _, cat in ipairs(sortedCats) do
-                local catCheckbox = GUI:CreateCheckbox(self.child, cat, nil, nil, function()
-                    if DF.DebugConsole then DF.DebugConsole:RefreshDisplay() end
-                end, function()
-                    -- customGet: absent = visible (true), explicit false = hidden
-                    local filters = DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.filters
-                    if not filters then return true end
-                    return filters[cat] ~= false
-                end, function(val)
-                    -- customSet
-                    if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
-                        DandersFramesDB_v2.debug.filters[cat] = val
-                    end
-                end)
-                filterGroup:AddWidget(catCheckbox, 28)
-                self.filterCheckboxes[cat] = catCheckbox
+        local function CreateCategoryCheckbox(catKey, catDesc)
+            local label = catKey
+            if catDesc and catDesc ~= "" then
+                label = catKey .. "  |cff888888" .. catDesc .. "|r"
             end
+            local cb = GUI:CreateCheckbox(self.child, label, nil, nil, function()
+                if DF.DebugConsole then DF.DebugConsole:RefreshDisplay() end
+            end, function()
+                -- customGet: absent = visible (true), explicit false = hidden
+                local filters = DandersFramesDB_v2 and DandersFramesDB_v2.debug and DandersFramesDB_v2.debug.filters
+                if not filters then return true end
+                return filters[catKey] ~= false
+            end, function(val)
+                -- customSet
+                if DandersFramesDB_v2 and DandersFramesDB_v2.debug then
+                    DandersFramesDB_v2.debug.filters[catKey] = val
+                end
+            end)
+            self.filterCheckboxes[catKey] = cb
+            return cb
         end
 
-        -- Show message if no categories yet
-        if not DF.DebugConsole or not next(DF.DebugConsole:GetKnownCategories()) then
-            local noCatLabel = GUI:CreateLabel(self.child, "|cff666666No categories yet. Enable debug logging and trigger some events.|r", 260)
-            filterGroup:AddWidget(noCatLabel, 28)
+        if DF.DebugConsole then
+            -- Render declared groups in the order defined in DebugConsole.lua
+            local groups = DF.DebugConsole:GetCategoryGroups()
+            for _, group in ipairs(groups) do
+                local groupLabel = L[group.name] or group.name
+                local subHeader = GUI:CreateLabel(self.child, "|cffeda55f" .. groupLabel .. "|r", 260)
+                filterGroup:AddWidget(subHeader, 22)
+                for _, cat in ipairs(group.categories) do
+                    filterGroup:AddWidget(CreateCategoryCheckbox(cat.key, cat.desc), 22)
+                end
+            end
+
+            -- Append auto-discovered categories that aren't in the registry
+            local registered = DF.DebugConsole:GetRegisteredCategorySet()
+            local known = DF.DebugConsole:GetKnownCategories()
+            local extras = {}
+            for cat in pairs(known) do
+                if not registered[cat] then
+                    tinsert(extras, cat)
+                end
+            end
+            if #extras > 0 then
+                table.sort(extras)
+                local extrasHeader = GUI:CreateLabel(self.child, "|cffeda55f" .. L["Discovered"] .. "|r", 260)
+                filterGroup:AddWidget(extrasHeader, 22)
+                for _, cat in ipairs(extras) do
+                    filterGroup:AddWidget(CreateCategoryCheckbox(cat, nil), 22)
+                end
+            end
         end
 
         AddToSection(filterGroup, nil, 1)
